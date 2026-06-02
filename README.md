@@ -180,3 +180,7 @@ en `data/raw/` antes de correr `00_ingesta`.
   los notebooks.
 - **Reproducibilidad.** Ejecuta los notebooks de principio a fin ("Restart & Run All") antes de
   considerar un resultado válido.
+
+## Equipo
+
+- Catalina Moreno
