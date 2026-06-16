@@ -184,3 +184,4 @@ en `data/raw/` antes de correr `00_ingesta`.
 ## Equipo
 
 - Catalina Moreno
+- Salin Avellaneda
