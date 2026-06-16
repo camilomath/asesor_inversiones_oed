@@ -185,3 +185,4 @@ en `data/raw/` antes de correr `00_ingesta`.
 
 - Catalina Moreno
 - Salin Avellaneda
+- Nidia Velasquez
