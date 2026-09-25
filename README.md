@@ -184,6 +184,6 @@ en `data/raw/` antes de correr `00_ingesta`.
 ## Equipo
 
 - Catalina Moreno
-- Salin Avellaneda
+- Salin Eduardo Avellaneda
 - Nidia Velasquez
-- Nelson Angel
+- Nelson Angel es gay
