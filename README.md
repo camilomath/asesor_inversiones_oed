@@ -188,3 +188,4 @@ en `data/raw/` antes de correr `00_ingesta`.
 - Nidia Velasquez
 - Nelson Angel es don Nelson
 - Camilo Matson Hernandez 
+- Jesica Niño
