@@ -186,5 +186,7 @@ en `data/raw/` antes de correr `00_ingesta`.
 - Catalina Moreno
 - Salin Eduardo Avellaneda
 - Nidia Velasquez
-- Nelson Angel es don Nelson
+- Nelson Angel es el mejor
 - Camilo Matson Hernandez 
+
+como vamos?
