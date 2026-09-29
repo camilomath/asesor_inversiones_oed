@@ -186,6 +186,5 @@ en `data/raw/` antes de correr `00_ingesta`.
 - Catalina Moreno
 - Salin Eduardo Avellaneda
 - Nidia Velasquez
-- Nelson Angel es don Nelson
-- Camilo Matson Hernandez
-- Jesica Andrea Niño Rojas  
+- Nelson Angel es don Marcos
+- Camilo Matson Hernandez 
