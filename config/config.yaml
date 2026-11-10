@@ -1,0 +1,128 @@
+# ==============================================================================
+# CONFIGURACIÓN CENTRAL Y PARÁMETROS REGULATORIOS DE COLOMBIA - ASESOR OED
+# ==============================================================================
+# Nota: Todos los valores monetarios están expresados en Pesos Colombianos (COP)
+# y las tasas anuales en Efectivo Anual (EA) en formato decimal (ej. 0.10 = 10% EA).
+
+parametros_macro_colombia:
+  anio_vigencia: 2026
+  smmlv_cop: 1423500.0               # Salario Mínimo Mensual Legal Vigente referencial (editable)
+  auxilio_transporte_cop: 200000.0   # Auxilio legal de transporte (aplica hasta 2 SMMLV)
+  uvt_cop: 49799.0                   # Unidad de Valor Tributario (DIAN)
+  uvr_valor_cop: 382.45              # Unidad de Valor Real certificada por Banco de la República
+  ipc_anual_dane: 0.052              # Inflación anual proyectada / IPC DANE (5.2% EA)
+  inflacion_educativa_anual: 0.075   # Inflación histórica sector educación en Colombia (~IPC + 2.3%)
+  tasa_usura_ea_consumo: 0.2650      # Tasa de Usura certificada por la SFC (Consumo y Ordinario)
+  ibc_ea_consumo: 0.1767             # Interés Bancario Corriente (IBC = Usura / 1.5)
+  tope_fogafin_cop: 50000000.0       # Seguro de Depósitos Fogafín por persona y entidad ($50 millones)
+  gmf_tasa: 0.004                    # Gravamen a los Movimientos Financieros (4x1000)
+  gmf_exencion_uvt_mensual: 350.0    # Tope mensual exento de 4x1000 (350 UVT)
+  deposito_bajo_monto_tope_uvt: 210.5 # Tope mensual depósitos de bajo monto (Nequi, Daviplata, etc.)
+
+parametros_laborales_y_tributarios:
+  salud_empleado_pct: 0.04           # 4% aporte obligatorio a Salud (empleado)
+  pension_empleado_pct: 0.04         # 4% aporte obligatorio a Pensión (empleado)
+  ibc_independiente_pct: 0.40        # 40% de honorarios brutos como IBC para contratistas OPS
+  salud_independiente_pct: 0.125     # 12.5% sobre el IBC (independiente)
+  pension_independiente_pct: 0.16    # 16.0% sobre el IBC (independiente)
+  arl_riesgo_i_pct: 0.00522          # 0.522% sobre el IBC (Riesgo I)
+  salario_integral_min_smmlv: 13.0   # Mínimo 13 SMMLV (10 salarial + 3 factor prestacional)
+  factor_prestacional_integral: 0.70 # Base de cotización en salario integral (70%)
+  retefuente_rendimientos_fijos: 0.04 # 4% retención sobre intereses de CDTs y cuentas
+  retefuente_fics_variable: 0.07     # 7% retención referencial en derivados/renta variable no exenta
+  ganancia_ocasional_pct: 0.15       # 15% tarifa de ganancia ocasional (Ley 2277 de 2022)
+  beneficio_max_afc_fpv_pct: 0.30    # Hasta el 30% del ingreso tributario exento por aportes AFC/FPV
+
+parametros_vivienda_ley_546:
+  relacion_max_cuota_ingreso: 0.30   # Ley 546 de 1999: Primera cuota <= 30% del ingreso familiar
+  tope_vis_smmlv: 150.0              # Tope Vivienda de Interés Social en aglomeraciones urbanas (150 SMMLV)
+  tope_vip_smmlv: 90.0               # Tope Vivienda de Interés Prioritario (90 SMMLV)
+  cuota_inicial_min_vis_pct: 0.20    # Mínimo 20% o 30% según proyecto VIS
+  cuota_inicial_min_no_vis_pct: 0.30 # Mínimo 30% en vivienda No VIS (financiación máx 70%)
+  gastos_escrituracion_registro_pct: 0.03 # ~3.0% gastos notariales, beneficencia y registro
+  canon_max_ley_820_mensual_pct: 0.01 # Ley 820 de 2003: Canon mensual <= 1% del valor comercial
+
+catalogo_vehiculos_inversion_colombia:
+  - id: "neobanco_alto_rendimiento"
+    nombre: "Cuenta de Alto Rendimiento / Bolsillo Remunerado (Nu, Lulo, Pibank, Ualá)"
+    tipo: "Liquidez / Renta Fija"
+    monto_minimo_cop: 10000.0
+    tasa_ea_esperada: 0.100
+    volatilidad_anual: 0.005
+    comision_admin_anual: 0.0
+    comision_fija_transaccion_cop: 0.0
+    retefuente_pct: 0.04
+    cubierto_fogafin: true
+    perfil_minimo: "Conservador"
+
+  - id: "cdt_digital_sfc"
+    nombre: "CDT Digital Tasa Fija (Vigilado SFC)"
+    tipo: "Renta Fija"
+    monto_minimo_cop: 50000.0
+    tasa_ea_esperada: 0.105
+    volatilidad_anual: 0.008
+    comision_admin_anual: 0.0
+    comision_fija_transaccion_cop: 0.0
+    retefuente_pct: 0.04
+    cubierto_fogafin: true
+    perfil_minimo: "Conservador"
+
+  - id: "fic_renta_fija_liquidez"
+    nombre: "Fondo de Inversión Colectiva (FIC) Renta Fija a la Vista"
+    tipo: "FIC Renta Fija"
+    monto_minimo_cop: 20000.0
+    tasa_ea_esperada: 0.098
+    volatilidad_anual: 0.015
+    comision_admin_anual: 0.012
+    comision_fija_transaccion_cop: 0.0
+    retefuente_pct: 0.04
+    cubierto_fogafin: false
+    perfil_minimo: "Conservador"
+
+  - id: "cuenta_afc_vivienda"
+    nombre: "Cuenta AFC / Fondo de Pensión Voluntaria (Beneficio Tributario)"
+    tipo: "Optimización Tributaria / Vivienda"
+    monto_minimo_cop: 50000.0
+    tasa_ea_esperada: 0.095
+    volatilidad_anual: 0.020
+    comision_admin_anual: 0.015
+    comision_fija_transaccion_cop: 0.0
+    retefuente_pct: 0.0
+    cubierto_fogafin: false
+    perfil_minimo: "Moderado"
+
+  - id: "fic_balanceado_global"
+    nombre: "FIC Balanceado / Deuda Corporativa y Multiactivo"
+    tipo: "FIC Moderado"
+    monto_minimo_cop: 50000.0
+    tasa_ea_esperada: 0.122
+    volatilidad_anual: 0.065
+    comision_admin_anual: 0.018
+    comision_fija_transaccion_cop: 0.0
+    retefuente_pct: 0.04
+    cubierto_fogafin: false
+    perfil_minimo: "Moderado"
+
+  - id: "acciones_etf_bvc_mgc"
+    nombre: "Acciones y ETFs en BVC / Mercado Global Colombiano (Art. 36-1 E.T.)"
+    tipo: "Renta Variable"
+    monto_minimo_cop: 50000.0
+    tasa_ea_esperada: 0.148
+    volatilidad_anual: 0.160
+    comision_admin_anual: 0.005
+    comision_fija_transaccion_cop: 14875.0 # Comisión fija referencial por orden en app bursátil
+    retefuente_pct: 0.0                    # Exento por Art. 36-1 E.T. en enajenación bursátil
+    cubierto_fogafin: false
+    perfil_minimo: "Agresivo"
+
+# Perfil semilla por defecto para permitir que los 6 integrantes trabajen en paralelo
+perfil_semilla_taller:
+  usuario_id: "usr_oed_demo_001"
+  nombre_alias: "Participante Taller OED"
+  modalidad_laboral: "Empleado"
+  ingreso_bruto_mensual_cop: 6500000.0
+  gastos_fijos_vitales_cop: 2800000.0
+  gastos_variables_estilo_vida_cop: 950000.0
+  gastos_hormiga_mensual_cop: 320000.0
+  liquidez_actual_fondo_emergencia_cop: 6000000.0
+  perfil_riesgo: "Moderado"

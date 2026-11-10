@@ -1,0 +1,10 @@
+# Dependencias del Sistema Local de Asesoría Financiera e Inversiones OED
+numpy>=1.26.0
+pandas>=2.1.0
+scipy>=1.11.0
+pyyaml>=6.0.1
+plotly>=5.18.0
+streamlit>=1.32.0
+openpyxl>=3.1.2
+pytest>=8.0.0
+jupyterlab>=4.1.0
