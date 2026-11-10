@@ -15,7 +15,13 @@ Implementa:
 from __future__ import annotations
 
 import random
+import sys
+from pathlib import Path
 from typing import Any, Dict
+
+_ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(_ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(_ROOT_DIR))
 
 from src.finance import cargar_configuracion, cuota_fija_francesa, ea_a_em
 
@@ -144,3 +150,39 @@ def evaluar_viabilidad_decision_vida(
         "dictamen_viabilidad": dictamen,
         "recomendacion_actuarial_y_legal": recomendacion_legal_actuarial,
     }
+
+
+if __name__ == "__main__":
+    print("=" * 80)
+    print("DEMO MÓDULO 5 (NELSON ANGEL): VIABILIDAD ACTUARIAL DE DECISIONES DE VIDA")
+    print("=" * 80)
+
+    # ---> AQUÍ PUEDES CAMBIAR TUS PARÁMETROS DE ENTRADA <---
+    res_prueba = evaluar_viabilidad_decision_vida(
+        tipo_decision="HIJOS",                       # 1er parámetro: 'HIJOS', 'CASARSE' o 'CREDITO'
+        ingreso_neto_hogar_mensual_cop=9_115_000.0,  # 2do parámetro: Ingreso neto mensual (9115000)
+        excedente_mensual_actual_cop=2_145_000.0,    # 3er parámetro: Excedente mensual libre (2145000)
+    )
+    print(
+        f"VPA Hijo (0-23a): {res_prueba['vpa_decision_cop']} | "
+        f"Exito Monte Carlo: {res_prueba['probabilidad_exito_montecarlo_pct']} % | "
+        "PRUEBA EXITOSA NELSON"
+    )
+    print("-" * 80)
+
+    for op in ("CASARSE", "HIJOS", "CREDITO"):
+        res = evaluar_viabilidad_decision_vida(
+            tipo_decision=op,
+            ingreso_neto_hogar_mensual_cop=9_115_000.0,
+            excedente_mensual_actual_cop=2_145_000.0,
+        )
+        print(
+            f"\n[{res['tipo_decision']}] -> Dictamen: {res['dictamen_viabilidad']} "
+            f"({res['probabilidad_exito_montecarlo_pct']:.1f}% éxito Monte Carlo)"
+        )
+        print(f"  • VPA Decisión: ${res['vpa_decision_cop']:,.0f} COP")
+        print(f"  • Impacto Mensual Inmediato: ${res['impacto_flujo_mensual_inmediato_cop']:,.0f} COP")
+        print(f"  • Ahorro Mensual Requerido: ${res['ahorro_mensual_requerido_cop']:,.0f} COP")
+        print(f"  • Recomendación: {res['recomendacion_actuarial_y_legal']}")
+
+
