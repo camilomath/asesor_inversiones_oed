@@ -31,7 +31,9 @@ from src.mod4_finca_raiz import (
     simular_plan_cuota_inicial_planos,
     simular_sistemas_amortizacion_ley_546,
 )
+from src.oed_design_system import verificar_sistema_diseno_oed
 from src.ui_mod4_finca_raiz import (
+    _construir_html_dashboard_local,
     _filas_a_csv_bytes,
     extraer_valores_iniciales_desde_estado,
     generar_resumen_ejecutivo_ciudadano,
@@ -256,7 +258,15 @@ def test_adaptador_interaccion_ui_mod4():
     assert generar_resumen_ejecutivo_ciudadano(res_ok)["nivel"] in ("success", "info")
     assert generar_resumen_ejecutivo_ciudadano(res_fail)["nivel"] == "error"
     api_resp = procesar_simulacion_api_local({"valor_inmueble_cop": 210_000_000, "ingreso_titular_cop": 6_000_000})
-    assert "resultado" in api_resp and "semaforo" in api_resp
+    assert "resultado" in api_resp and "semaforo" in api_resp and "alertas_html" in api_resp
+    assert 'class="oed-term"' in api_resp["semaforo"]["mensaje_html"]
+    assert 'class="oed-term"' in api_resp["semaforo"]["receta_html"]
+
+    # Verifica que el dashboard web local de Jesi cumpla los 5 bloques del Manual de Marca OED
+    html_local = _construir_html_dashboard_local()
+    assert "Paso 5: 🏡 Chequeo para Comprar Casa sin Ahogarte" in html_local
+    assert "Diccionario del Médico Amigo" in html_local
+    assert verificar_sistema_diseno_oed() is True
     assert len(_filas_a_csv_bytes([{"mes": 1, "cuota": 1500000}])) > 10
 
 

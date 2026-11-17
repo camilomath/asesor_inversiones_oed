@@ -13,7 +13,9 @@ Diseñado con arquitectura dual:
 from __future__ import annotations
 
 import csv
+import html
 import io
+import json
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
@@ -26,6 +28,17 @@ if __package__ in (None, ""):
 
 from src.finance import cargar_configuracion
 from src.mod4_finca_raiz import evaluar_inversion_finca_raiz
+from src.oed_design_system import (
+    _CSS_MEDICO_AMIGO_OED,
+    GLOSARIO_LENGUAJE_CLARO_OED,
+    RUTA_CLINICA_FINANCIERA_OED,
+    aplicar_estilo_plotly_oed,
+    enriquecer_texto_con_explicaciones,
+    formatear_cop_claro,
+    render_encabezado_modulo_oed,
+    render_glosario_interactivo_oed,
+    render_semaforo_ciudadano_oed,
+)
 
 
 # ==============================================================================
@@ -89,8 +102,8 @@ def extraer_valores_iniciales_desde_estado(
 
 def generar_resumen_ejecutivo_ciudadano(resultado: Dict[str, Any]) -> Dict[str, str]:
     """
-    Traduce el dictamen técnico del Módulo 4 a un mensaje claro ('Para Dummies')
-    con nivel de semáforo ('success', 'warning', 'error') para mostrar en interfaz.
+    Traduce el dictamen técnico del Módulo 4 a la voz cercana del 'Médico Financiero Amigo'
+    definida en el Manual de Marca OED, incluyendo diagnóstico claro y receta práctica mensual.
     """
     dictamen = resultado["dictamen_viabilidad_inmobiliaria"]
     cuota_pesos = resultado["primera_cuota_credito_cop"]
@@ -99,41 +112,58 @@ def generar_resumen_ejecutivo_ciudadano(resultado: Dict[str, Any]) -> Dict[str, 
     if dictamen == "VIABLE_COMPRA_EN_PESOS_OPTIMA":
         return {
             "nivel": "success",
-            "titulo": "Compra Viable y Rentable en Pesos (Cumple Ley 546 de 1999)",
+            "titulo": "Tus signos vitales están listos para comprar en Pesos (cumples la Ley 546)",
             "mensaje": (
-                f"La primera cuota en Pesos (${cuota_pesos:,.0f} COP) está dentro del tope legal del 30% "
-                f"de tus ingresos familiares (${tope_30:,.0f} COP) y el proyecto supera tu costo de oportunidad "
-                f"con una TIR del {resultado['tir_inmobiliaria_ea_pct']}% EA."
+                f"Mirando tus cuentas con calma, la primera cuota fija en Pesos ({formatear_cop_claro(cuota_pesos)}) "
+                f"respeta holgadamente el tope saludable del 30% de tu hogar ({formatear_cop_claro(tope_30)}) y el "
+                f"inmueble proyecta una TIR del {resultado['tir_inmobiliaria_ea_pct']}% EA, superando tu costo de oportunidad."
+            ),
+            "receta": (
+                "Programa desde este mes tu ahorro del encargo fiduciario a través de una Cuenta AFC para bajar "
+                "impuestos medidos en UVT y pide cotización en Pesos Cuota Fija."
             ),
         }
     if dictamen == "VIABLE_VIVIENDA_PROPIA_PERO_FIC_SUPERA_RENTA":
         return {
             "nivel": "info",
-            "titulo": "Viable para Vivienda Propia (Cumple Ley 546), pero Financieramente un FIC Rinde Más",
+            "titulo": "Saludable para vivir en familia (cumples Ley 546), aunque para renta pura un FIC rinde más",
             "mensaje": (
-                f"El banco sí puede aprobarte el crédito en Pesos (${cuota_pesos:,.0f} COP <= ${tope_30:,.0f} COP). "
-                "Como hogar propio es viable; sin embargo, si la compras solo como inversión para arrendar, "
-                "el Cap Rate neto es menor que invertir tu capital en un FIC Inmobiliario / CDT."
+                f"Tu corazón financiero respira tranquilo: la cuota en Pesos ({formatear_cop_claro(cuota_pesos)}) cabe "
+                f"dentro del tope legal ({formatear_cop_claro(tope_30)}). Si es para vivir tú, adelante con paz; si la "
+                "buscas solo como negocio de arriendo, hoy su Cap Rate neto rinde menos que un FIC o un CDT."
+            ),
+            "receta": (
+                "Si tu meta es hogar propio, usa tu Cuenta AFC para ganar el alivio tributario; si solo buscas "
+                "rentabilidad financiera sin administrar arrendatarios, compara invertir ese capital en un FIC."
             ),
         }
     if dictamen == "SOLO_CUMPLE_EN_UVR_CON_RIESGO_INFLACIONARIO":
         return {
             "nivel": "warning",
-            "titulo": "Precaución: Solo Cumple el 30% en UVR (No Alcanza en Cuota Fija en Pesos)",
+            "titulo": "Chequeo preventivo: hoy solo pasas en UVR y conviene vigilar la inflación",
             "mensaje": (
-                f"En Pesos la cuota (${cuota_pesos:,.0f} COP) supera tu tope legal (${tope_30:,.0f} COP), "
-                f"mientras que en UVR (${resultado['primera_cuota_uvr_cop']:,.0f} COP) sí pasa raspando. "
-                "Cuidado: en UVR la cuota y el saldo en pesos suben con la inflación IPC."
+                f"Sin afán ni sustos: en Pesos Fijos la cuota ({formatear_cop_claro(cuota_pesos)}) supera tu cinturón "
+                f"protector de la Ley 546 ({formatear_cop_claro(tope_30)}), y solo pasa en UVR "
+                f"({formatear_cop_claro(resultado['primera_cuota_uvr_cop'])}). Como en UVR la deuda sube con el IPC, "
+                "tomarlo así podría apretar tu flujo en unos años."
+            ),
+            "receta": (
+                "Ampliemos unos meses el ahorro sobre planos en encargo fiduciario o sumemos aportes en Cuenta AFC "
+                "para bajar el monto del préstamo y pasarte tranquilo a Pesos."
             ),
         }
     return {
         "nivel": "error",
-        "titulo": "No Cumple la Regla del 30% de la Ley 546 de 1999 con las Condiciones Actuales",
+        "titulo": "Hagamos una pausa protectora: hoy la cuota apretaría tu tranquilidad (Ley 546)",
         "mensaje": (
-            f"La cuota mensual (${cuota_pesos:,.0f} COP) supera el máximo legal permitido para tu ingreso "
-            f"(${tope_30:,.0f} COP). Para lograr la aprobación necesitas sumar "
-            f"${resultado['deficit_ingreso_familiar_cop']:,.0f} COP de ingreso familiar mensual o aportar "
-            f"${resultado['cuota_inicial_extra_requerida_ley_546_cop']:,.0f} COP adicionales en la cuota inicial."
+            f"Qué bueno revisarlo juntos antes de firmar: la primera cuota ({formatear_cop_claro(cuota_pesos)}) supera "
+            f"el máximo saludable del 30% de los ingresos del hogar ({formatear_cop_claro(tope_30)}). Cuidar tu sueño "
+            "vale más que cualquier ladrillo, y tiene solución ajustando la dosis."
+        ),
+        "receta": (
+            f"Tienes dos caminos claros para lograrlo sin ahogarte: sumar ingresos familiares con co-deudor por "
+            f"{formatear_cop_claro(resultado['deficit_ingreso_familiar_cop'])}/mes, o reunir "
+            f"{formatear_cop_claro(resultado['cuota_inicial_extra_requerida_ley_546_cop'])} extra de cuota inicial en Cuenta AFC."
         ),
     }
 
@@ -162,7 +192,7 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
     plan = resultado["plan_cuota_inicial_detalle"]
     amort = resultado["amortizacion_detalle"]
 
-    # --- Figura 1: Encargo Fiduciario Sobre Planos ---
+    # --- Figura 1: Encargo Fiduciario Sobre Planos (Paleta Oficial OED) ---
     cronograma = plan["cronograma_fiduciario_mensual"]
     meses_fid = [r["mes"] for r in cronograma]
     fig_planos = make_subplots(specs=[[{"secondary_y": True}]])
@@ -172,7 +202,7 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
                 x=meses_fid,
                 y=[r["cuota_mensual_afc_cop"] for r in cronograma],
                 name="Cuota Mensual (Cuenta AFC)",
-                marker_color="#1f77b4",
+                marker_color="#1D4ED8",
             ),
             secondary_y=False,
         )
@@ -181,7 +211,7 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
                 x=meses_fid,
                 y=[r["abono_extra_cesantias_primas_subsidio_cop"] for r in cronograma],
                 name="Cesantías, Primas y Subsidio",
-                marker_color="#2ca02c",
+                marker_color="#15803D",
             ),
             secondary_y=False,
         )
@@ -191,17 +221,13 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
                 y=[r["saldo_acumulado_encargo_cop"] for r in cronograma],
                 name="Saldo Acumulado en Fiducia",
                 mode="lines+markers",
-                line=dict(color="#ff7f0e", width=3),
+                line=dict(color="#EA580C", width=3),
             ),
             secondary_y=True,
         )
     fig_planos.update_layout(
         barmode="stack",
-        title="Acumulación de la Cuota Inicial en Encargo Fiduciario + AFC",
         xaxis_title="Mes de Entrega sobre Planos",
-        template="plotly_white",
-        height=400,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
     )
     fig_planos.update_yaxes(title_text="Aporte del Mes (COP)", secondary_y=False)
     fig_planos.update_yaxes(title_text="Saldo Acumulado (COP)", secondary_y=True)
@@ -216,7 +242,7 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
         rows=1,
         cols=2,
         subplot_titles=(
-            "Cuota Mensual (COP) vs. Tope 30% Ley 546",
+            "Cuota Mensual (COP) vs. Cinturón 30% Ley 546",
             "Saldo de la Deuda en Pesos (Efecto Inflación UVR)",
         ),
     )
@@ -225,7 +251,7 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
             x=[r["anio"] for r in t_fija],
             y=[r["cuota_total_cop"] for r in t_fija],
             name="Pesos Cuota Fija",
-            line=dict(color="#1f77b4", width=3),
+            line=dict(color="#1D4ED8", width=3),
         ),
         row=1,
         col=1,
@@ -235,7 +261,7 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
             x=[r["anio"] for r in t_const],
             y=[r["cuota_total_cop"] for r in t_const],
             name="Abono Constante Capital",
-            line=dict(color="#2ca02c", width=2, dash="dot"),
+            line=dict(color="#15803D", width=2, dash="dot"),
         ),
         row=1,
         col=1,
@@ -245,7 +271,7 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
             x=[r["anio"] for r in t_uvr],
             y=[r["cuota_total_cop"] for r in t_uvr],
             name="UVR Indexada al IPC",
-            line=dict(color="#d62728", width=3),
+            line=dict(color="#DC2626", width=3),
         ),
         row=1,
         col=1,
@@ -253,8 +279,8 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
     fig_amort.add_hline(
         y=tope_ley_546,
         line_dash="dash",
-        line_color="#555555",
-        annotation_text=f"Tope 30% (${tope_ley_546:,.0f})",
+        line_color="#475569",
+        annotation_text=f"Tope 30% ({formatear_cop_claro(tope_ley_546)})",
         row=1,
         col=1,
     )
@@ -264,7 +290,7 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
             x=[r["anio"] for r in t_fija],
             y=[r["saldo_capital_cop"] for r in t_fija],
             name="Saldo Pesos Fija",
-            line=dict(color="#1f77b4", width=3),
+            line=dict(color="#1D4ED8", width=3),
             showlegend=False,
         ),
         row=1,
@@ -275,7 +301,7 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
             x=[r["anio"] for r in t_const],
             y=[r["saldo_capital_cop"] for r in t_const],
             name="Saldo Abono Constante",
-            line=dict(color="#2ca02c", width=2, dash="dot"),
+            line=dict(color="#15803D", width=2, dash="dot"),
             showlegend=False,
         ),
         row=1,
@@ -286,16 +312,11 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
             x=[r["anio"] for r in t_uvr],
             y=[r["saldo_capital_cop"] for r in t_uvr],
             name="Saldo UVR en COP",
-            line=dict(color="#d62728", width=3),
+            line=dict(color="#DC2626", width=3),
             showlegend=False,
         ),
         row=1,
         col=2,
-    )
-    fig_amort.update_layout(
-        template="plotly_white",
-        height=430,
-        legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="left", x=0),
     )
     fig_amort.update_xaxes(title_text="Año del Crédito")
     fig_amort.update_yaxes(title_text="Pesos Colombianos (COP)")
@@ -322,7 +343,7 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
         go.Bar(
             x=list(range(len(flujos))),
             y=flujos,
-            marker_color=["#d62728" if f < 0 else "#2ca02c" for f in flujos],
+            marker_color=["#DC2626" if f < 0 else "#15803D" for f in flujos],
             name="Flujo Neto (COP)",
         ),
         row=1,
@@ -332,7 +353,7 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
         go.Bar(
             x=estrategias,
             y=patrimonios,
-            marker_color=["#1f77b4", "#ff7f0e", "#9467bd"],
+            marker_color=["#1D4ED8", "#EA580C", "#7C3AED"],
             text=[f"${p / 1e6:,.1f}M" for p in patrimonios],
             textposition="auto",
             name="Patrimonio Año 10",
@@ -340,15 +361,19 @@ def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
         row=1,
         col=2,
     )
-    fig_renta.update_layout(template="plotly_white", height=420, showlegend=False)
+    fig_renta.update_layout(showlegend=False)
     fig_renta.update_xaxes(title_text="Año", row=1, col=1)
     fig_renta.update_yaxes(title_text="COP", row=1, col=1)
     fig_renta.update_yaxes(title_text="Patrimonio Neto (COP)", row=1, col=2)
 
     return {
-        "fig_planos": fig_planos,
-        "fig_amortizacion": fig_amort,
-        "fig_rentabilidad": fig_renta,
+        "fig_planos": aplicar_estilo_plotly_oed(
+            fig_planos,
+            titulo="Acumulación de tu Cuota Inicial en Encargo Fiduciario + Cuenta AFC",
+            altura=400,
+        ),
+        "fig_amortizacion": aplicar_estilo_plotly_oed(fig_amort, altura=430),
+        "fig_rentabilidad": aplicar_estilo_plotly_oed(fig_renta, altura=420),
     }
 
 
@@ -372,11 +397,8 @@ def render_modulo_4_finca_raiz(
     estado_previo = perfil_estado if perfil_estado is not None else dict(st.session_state.get("perfil_usuario", {}))
     defaults = extraer_valores_iniciales_desde_estado(estado_previo, cfg)
 
-    st.title("🏗️ Módulo 4: Compra Inteligente de Vivienda e Inversión en Finca Raíz")
-    st.caption(
-        "Responsable OED: **Jesi** | Marco Regulatorio Colombiano: **Ley 546 de 1999** (Tope 30% y UVR vs. Pesos), "
-        "**Art. 126-4 E.T.** (Cuentas AFC) y **Ley 820 de 2003** (Arrendamiento Urbano)."
-    )
+    # BLOQUE 1: Encabezado del Consultorio + Barra de Progreso (Pasos 0 al 6)
+    render_encabezado_modulo_oed(paso_actual=5)
 
     if defaults["conectado_con_modulos_previos"]:
         st.info("🔗 Datos de ingresos y ahorro conectados automáticamente desde los módulos previos del equipo OED.")
@@ -517,20 +539,21 @@ def render_modulo_4_finca_raiz(
         config=cfg,
     )
 
-    # --- Semáforo Ciudadano y KPIs Superiores ---
+    # BLOQUE 3: Diagnóstico del Médico Financiero Amigo con burbujas (?) + Receta del Mes + 4 Signos Vitales
     semaforo = generar_resumen_ejecutivo_ciudadano(resultado)
-    texto_banner = f"**{semaforo['titulo']}** — {semaforo['mensaje']}"
-    if semaforo["nivel"] == "success":
-        st.success(texto_banner)
-    elif semaforo["nivel"] == "info":
-        st.info(texto_banner)
-    elif semaforo["nivel"] == "warning":
-        st.warning(texto_banner)
-    else:
-        st.error(texto_banner)
+    render_semaforo_ciudadano_oed(
+        nivel=semaforo["nivel"],
+        titulo_claro=semaforo["titulo"],
+        explicacion_humana=semaforo["mensaje"],
+        siguiente_paso_accionable=semaforo["receta"],
+    )
 
     for alerta in resultado["alertas_regulatorias"]:
-        st.warning(f"⚖️ {alerta}")
+        alerta_rica = enriquecer_texto_con_explicaciones(alerta)
+        st.markdown(
+            f'<div class="oed-doc-card oed-doc-ambar">⚖️ {alerta_rica}</div>',
+            unsafe_allow_html=True,
+        )
 
     k1, k2, k3, k4 = st.columns(4)
     k1.metric(
@@ -626,6 +649,24 @@ def render_modulo_4_finca_raiz(
             }
             st.json(resumen_contrato)
 
+    # BLOQUE 5: Diccionario desplegable del Médico Amigo (con foco en vivienda + acceso a las 5 familias)
+    render_glosario_interactivo_oed(
+        [
+            "LEY_546",
+            "VIS_VIP",
+            "UVR",
+            "ENCARGO_FIDUCIARIO",
+            "LEASING",
+            "CUENTA_AFC",
+            "LEY_820",
+            "CAP_RATE",
+            "VPN_TIR",
+            "SMMLV",
+            "UVT",
+            "FIC",
+        ]
+    )
+
     # Guardar en sesión de Streamlit para que el Módulo 5 de Nelson pueda leerlo en Etapa 5
     st.session_state["resultado_mod4_finca_raiz"] = resultado
     return resultado
@@ -665,59 +706,80 @@ def procesar_simulacion_api_local(payload: Dict[str, Any]) -> Dict[str, Any]:
         incluir_tablas_detalle=True,
         config=cfg,
     )
+    semaforo = generar_resumen_ejecutivo_ciudadano(resultado)
+    semaforo["titulo_html"] = enriquecer_texto_con_explicaciones(semaforo["titulo"])
+    semaforo["mensaje_html"] = enriquecer_texto_con_explicaciones(semaforo["mensaje"])
+    semaforo["receta_html"] = enriquecer_texto_con_explicaciones(semaforo["receta"])
     return {
         "resultado": resultado,
-        "semaforo": generar_resumen_ejecutivo_ciudadano(resultado),
+        "semaforo": semaforo,
+        "alertas_html": [enriquecer_texto_con_explicaciones(a) for a in resultado["alertas_regulatorias"]],
     }
 
 
-_HTML_DASHBOARD_LOCAL = """<!DOCTYPE html>
+def _construir_html_dashboard_local() -> str:
+    """Genera el visualizador web local de Jesi aplicando los 5 bloques del Manual de Marca OED."""
+    info_paso = next((p for p in RUTA_CLINICA_FINANCIERA_OED if p["paso"] == 5), RUTA_CLINICA_FINANCIERA_OED[-1])
+    pills_html = "".join(
+        f'<span class="oed-step-pill {"oed-step-active" if p["paso"] == 5 else ""}">'
+        f'Paso {p["paso"]}: {p["icono"]} {html.escape(p["titulo_ciudadano"])}</span>'
+        for p in RUTA_CLINICA_FINANCIERA_OED
+    )
+    saludo_rico = enriquecer_texto_con_explicaciones(info_paso["saludo_medico"])
+    glosario_json = json.dumps(GLOSARIO_LENGUAJE_CLARO_OED, ensure_ascii=False)
+
+    return (
+        """<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Módulo 4: Finca Raíz OED — Jesi</title>
+<title>Paso 5: Chequeo para Comprar Casa sin Ahogarte — Jesi (OED)</title>
+"""
+        + _CSS_MEDICO_AMIGO_OED
+        + """
 <style>
-  :root { --bg:#f4f7fb; --card:#ffffff; --ink:#17253a; --muted:#5c6b82; --blue:#1d4ed8; --green:#15803d; --amber:#b45309; --red:#b91c1c; --border:#dde4ee; }
+  :root { --bg:#F4F7FB; --card:#FFFFFF; --ink:#0F294A; --muted:#475569; --blue:#1D4ED8; --green:#15803D; --amber:#B45309; --red:#B91C1C; --border:#DDE4EE; }
   * { box-sizing:border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
   body { margin:0; background:var(--bg); color:var(--ink); padding:20px; }
   .wrap { max-width:1260px; margin:0 auto; }
-  header { background:linear-gradient(135deg,#0f294a,#1d4ed8); color:#fff; padding:20px 24px; border-radius:14px; margin-bottom:16px; }
-  header h1 { margin:0 0 6px 0; font-size:22px; }
-  header p { margin:0; opacity:0.9; font-size:13.5px; }
   .grid3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:14px; margin-bottom:16px; }
   .grid4 { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:16px; }
   .grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(420px,1fr)); gap:14px; margin-bottom:16px; }
   .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:0 2px 6px rgba(15,41,74,0.04); }
-  .card h3 { margin:0 0 12px 0; font-size:15px; color:#0f294a; border-bottom:1px solid var(--border); padding-bottom:6px; }
+  .card h3 { margin:0 0 12px 0; font-size:15px; color:#0F294A; border-bottom:1px solid var(--border); padding-bottom:6px; }
   label { display:block; font-size:12.5px; color:var(--muted); margin:8px 0 3px; font-weight:600; }
-  input, select { width:100%; padding:7px 9px; border:1px solid #cbd5e1; border-radius:7px; font-size:13.5px; }
+  input, select { width:100%; padding:7px 9px; border:1px solid #CBD5E1; border-radius:7px; font-size:13.5px; }
   .chk { display:flex; align-items:center; gap:8px; margin-top:12px; font-size:12.5px; }
   .chk input { width:auto; }
   .btn { background:var(--blue); color:#fff; border:none; padding:10px 16px; border-radius:8px; font-weight:600; cursor:pointer; font-size:13.5px; }
-  .btn-sec { background:#0f766e; }
-  .banner { padding:14px 16px; border-radius:10px; margin-bottom:12px; font-size:14px; border-left:5px solid; }
-  .b-success { background:#dcfce7; color:#14532d; border-color:var(--green); }
-  .b-info { background:#dbeafe; color:#1e3a8a; border-color:var(--blue); }
-  .b-warning { background:#fef3c7; color:#78350f; border-color:var(--amber); }
-  .b-error { background:#fee2e2; color:#7f1d1d; border-color:var(--red); }
+  .btn-sec { background:#15803D; }
   .kpi-title { font-size:12px; color:var(--muted); font-weight:600; }
-  .kpi-val { font-size:21px; font-weight:700; margin:4px 0; color:#0f294a; }
+  .kpi-val { font-size:21px; font-weight:700; margin:4px 0; color:#0F294A; }
   .kpi-sub { font-size:12px; color:var(--blue); }
   table { width:100%; border-collapse:collapse; font-size:12.5px; }
   th, td { padding:7px 8px; border-bottom:1px solid var(--border); text-align:right; }
   th:first-child, td:first-child { text-align:left; }
-  th { background:#f8fafc; color:#334155; }
+  th { background:#F8FAFC; color:#334155; }
   svg { width:100%; height:250px; background:#fff; border-radius:8px; }
+  details summary { cursor:pointer; font-weight:700; color:#0F294A; font-size:14.5px; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>🏗️ Módulo 4: Compra Inteligente de Vivienda e Inversión en Finca Raíz</h1>
-    <p>Responsable OED: <b>Jesi</b> | Simulador Local Activo (100% Offline) — Ley 546 de 1999, Cuentas AFC (Art. 126-4 E.T.) y Ley 820 de 2003</p>
-  </header>
+  <!-- BLOQUE 1: Barra de Pasos (0 al 6) + Saludo del Médico Financiero Amigo -->
+  <div class="oed-steps">"""
+        + pills_html
+        + """</div>
+  <div class="oed-header">
+    <h1>🏡 Paso 5 — Chequeo para Comprar Casa sin Ahogarte</h1>
+    <p>🩺 <i>\""""
+        + saludo_rico
+        + """\"</i><br>
+    <small>Tu Médico Financiero en esta etapa: <b>Jesi</b> · Módulo 4: Inversión Patrimonial en Finca Raíz</small></p>
+  </div>
 
+  <!-- BLOQUE 2: Datos de tu Hogar, del Inmueble y del Crédito -->
   <div class="grid3">
     <div class="card">
       <h3>👨‍👩‍👧 1. Hogar y Ahorros</h3>
@@ -729,7 +791,7 @@ _HTML_DASHBOARD_LOCAL = """<!DOCTYPE html>
       <input type="number" id="ahorro_previo_afc_cop" value="8000000" step="1000000">
       <label>Cesantías + Primas anuales (COP)</label>
       <input type="number" id="cesantias_primas_cop" value="5500000" step="500000">
-      <label class="chk"><input type="checkbox" id="aplicar_subsidio_ccf" checked> Aplicar Subsidio Caja Compensación (si <= 4 SMMLV y VIS)</label>
+      <label class="chk"><input type="checkbox" id="aplicar_subsidio_ccf" checked> Aplicar Subsidio Caja Compensación (si &lt;= 4 SMMLV y VIS)</label>
     </div>
 
     <div class="card">
@@ -763,10 +825,11 @@ _HTML_DASHBOARD_LOCAL = """<!DOCTYPE html>
   </div>
 
   <div style="margin-bottom:14px; display:flex; gap:10px;">
-    <button class="btn" onclick="simular()">🔄 Recalcular Simulación</button>
+    <button class="btn" onclick="simular()">🔄 Actualizar Chequeo Financiero</button>
     <button class="btn btn-sec" onclick="descargarCSV()">📥 Descargar Tabla Amortización Pesos (CSV Excel)</button>
   </div>
 
+  <!-- BLOQUE 3: Diagnóstico del Médico Amigo + Burbujas (?) + Receta + 4 Signos Vitales -->
   <div id="semaforo_box"></div>
   <div id="alertas_box"></div>
 
@@ -777,6 +840,7 @@ _HTML_DASHBOARD_LOCAL = """<!DOCTYPE html>
     <div class="card"><div class="kpi-title">TIR Inmobiliaria (10 años)</div><div class="kpi-val" id="k_tir">-</div><div class="kpi-sub" id="k_cap">-</div></div>
   </div>
 
+  <!-- BLOQUE 4: Gráficas Interactivas con la Paleta Oficial del Consultorio OED -->
   <div class="grid2">
     <div class="card">
       <h3>⚖️ Evolución de Cuota Mensual: Pesos Fija vs. Abono Capital vs. UVR</h3>
@@ -792,15 +856,53 @@ _HTML_DASHBOARD_LOCAL = """<!DOCTYPE html>
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" style="margin-bottom:16px;">
     <h3>📋 Comparativa de los 3 Sistemas de Amortización Vigilados por la SFC</h3>
     <table id="tabla_sistemas"></table>
+  </div>
+
+  <!-- BLOQUE 5: Diccionario Desplegable del Médico Amigo (5 Familias de Términos) -->
+  <div class="card">
+    <details open>
+      <summary>🩺 ¿Alguna palabra te sonó a chino? Pregúntale aquí al Diccionario del Médico Amigo (5 Familias)</summary>
+      <div style="margin-top:12px;">
+        <label>Selecciona el término que quieres que te expliquemos en sencillo:</label>
+        <select id="glosario_select" onchange="mostrarTerminoGlosario()"></select>
+        <div id="glosario_detalle" style="margin-top:10px;"></div>
+      </div>
+    </details>
   </div>
 </div>
 
 <script>
+const GLOSARIO_OED = """
+        + glosario_json
+        + """;
 let ultimoResultado = null;
 const cop = n => '$' + Math.round(n).toLocaleString('es-CO');
+
+function inicializarGlosario() {
+  const sel = document.getElementById('glosario_select');
+  const ordenModulo4 = ['LEY_546','VIS_VIP','UVR','ENCARGO_FIDUCIARIO','LEASING','CUENTA_AFC','LEY_820','CAP_RATE','VPN_TIR'];
+  const resto = Object.keys(GLOSARIO_OED).filter(k => !ordenModulo4.includes(k));
+  const todos = [...ordenModulo4, ...resto].filter(k => GLOSARIO_OED[k]);
+  sel.innerHTML = todos.map(k => `<option value="${k}">[${GLOSARIO_OED[k].categoria}] ${GLOSARIO_OED[k].termino_tecnico}</option>`).join('');
+  mostrarTerminoGlosario();
+}
+
+function mostrarTerminoGlosario() {
+  const k = document.getElementById('glosario_select').value;
+  const f = GLOSARIO_OED[k];
+  if (!f) return;
+  document.getElementById('glosario_detalle').innerHTML = `
+    <div class="oed-doc-card oed-doc-azul" style="margin-bottom:8px;">
+      <b>🩺 Explicación de tu Médico Amigo (${f.termino_tecnico}):</b><br>${f.lenguaje_claro}
+    </div>
+    <div class="oed-rx-box" style="margin:0;">
+      <b>🇨🇴 Ejemplo cotidiano en pesos:</b> ${f.ejemplo_cotidiano}
+    </div>
+  `;
+}
 
 function dibujarLineas(svgId, series, topeY) {
   const svg = document.getElementById(svgId);
@@ -820,7 +922,7 @@ function dibujarLineas(svgId, series, topeY) {
   }
   if (topeY) {
     const yt = y(topeY);
-    html += `<line x1="${padL}" y1="${yt}" x2="${W-padR}" y2="${yt}" stroke="#334155" stroke-dasharray="5,4" stroke-width="1.5"/>`;
+    html += `<line x1="${padL}" y1="${yt}" x2="${W-padR}" y2="${yt}" stroke="#475569" stroke-dasharray="5,4" stroke-width="1.5"/>`;
   }
   series.forEach(s => {
     const pts = s.datos.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
@@ -840,7 +942,7 @@ function dibujarBarras(svgId, etiquetas, valores, colores) {
     const bh = ((v / maxY) * (H - padT - padB));
     const by = H - padB - bh;
     html += `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="6" fill="${colores[i]}"/>`;
-    html += `<text x="${bx + bw/2}" y="${by - 6}" font-size="11" font-weight="700" fill="#0f294a" text-anchor="middle">$${(v/1e6).toFixed(1)}M</text>`;
+    html += `<text x="${bx + bw/2}" y="${by - 6}" font-size="11" font-weight="700" fill="#0F294A" text-anchor="middle">$${(v/1e6).toFixed(1)}M</text>`;
     html += `<text x="${bx + bw/2}" y="${H - 14}" font-size="11" fill="#334155" text-anchor="middle">${etiquetas[i]}</text>`;
   });
   svg.innerHTML = html;
@@ -859,8 +961,23 @@ async function simular() {
   const r = data.resultado, sem = data.semaforo;
   ultimoResultado = r;
 
-  document.getElementById('semaforo_box').innerHTML = `<div class="banner b-${sem.nivel}"><b>${sem.titulo}</b><br>${sem.mensaje}</div>`;
-  document.getElementById('alertas_box').innerHTML = r.alertas_regulatorias.map(a => `<div class="banner b-warning">⚖️ ${a}</div>`).join('');
+  const mapaEstilos = {
+    success: {cls:'oed-doc-verde', ico:'🩺💚 Signos vitales saludables:'},
+    info:    {cls:'oed-doc-azul',  ico:'🩺💙 Lectura tranquila de tu médico financiero:'},
+    warning: {cls:'oed-doc-ambar', ico:'🩺🧡 Chequeo preventivo a tiempo:'},
+    error:   {cls:'oed-doc-rojo',  ico:'🩺❤️‍🩹 Pausa protectora para cuidar tu tranquilidad:'}
+  };
+  const est = mapaEstilos[sem.nivel] || mapaEstilos.error;
+  document.getElementById('semaforo_box').innerHTML = `
+    <div class="oed-doc-card ${est.cls}">
+      <b>${est.ico} ${sem.titulo_html || sem.titulo}</b>
+      <div style="margin-top:4px;">${sem.mensaje_html || sem.mensaje}</div>
+      <div style="margin-top:6px; font-size:12px; opacity:0.85;">💡 <i>Tip: Pasa el cursor sobre cualquier palabra subrayada con <b>?</b> para ver su explicación sencilla.</i></div>
+    </div>
+    <div class="oed-rx-box"><b>💊 Tu Receta Práctica para este Mes:</b> ${sem.receta_html || sem.receta}</div>
+  `;
+  const alertasHtml = data.alertas_html || r.alertas_regulatorias;
+  document.getElementById('alertas_box').innerHTML = alertasHtml.map(a => `<div class="oed-doc-card oed-doc-ambar">⚖️ ${a}</div>`).join('');
 
   document.getElementById('k_seg').innerText = r.codigo_segmento;
   document.getElementById('k_smmlv').innerText = `${r.valor_inmueble_smmlv} SMMLV`;
@@ -873,16 +990,16 @@ async function simular() {
 
   const am = r.amortizacion_detalle;
   dibujarLineas('svg_cuotas', [
-    {color:'#1d4ed8', datos: am.tabla_pesos_cuota_fija.map(x => x.cuota_total_cop)},
-    {color:'#15803d', datos: am.tabla_pesos_abono_constante.map(x => x.cuota_total_cop)},
-    {color:'#dc2626', datos: am.tabla_uvr_ciclica.map(x => x.cuota_total_cop)}
+    {color:'#1D4ED8', datos: am.tabla_pesos_cuota_fija.map(x => x.cuota_total_cop)},
+    {color:'#15803D', datos: am.tabla_pesos_abono_constante.map(x => x.cuota_total_cop)},
+    {color:'#DC2626', datos: am.tabla_uvr_ciclica.map(x => x.cuota_total_cop)}
   ], r.tope_cuota_ley_546_30pct_cop);
 
   const c = r.comparativa_estrategias_10a;
   dibujarBarras('svg_patrimonio',
     ['Comprar Pesos', 'Comprar UVR', 'Arrendar + FIC'],
     [c.comprar_pesos_patrimonio_10a_cop, c.comprar_uvr_patrimonio_10a_cop, c.arrendar_e_invertir_fic_patrimonio_10a_cop],
-    ['#1d4ed8', '#ea580c', '#7c3aed']
+    ['#1D4ED8', '#EA580C', '#7C3AED']
   );
   document.getElementById('resumen_renta').innerText =
     `Canon aplicado (Ley 820 <= 1%): ${cop(r.canon_mensual_aplicado_cop)}/mes | Beneficio AFC est.: ${cop(r.ahorro_tributario_afc_total_cop)}`;
@@ -906,12 +1023,14 @@ function descargarCSV() {
   a.click();
 }
 
-document.querySelectorAll('input, select').forEach(el => el.addEventListener('change', simular));
+inicializarGlosario();
+document.querySelectorAll('input, select:not(#glosario_select)').forEach(el => el.addEventListener('change', simular));
 simular();
 </script>
 </body>
 </html>
 """
+    )
 
 
 def iniciar_servidor_web_local_autonomo(puerto: int = 8504, abrir_navegador: bool = True) -> None:
@@ -919,21 +1038,21 @@ def iniciar_servidor_web_local_autonomo(puerto: int = 8504, abrir_navegador: boo
     Levanta una calculadora web interactiva en `http://127.0.0.1:8504` usando únicamente la
     librería estándar de Python, ideal cuando la red corporativa demora la instalación de Streamlit.
     """
-    import json
     import webbrowser
     from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    cuerpo_html = _construir_html_dashboard_local().encode("utf-8")
 
     class Mod4Handler(BaseHTTPRequestHandler):
         def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
             return
 
         def do_GET(self) -> None:  # noqa: N802
-            cuerpo = _HTML_DASHBOARD_LOCAL.encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(cuerpo)))
+            self.send_header("Content-Length", str(len(cuerpo_html)))
             self.end_headers()
-            self.wfile.write(cuerpo)
+            self.wfile.write(cuerpo_html)
 
         def do_POST(self) -> None:  # noqa: N802
             longitud = int(self.headers.get("Content-Length", "0"))
