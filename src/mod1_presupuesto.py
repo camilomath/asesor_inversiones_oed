@@ -22,6 +22,10 @@ Enfoque de Ingeniería (Balance Termodinámico / Hidráulico de Flujo de Caja):
 
 from __future__ import annotations
 
+import json
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List
 
 from src.finance import (
@@ -773,6 +777,159 @@ def ejecutar_modulo_1_perfil_usuario(
         }
     )
     return salida_contrato
+
+
+# ==============================================================================
+# 3B. PERSISTENCIA LOCAL DE NÓMINA, MODALIDAD Y ESCENARIOS (data/processed/)
+# ==============================================================================
+
+RUTA_PERFIL_ACTIVO_MOD1 = Path(__file__).resolve().parent.parent / "data" / "processed" / "perfil_mod1_activo.json"
+RUTA_HISTORIAL_MOD1 = (
+    Path(__file__).resolve().parent.parent / "data" / "processed" / "historial_simulaciones_mod1.json"
+)
+
+
+def guardar_simulacion_presupuesto(
+    datos_entrada: Dict[str, Any],
+    nombre_escenario: str | None = None,
+    guardar_en_historial: bool = False,
+    ruta_activo: str | Path | None = None,
+    ruta_historial: str | Path | None = None,
+    config: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """
+    Persiste localmente en `data/processed/` la configuración actual cuando el usuario cambia
+    el salario, la modalidad contractual o sus parámetros presupuestales:
+    - Siempre actualiza `perfil_mod1_activo.json` (estado activo persistente entre sesiones).
+    - Si `guardar_en_historial=True`, registra además una instantánea identificable en
+      `historial_simulaciones_mod1.json` para consultar o restaurar distintos salarios/modalidades.
+    """
+    cfg = config or cargar_configuracion()
+    contrato_full = ejecutar_modulo_1_perfil_usuario(datos_entrada, config=cfg)
+    diag = contrato_full["diagnostico_mod1"]
+    nom = diag["liquidacion_nomina"]
+
+    ahora_iso = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+    etiqueta = (nombre_escenario or "").strip()
+    if not etiqueta:
+        etiqueta = f"{nom['modalidad_laboral']} — ${nom['ingreso_bruto_mensual_cop']:,.0f} COP"
+
+    parametros_limpios = {
+        "modalidad_laboral": nom["modalidad_laboral"],
+        "clase_riesgo_arl": int(datos_entrada.get("clase_riesgo_arl", 1)),
+        "ingreso_bruto_mensual_cop": nom["ingreso_bruto_mensual_cop"],
+        "otros_ingresos_mensuales_cop": diag["otros_ingresos_mensuales_cop"],
+        "aporte_voluntario_afc_fpv_cop": float(datos_entrada.get("aporte_voluntario_afc_fpv_cop", 0.0)),
+        "gastos_fijos_vitales_cop": diag["gastos_fijos_vitales_cop"],
+        "gastos_variables_estilo_vida_cop": diag["gastos_variables_estilo_vida_cop"],
+        "gastos_hormiga_mensual_cop": diag["gastos_hormiga_mensual_cop"],
+        "cuotas_deuda_mensual_cop": diag["cuotas_deuda_mensual_cop"],
+        "liquidez_actual_fondo_emergencia_cop": float(
+            datos_entrada.get("liquidez_actual_fondo_emergencia_cop", 0.0)
+        ),
+        "cuotas_manejo_mensual_cop": diag["radiografia_fugas"]["cuotas_manejo_mensual_cop"],
+        "monto_movimientos_gmf_mensual_cop": float(
+            datos_entrada.get("monto_movimientos_gmf_mensual_cop", 0.0)
+        ),
+        "cuenta_exenta_4x1000": bool(datos_entrada.get("cuenta_exenta_4x1000", True)),
+        "detalle_gastos_hormiga": datos_entrada.get("detalle_gastos_hormiga")
+        or diag["radiografia_fugas"]["detalle_items"],
+    }
+
+    registro_activo = {
+        "nombre_escenario": etiqueta,
+        "fecha_guardado_iso": ahora_iso,
+        "parametros_entrada": parametros_limpios,
+        "resumen_resultados": {
+            "modalidad_laboral": nom["modalidad_laboral"],
+            "ingreso_bruto_mensual_cop": nom["ingreso_bruto_mensual_cop"],
+            "total_descuentos_ley_cop": nom["total_descuentos_ley_cop"],
+            "ingreso_neto_mensual_cop": diag["ingreso_neto_mensual_cop"],
+            "excedente_mensual_cop": diag["excedente_mensual_cop"],
+            "meses_fondo_emergencia": diag["meses_fondo_emergencia"],
+            "costo_oportunidad_hormiga_10a_cop": diag["costo_oportunidad_hormiga_10a_cop"],
+            "estado_flujo_caja": diag["estado_flujo_caja"],
+        },
+    }
+
+    target_activo = Path(ruta_activo) if ruta_activo else RUTA_PERFIL_ACTIVO_MOD1
+    target_activo.parent.mkdir(parents=True, exist_ok=True)
+    with open(target_activo, "w", encoding="utf-8") as f_act:
+        json.dump(registro_activo, f_act, ensure_ascii=False, indent=2)
+
+    target_hist = Path(ruta_historial) if ruta_historial else RUTA_HISTORIAL_MOD1
+    historial = listar_historial_simulaciones(target_hist)
+
+    nuevo_item_historial: Dict[str, Any] | None = None
+    if guardar_en_historial:
+        nuevo_item_historial = {
+            "id_registro": f"mod1_{uuid.uuid4().hex[:8]}",
+            **registro_activo,
+        }
+        historial.insert(0, nuevo_item_historial)
+        historial = historial[:50]  # Conservar hasta las 50 simulaciones más recientes
+        target_hist.parent.mkdir(parents=True, exist_ok=True)
+        with open(target_hist, "w", encoding="utf-8") as f_hist:
+            json.dump(historial, f_hist, ensure_ascii=False, indent=2)
+
+    return {
+        "guardado_exitoso": True,
+        "ruta_perfil_activo": str(target_activo),
+        "fecha_guardado_iso": ahora_iso,
+        "perfil_activo": registro_activo,
+        "item_historial_creado": nuevo_item_historial,
+        "historial": historial,
+    }
+
+
+def listar_historial_simulaciones(ruta_historial: str | Path | None = None) -> List[Dict[str, Any]]:
+    """Lee el listado de escenarios de nómina/presupuesto guardados localmente."""
+    target_hist = Path(ruta_historial) if ruta_historial else RUTA_HISTORIAL_MOD1
+    if not target_hist.exists():
+        return []
+    try:
+        with open(target_hist, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def cargar_simulacion_presupuesto(
+    ruta_activo: str | Path | None = None,
+    ruta_historial: str | Path | None = None,
+) -> Dict[str, Any]:
+    """Recupera el último perfil activo guardado en disco junto con el historial de escenarios."""
+    target_activo = Path(ruta_activo) if ruta_activo else RUTA_PERFIL_ACTIVO_MOD1
+    perfil_activo = None
+    if target_activo.exists():
+        try:
+            with open(target_activo, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+                if isinstance(loaded, dict) and "parametros_entrada" in loaded:
+                    perfil_activo = loaded
+        except Exception:
+            perfil_activo = None
+
+    return {
+        "existe_perfil_guardado": perfil_activo is not None,
+        "perfil_activo": perfil_activo,
+        "historial": listar_historial_simulaciones(ruta_historial),
+    }
+
+
+def eliminar_simulacion_historial(
+    id_registro: str,
+    ruta_historial: str | Path | None = None,
+) -> List[Dict[str, Any]]:
+    """Elimina un escenario específico del historial local por su `id_registro`."""
+    target_hist = Path(ruta_historial) if ruta_historial else RUTA_HISTORIAL_MOD1
+    actuales = listar_historial_simulaciones(target_hist)
+    filtrados = [item for item in actuales if item.get("id_registro") != id_registro]
+    target_hist.parent.mkdir(parents=True, exist_ok=True)
+    with open(target_hist, "w", encoding="utf-8") as f:
+        json.dump(filtrados, f, ensure_ascii=False, indent=2)
+    return filtrados
 
 
 # ==============================================================================

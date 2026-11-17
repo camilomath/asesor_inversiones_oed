@@ -5,13 +5,11 @@ Radiografía del Sueldo, Presupuesto Personal y Gastos Hormiga — Nidia Velásq
 Características:
 - Cero dependencias externas requeridas: utiliza `http.server` de la librería estándar de Python
   y ejecuta directamente las funciones reales de `src/mod1_presupuesto.py` en el backend local.
-- Interfaz interactiva en español (100% offline, sin CDNs externos) con:
-  • Controles en vivo de modalidad laboral (Empleado, Integral, Independiente OPS + ARL I-V), AFC,
-    egresos, fondo de emergencia, calculadora ítem por ítem de gastos hormiga y 4x1000 (GMF).
-  • Diagrama de Sankey SVG, Cascada (Waterfall) SVG, Curva de Costo de Oportunidad (120 meses)
-    y Termómetro 50/30/20 + Fondo de Emergencia.
-  • Comparador simultáneo de las 3 modalidades laborales en Colombia y exportación del
-    Contrato JSON de Integración OED.
+- Persistencia automática y por escenarios en `data/processed/` cuando el usuario cambia el salario,
+  la modalidad contractual o cualquier parámetro presupuestal, restaurando el estado al recargar.
+- Fondo temático con símbolo vectorial de ahorro (alcancía + moneda) de alto contraste y legibilidad.
+- Diagrama de Sankey SVG, Cascada (Waterfall) SVG, Curva de Costo de Oportunidad (120 meses),
+  Termómetro 50/30/20 + Fondo de Emergencia, Comparador de Modalidades e Historial Guardado.
 
 Uso:
     python app_mod1_local.py
@@ -36,9 +34,12 @@ if str(ROOT_DIR) not in sys.path:
 
 from src.finance import cargar_configuracion
 from src.mod1_presupuesto import (
+    cargar_simulacion_presupuesto,
     comparar_modalidades_laborales,
     diagnosticar_presupuesto_y_flujo_caja,
     ejecutar_modulo_1_perfil_usuario,
+    eliminar_simulacion_historial,
+    guardar_simulacion_presupuesto,
 )
 
 CONFIG_GLOBAL = cargar_configuracion()
@@ -51,8 +52,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 <title>Módulo 1 OED — Radiografía del Sueldo, Presupuesto y Gastos Hormiga</title>
 <style>
   :root {
-    --bg: #f1f5f9;
-    --card: #ffffff;
+    --bg: #e6f4ea;
+    --card: rgba(255, 255, 255, 0.89);
     --border: #cbd5e1;
     --text: #0f172a;
     --muted: #475569;
@@ -64,38 +65,73 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
     --amber-bg: #fef3c7;
     --red: #b91c1c;
     --red-bg: #fee2e2;
-    --purple: #6d28d9;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-    background: var(--bg);
+    background-color: var(--bg);
+    /* Patrón visible de fondo con símbolo de ahorro (alcancía verde/azul + moneda dorada $) */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg fill='none' stroke='%2315803d' stroke-opacity='0.22' stroke-width='2.4'%3E%3Ccircle cx='80' cy='32' r='13' fill='%23fef08a' fill-opacity='0.45' stroke='%23ca8a04' stroke-opacity='0.35'/%3E%3Ctext x='80' y='37' text-anchor='middle' font-family='Arial' font-weight='bold' font-size='14' fill='%23a16207' fill-opacity='0.45' stroke='none'%3E%24%3C/text%3E%3Cpath d='M68 51h24' stroke-linecap='round'/%3E%3Cellipse cx='80' cy='86' rx='34' ry='25' fill='%23bbf7d0' fill-opacity='0.28'/%3E%3Cpath d='M113 80h8a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4h-8'/%3E%3Cpath d='M56 65l-9-11 15 3'/%3E%3Cpath d='M62 108v12M96 108v12' stroke-linecap='round'/%3E%3Cpath d='M46 86c-6-2-8-8-4-11' stroke-linecap='round'/%3E%3Ccircle cx='98' cy='78' r='2.5' fill='%2315803d' fill-opacity='0.30' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
+    background-attachment: fixed;
     color: var(--text);
     font-size: 14px;
     line-height: 1.45;
+    position: relative;
+    min-height: 100vh;
+  }
+  /* Marca de agua grande central/derecha con símbolo de ahorro */
+  .watermark-ahorro {
+    position: fixed;
+    right: 28px;
+    bottom: 18px;
+    width: 340px;
+    height: 340px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.28;
+  }
+  header, .layout {
+    position: relative;
+    z-index: 1;
   }
   header {
-    background: linear-gradient(135deg, #0b2545 0%, #134074 60%, #1b6ca8 100%);
+    background: linear-gradient(135deg, #0b2545 0%, #134074 60%, #15803d 100%);
     color: #fff;
-    padding: 16px 24px;
+    padding: 15px 24px;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.18);
+  }
+  .brand-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand-icon {
+    width: 42px;
+    height: 42px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
   }
   header h1 {
     margin: 0;
-    font-size: 19px;
+    font-size: 18.5px;
     font-weight: 700;
     letter-spacing: -0.2px;
   }
   header p {
     margin: 3px 0 0;
     font-size: 12.5px;
-    opacity: 0.9;
+    opacity: 0.92;
   }
   .presets {
     display: flex;
@@ -115,10 +151,10 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
   .btn-preset:hover { background: rgba(255, 255, 255, 0.28); }
   .layout {
     display: grid;
-    grid-template-columns: 380px 1fr;
+    grid-template-columns: 390px 1fr;
     gap: 18px;
     padding: 18px 22px;
-    max-width: 1600px;
+    max-width: 1620px;
     margin: 0 auto;
   }
   @media (max-width: 1080px) {
@@ -126,10 +162,11 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
   }
   .panel {
     background: var(--card);
+    backdrop-filter: blur(4px);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 16px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
   }
   .section-title {
     font-size: 13.5px;
@@ -137,11 +174,24 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
     text-transform: uppercase;
     letter-spacing: 0.4px;
     color: var(--primary);
-    margin: 0 0 12px;
+    margin: 0 0 10px;
     padding-bottom: 6px;
     border-bottom: 2px solid var(--primary-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
-  .field { margin-bottom: 11px; }
+  .save-pill {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: none;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--green-bg);
+    color: var(--green);
+    border: 1px solid #86efac;
+  }
+  .field { margin-bottom: 10px; }
   .field label {
     display: flex;
     justify-content: space-between;
@@ -173,6 +223,27 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
+  .save-box {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 10px 0 14px;
+  }
+  .btn-save {
+    width: 100%;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: opacity 0.15s;
+  }
+  .btn-save:hover { opacity: 0.92; }
   .hormiga-list {
     display: flex;
     flex-direction: column;
@@ -255,7 +326,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
     padding-bottom: 8px;
   }
   .tab-btn {
-    padding: 7px 14px;
+    padding: 7px 13px;
     border-radius: 7px;
     border: 1px solid var(--border);
     background: #f8fafc;
@@ -326,15 +397,52 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
   }
   .badge-ok { background: var(--green-bg); color: var(--green); }
   .badge-warn { background: var(--amber-bg); color: var(--amber); }
+  .btn-mini {
+    padding: 4px 8px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: #fff;
+    cursor: pointer;
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+  .btn-mini:hover { background: var(--primary-light); color: var(--primary); }
   svg { width: 100%; height: auto; display: block; }
 </style>
 </head>
 <body>
 
+<!-- SÍMBOLO DE AHORRO DE FONDO (MARCA DE AGUA VECTORIAL ALCANCÍA + MONEDA $) -->
+<div class="watermark-ahorro" aria-hidden="true">
+  <svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+    <g fill="none" stroke="#0f4c81" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="112" cy="44" r="24" fill="#dcfce7"/>
+      <text x="112" y="53" text-anchor="middle" font-family="Arial" font-weight="900" font-size="28" fill="#15803d" stroke="none">$</text>
+      <path d="M92 78h40"/>
+      <ellipse cx="110" cy="132" rx="62" ry="46" fill="#e0f2fe"/>
+      <path d="M170 122h16a8 8 0 0 1 8 8v12a8 8 0 0 1-8 8h-15"/>
+      <path d="M72 95l-16-22 28 7"/>
+      <path d="M80 172v22M138 172v22"/>
+      <path d="M48 132c-12-4-16-16-8-22"/>
+      <circle cx="144" cy="116" r="4.5" fill="#0f4c81" stroke="none"/>
+    </g>
+  </svg>
+</div>
+
 <header>
-  <div>
-    <h1>Módulo 1: Radiografía del Sueldo, Presupuesto y Gastos Hormiga</h1>
-    <p>Responsable OED: <strong>Nidia Velásquez</strong> (Ing. Mecánica) · Motor Python Local en Tiempo Real (<code>src/mod1_presupuesto.py</code>)</p>
+  <div class="brand-wrap">
+    <div class="brand-icon" title="Símbolo de Ahorro y Patrimonio OED">
+      <svg viewBox="0 0 40 40" width="28" height="28" fill="none" stroke="#fff" stroke-width="2.2">
+        <circle cx="20" cy="9" r="5" fill="rgba(255,255,255,0.2)"/>
+        <path d="M15 16h10"/>
+        <ellipse cx="20" cy="25" rx="11" ry="8"/>
+        <path d="M31 23h3v4h-3M14 32v4M25 32v4M13 19l-3-4 5 1"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Módulo 1: Radiografía del Sueldo, Presupuesto y Gastos Hormiga</h1>
+      <p>Responsable OED: <strong>Nidia Velásquez</strong> (Ing. Mecánica) · Persistencia Local Activa en <code>data/processed/</code></p>
+    </div>
   </div>
   <div class="presets">
     <button class="btn-preset" onclick="cargarEscenario('semilla')">Caso Semilla OED ($6.5M)</button>
@@ -348,12 +456,15 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 <div class="layout">
   <!-- PANEL IZQUIERDO: PARÁMETROS DE ENTRADA -->
   <aside class="panel">
-    <h2 class="section-title">1. Nómina y Modalidad (Colombia)</h2>
+    <h2 class="section-title">
+      <span>1. Nómina y Modalidad</span>
+      <span id="badge_autoguardado" class="save-pill">Listo</span>
+    </h2>
 
     <div class="row-2">
       <div class="field">
         <label>Modalidad Contractual</label>
-        <select id="modalidad_laboral" onchange="onModalidadChange()">
+        <select id="modalidad_laboral" onchange="onNominaChanged()">
           <option value="Empleado">Empleado Ordinario</option>
           <option value="Integral">Salario Integral (&ge;13 SMMLV)</option>
           <option value="Independiente">Independiente / OPS (IBC 40%)</option>
@@ -361,7 +472,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
       </div>
       <div class="field">
         <label>Clase ARL (OPS)</label>
-        <select id="clase_riesgo_arl" onchange="recalcular()">
+        <select id="clase_riesgo_arl" onchange="onNominaChanged()">
           <option value="1">Clase I (0.522%)</option>
           <option value="2">Clase II (1.044%)</option>
           <option value="3">Clase III (2.436%)</option>
@@ -373,45 +484,60 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 
     <div class="field">
       <label>Ingreso Bruto Mensual <span class="val-hint" id="lbl_bruto">$6.500.000</span></label>
-      <input type="number" id="ingreso_bruto" step="100000" min="0" value="6500000" oninput="syncSlider('ingreso_bruto','rng_bruto'); recalcular();" />
-      <input type="range" id="rng_bruto" min="1423500" max="35000000" step="100000" value="6500000" oninput="syncInput('rng_bruto','ingreso_bruto'); recalcular();" />
+      <input type="number" id="ingreso_bruto" step="100000" min="0" value="6500000" oninput="syncSlider('ingreso_bruto','rng_bruto'); onNominaChanged();" />
+      <input type="range" id="rng_bruto" min="1423500" max="35000000" step="100000" value="6500000" oninput="syncInput('rng_bruto','ingreso_bruto'); onNominaChanged();" />
     </div>
 
     <div class="row-2">
       <div class="field">
         <label>Otros Ingresos / Mes</label>
-        <input type="number" id="otros_ingresos" step="50000" min="0" value="0" oninput="recalcular()" />
+        <input type="number" id="otros_ingresos" step="50000" min="0" value="0" oninput="onNominaChanged()" />
       </div>
       <div class="field">
         <label title="Aporte voluntario a Cuenta AFC o Fondo de Pensión Voluntaria para reducir Retefuente">Aporte AFC / FPV</label>
-        <input type="number" id="aporte_afc" step="50000" min="0" value="0" oninput="recalcular()" />
+        <input type="number" id="aporte_afc" step="50000" min="0" value="0" oninput="onNominaChanged()" />
       </div>
     </div>
 
-    <h2 class="section-title" style="margin-top:14px;">2. Presupuesto y Liquidez</h2>
+    <!-- BLOQUE DE GUARDADO DE NÓMINA Y MODALIDAD -->
+    <div class="save-box">
+      <label style="font-size:12px; font-weight:800; color:#14532d; display:block; margin-bottom:5px;">
+        💾 Guardar Cambio de Salario y Modalidad
+      </label>
+      <input type="text" id="nombre_escenario" placeholder="Nombre opcional (ej. Nuevo Salario 2026)" style="background:#fff; font-size:12px; padding:6px 8px;" />
+      <button class="btn-save" onclick="guardarEscenarioManual()">
+        💾 Guardar Información de Nómina y Modalidad
+      </button>
+      <div id="msg_guardado_detalle" style="font-size:11.5px; color:#166534; margin-top:6px; font-weight:600;">
+        Al cambiar el salario o modalidad se guarda automáticamente en local.
+      </div>
+      <div id="mini_historial_sidebar" style="margin-top:7px; font-size:11.5px;"></div>
+    </div>
+
+    <h2 class="section-title"><span>2. Presupuesto y Liquidez</span></h2>
 
     <div class="field">
       <label>Costos Fijos Vitales (Arriendo, Mercado, Servicios) <span class="val-hint" id="lbl_fijos">$2.800.000</span></label>
-      <input type="number" id="gastos_fijos" step="50000" min="0" value="2800000" oninput="recalcular()" />
+      <input type="number" id="gastos_fijos" step="50000" min="0" value="2800000" oninput="onNominaChanged()" />
     </div>
 
     <div class="row-2">
       <div class="field">
         <label>Estilo de Vida / Variables</label>
-        <input type="number" id="gastos_variables" step="50000" min="0" value="950000" oninput="recalcular()" />
+        <input type="number" id="gastos_variables" step="50000" min="0" value="950000" oninput="onNominaChanged()" />
       </div>
       <div class="field">
         <label>Cuotas Deuda Actuales</label>
-        <input type="number" id="cuotas_deuda" step="50000" min="0" value="0" oninput="recalcular()" />
+        <input type="number" id="cuotas_deuda" step="50000" min="0" value="0" oninput="onNominaChanged()" />
       </div>
     </div>
 
     <div class="field">
       <label>Liquidez Actual Fondo de Emergencia</label>
-      <input type="number" id="liquidez_emergencia" step="200000" min="0" value="6000000" oninput="recalcular()" />
+      <input type="number" id="liquidez_emergencia" step="200000" min="0" value="6000000" oninput="onNominaChanged()" />
     </div>
 
-    <h2 class="section-title" style="margin-top:14px;">3. Gastos Hormiga y Fugas (4x1000)</h2>
+    <h2 class="section-title" style="margin-top:14px;"><span>3. Gastos Hormiga y Fugas (4x1000)</span></h2>
     <div style="font-size:11.5px; color:var(--muted); margin-bottom:6px; display:grid; grid-template-columns:1.5fr 1fr 0.7fr 26px; gap:5px; font-weight:600;">
       <span>Micro-gasto</span><span>$ Unitario</span><span>Veces/mes</span><span></span>
     </div>
@@ -421,15 +547,15 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
     <div class="row-2" style="margin-top:10px;">
       <div class="field">
         <label>Cuotas de Manejo / Mes</label>
-        <input type="number" id="cuotas_manejo" step="5000" min="0" value="0" oninput="recalcular()" />
+        <input type="number" id="cuotas_manejo" step="5000" min="0" value="0" oninput="onNominaChanged()" />
       </div>
       <div class="field">
         <label>Retiros Sujetos 4x1000</label>
-        <input type="number" id="movimientos_gmf" step="100000" min="0" value="0" oninput="recalcular()" />
+        <input type="number" id="movimientos_gmf" step="100000" min="0" value="0" oninput="onNominaChanged()" />
       </div>
     </div>
     <label style="display:flex; align-items:center; gap:7px; font-size:12px; cursor:pointer;">
-      <input type="checkbox" id="cuenta_exenta" checked onchange="recalcular()" />
+      <input type="checkbox" id="cuenta_exenta" checked onchange="onNominaChanged()" />
       Cuenta marcada exenta de 4x1000 (tope legal 350 UVT/mes)
     </label>
   </aside>
@@ -472,21 +598,22 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
     <!-- PESTAÑAS DE ANÁLISIS -->
     <div class="panel">
       <div class="tabs">
-        <button class="tab-btn active" onclick="activarTab('tab_flujos', this)">1. Flujo Sankey &amp; Cascada</button>
-        <button class="tab-btn" onclick="activarTab('tab_nomina', this)">2. Radiografía del Sueldo &amp; Comparativa</button>
-        <button class="tab-btn" onclick="activarTab('tab_hormiga', this)">3. Costo Oportunidad Hormiga &amp; 50/30/20</button>
-        <button class="tab-btn" onclick="activarTab('tab_contrato', this)">4. Contrato JSON OED</button>
+        <button class="tab-btn active" id="btn_tab_flujos" onclick="activarTab('tab_flujos', this)">1. Flujo Sankey &amp; Cascada</button>
+        <button class="tab-btn" id="btn_tab_nomina" onclick="activarTab('tab_nomina', this)">2. Radiografía del Sueldo &amp; Comparativa</button>
+        <button class="tab-btn" id="btn_tab_hormiga" onclick="activarTab('tab_hormiga', this)">3. Costo Oportunidad Hormiga &amp; 50/30/20</button>
+        <button class="tab-btn" id="btn_tab_guardados" onclick="activarTab('tab_guardados', this)">4. Escenarios Guardados (<span id="contador_historial">0</span>)</button>
+        <button class="tab-btn" id="btn_tab_contrato" onclick="activarTab('tab_contrato', this)">5. Contrato JSON OED</button>
       </div>
 
       <!-- TAB 1: SANKEY & WATERFALL -->
       <div id="tab_flujos" class="tab-pane active">
         <div class="charts-2col">
           <div>
-            <h3 class="section-title">Diagrama de Sankey — Balance Termodinámico</h3>
+            <h3 class="section-title"><span>Diagrama de Sankey — Balance Termodinámico</span></h3>
             <div id="svg_sankey_wrap"></div>
           </div>
           <div>
-            <h3 class="section-title">Cascada (Waterfall) — Del Bruto al Excedente</h3>
+            <h3 class="section-title"><span>Cascada (Waterfall) — Del Bruto al Excedente</span></h3>
             <div id="svg_waterfall_wrap"></div>
           </div>
         </div>
@@ -496,11 +623,11 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
       <div id="tab_nomina" class="tab-pane">
         <div class="charts-2col">
           <div>
-            <h3 class="section-title">Desglose de Nómina Actual</h3>
+            <h3 class="section-title"><span>Desglose de Nómina Actual</span></h3>
             <table id="tabla_nomina_detalle"></table>
           </div>
           <div>
-            <h3 class="section-title">Comparativa Mismo Bruto: Empleado vs. Integral vs. OPS</h3>
+            <h3 class="section-title"><span>Comparativa Mismo Bruto: Empleado vs. Integral vs. OPS</span></h3>
             <table id="tabla_comparativa_mod"></table>
             <p style="font-size:12px; color:var(--muted); margin-top:8px;">
               <strong>Nota Ingenieril:</strong> En <em>Empleado Ordinario</em> el empleador asume adicionalmente Prima (8.33%), Cesantías (8.33%) e Intereses sobre Cesantías, mientras que en <em>OPS Independiente</em> el contratista asume la totalidad de su seguridad social sobre el 40% del ingreso bruto (piso 1 SMMLV).
@@ -513,20 +640,28 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
       <div id="tab_hormiga" class="tab-pane">
         <div class="charts-2col">
           <div>
-            <h3 class="section-title">Curva de Capitalización de Fugas (1 a 120 Meses al 10% EA)</h3>
+            <h3 class="section-title"><span>Curva de Capitalización de Fugas (1 a 120 Meses al 10% EA)</span></h3>
             <div id="svg_oportunidad_wrap"></div>
           </div>
           <div>
-            <h3 class="section-title">Diagnóstico Regla 50 / 30 / 20 Adaptada a Colombia</h3>
+            <h3 class="section-title"><span>Diagnóstico Regla 50 / 30 / 20 Adaptada a Colombia</span></h3>
             <div id="panel_50_30_20"></div>
           </div>
         </div>
       </div>
 
-      <!-- TAB 4: CONTRATO JSON -->
+      <!-- TAB 4: HISTORIAL DE ESCENARIOS GUARDADOS -->
+      <div id="tab_guardados" class="tab-pane">
+        <h3 class="section-title">
+          <span>Historial Local de Cambios de Salario y Modalidad Guardados (<code>data/processed/</code>)</span>
+        </h3>
+        <div id="contenedor_tabla_historial"></div>
+      </div>
+
+      <!-- TAB 5: CONTRATO JSON -->
       <div id="tab_contrato" class="tab-pane">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <h3 class="section-title" style="margin:0; border:none;">Payload Oficial para Módulos 2, 3, 4 y 5</h3>
+          <h3 class="section-title" style="margin:0; border:none;"><span>Payload Oficial para Módulos 2, 3, 4 y 5</span></h3>
           <button class="tab-btn active" onclick="descargarContratoJSON()">Descargar perfil_mod1.json</button>
         </div>
         <pre id="json_contrato" class="json-box"></pre>
@@ -542,6 +677,8 @@ const fmtCOP = (v) => {
 };
 
 let estadoUltimoResultado = null;
+let historialGuardado = [];
+let timerAutoSave = null;
 
 let itemsHormiga = [
   { concepto: "Café / snacks calle", monto_unitario_cop: 6500, frecuencia_mensual: 20 },
@@ -550,6 +687,25 @@ let itemsHormiga = [
   { concepto: "Antojos fin de semana", monto_unitario_cop: 22500, frecuencia_mensual: 2 }
 ];
 
+function obtenerPayloadFormulario() {
+  return {
+    modalidad_laboral: document.getElementById("modalidad_laboral").value,
+    clase_riesgo_arl: Number(document.getElementById("clase_riesgo_arl").value || 1),
+    ingreso_bruto_mensual_cop: Number(document.getElementById("ingreso_bruto").value || 0),
+    otros_ingresos_mensuales_cop: Number(document.getElementById("otros_ingresos").value || 0),
+    aporte_voluntario_afc_fpv_cop: Number(document.getElementById("aporte_afc").value || 0),
+    gastos_fijos_vitales_cop: Number(document.getElementById("gastos_fijos").value || 0),
+    gastos_variables_estilo_vida_cop: Number(document.getElementById("gastos_variables").value || 0),
+    cuotas_deuda_mensual_cop: Number(document.getElementById("cuotas_deuda").value || 0),
+    liquidez_actual_fondo_emergencia_cop: Number(document.getElementById("liquidez_emergencia").value || 0),
+    cuotas_manejo_mensual_cop: Number(document.getElementById("cuotas_manejo").value || 0),
+    monto_movimientos_gmf_mensual_cop: Number(document.getElementById("movimientos_gmf").value || 0),
+    cuenta_exenta_4x1000: document.getElementById("cuenta_exenta").checked,
+    gastos_hormiga_mensual_cop: 0,
+    detalle_gastos_hormiga: itemsHormiga
+  };
+}
+
 function renderItemsHormiga() {
   const cont = document.getElementById("lista_hormiga");
   cont.innerHTML = "";
@@ -557,9 +713,9 @@ function renderItemsHormiga() {
     const row = document.createElement("div");
     row.className = "hormiga-item";
     row.innerHTML = `
-      <input type="text" value="${it.concepto}" oninput="itemsHormiga[${idx}].concepto=this.value; recalcular();" />
-      <input type="number" step="500" min="0" value="${it.monto_unitario_cop}" oninput="itemsHormiga[${idx}].monto_unitario_cop=Number(this.value||0); recalcular();" />
-      <input type="number" step="1" min="0" value="${it.frecuencia_mensual}" oninput="itemsHormiga[${idx}].frecuencia_mensual=Number(this.value||0); recalcular();" />
+      <input type="text" value="${it.concepto}" oninput="itemsHormiga[${idx}].concepto=this.value; onNominaChanged();" />
+      <input type="number" step="500" min="0" value="${it.monto_unitario_cop}" oninput="itemsHormiga[${idx}].monto_unitario_cop=Number(this.value||0); onNominaChanged();" />
+      <input type="number" step="1" min="0" value="${it.frecuencia_mensual}" oninput="itemsHormiga[${idx}].frecuencia_mensual=Number(this.value||0); onNominaChanged();" />
       <button class="btn-del" title="Eliminar" onclick="eliminarItemHormiga(${idx})">&times;</button>
     `;
     cont.appendChild(row);
@@ -569,13 +725,13 @@ function renderItemsHormiga() {
 function agregarItemHormiga() {
   itemsHormiga.push({ concepto: "Nuevo micro-gasto", monto_unitario_cop: 10000, frecuencia_mensual: 4 });
   renderItemsHormiga();
-  recalcular();
+  onNominaChanged();
 }
 
 function eliminarItemHormiga(idx) {
   itemsHormiga.splice(idx, 1);
   renderItemsHormiga();
-  recalcular();
+  onNominaChanged();
 }
 
 function syncSlider(numId, rngId) {
@@ -585,10 +741,53 @@ function syncInput(rngId, numId) {
   document.getElementById(numId).value = document.getElementById(rngId).value;
 }
 
-function onModalidadChange() {
+function actualizarEstadoARL() {
   const mod = document.getElementById("modalidad_laboral").value;
   document.getElementById("clase_riesgo_arl").disabled = (mod !== "Independiente");
+}
+
+function onNominaChanged() {
+  actualizarEstadoARL();
   recalcular();
+  // Auto-guardar el cambio de salario/modalidad en disco con breve debounce
+  const badge = document.getElementById("badge_autoguardado");
+  badge.textContent = "Guardando...";
+  if (timerAutoSave) clearTimeout(timerAutoSave);
+  timerAutoSave = setTimeout(() => persistirEnServidor(false), 320);
+}
+
+async function persistirEnServidor(guardarEnHistorial) {
+  const payload = obtenerPayloadFormulario();
+  const etiqueta = document.getElementById("nombre_escenario").value || "";
+  const res = await fetch("/api/guardar", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      parametros: payload,
+      nombre_escenario: etiqueta,
+      guardar_en_historial: guardarEnHistorial
+    })
+  });
+  const data = await res.json();
+  if (data.guardado_exitoso) {
+    const hora = new Date().toLocaleTimeString("es-CO", { hour12: false });
+    document.getElementById("badge_autoguardado").textContent = `Guardado ${hora}`;
+    historialGuardado = data.historial || [];
+    renderTablaHistorial();
+    if (guardarEnHistorial) {
+      document.getElementById("msg_guardado_detalle").innerHTML =
+        `<strong>Escenario registrado en historial (${hora}):</strong> ${data.perfil_activo.nombre_escenario}`;
+      document.getElementById("nombre_escenario").value = "";
+    } else {
+      document.getElementById("msg_guardado_detalle").textContent =
+        `Último cambio de salario/modalidad guardado en disco a las ${hora}.`;
+    }
+  }
+}
+
+async function guardarEscenarioManual() {
+  await persistirEnServidor(true);
+  activarTab("tab_guardados", document.getElementById("btn_tab_guardados"));
 }
 
 function activarTab(tabId, btn) {
@@ -596,6 +795,32 @@ function activarTab(tabId, btn) {
   document.querySelectorAll(".tabs .tab-btn").forEach(b => b.classList.remove("active"));
   document.getElementById(tabId).classList.add("active");
   btn.classList.add("active");
+}
+
+function aplicarParametrosAlFormulario(p) {
+  setForm(
+    p.modalidad_laboral || "Empleado",
+    p.clase_riesgo_arl || 1,
+    p.ingreso_bruto_mensual_cop ?? 6500000,
+    p.otros_ingresos_mensuales_cop ?? 0,
+    p.aporte_voluntario_afc_fpv_cop ?? 0,
+    p.gastos_fijos_vitales_cop ?? 2800000,
+    p.gastos_variables_estilo_vida_cop ?? 950000,
+    p.cuotas_deuda_mensual_cop ?? 0,
+    p.liquidez_actual_fondo_emergencia_cop ?? 6000000,
+    p.cuotas_manejo_mensual_cop ?? 0,
+    p.monto_movimientos_gmf_mensual_cop ?? 0,
+    p.cuenta_exenta_4x1000 !== false
+  );
+  if (Array.isArray(p.detalle_gastos_hormiga) && p.detalle_gastos_hormiga.length > 0) {
+    itemsHormiga = p.detalle_gastos_hormiga.map(x => ({
+      concepto: x.concepto || "Micro-gasto",
+      monto_unitario_cop: Number(x.monto_unitario_cop ?? x.gasto_mensual_cop ?? 0),
+      frecuencia_mensual: Number(x.frecuencia_mensual ?? 1)
+    }));
+  }
+  renderItemsHormiga();
+  actualizarEstadoARL();
 }
 
 function cargarEscenario(nombre) {
@@ -633,7 +858,7 @@ function cargarEscenario(nombre) {
     ];
   }
   renderItemsHormiga();
-  onModalidadChange();
+  onNominaChanged();
 }
 
 function setForm(mod, arl, bruto, otros, afc, fijos, vars, deuda, liq, manejo, gmf, exenta) {
@@ -653,23 +878,7 @@ function setForm(mod, arl, bruto, otros, afc, fijos, vars, deuda, liq, manejo, g
 }
 
 async function recalcular() {
-  const payload = {
-    modalidad_laboral: document.getElementById("modalidad_laboral").value,
-    clase_riesgo_arl: Number(document.getElementById("clase_riesgo_arl").value || 1),
-    ingreso_bruto_mensual_cop: Number(document.getElementById("ingreso_bruto").value || 0),
-    otros_ingresos_mensuales_cop: Number(document.getElementById("otros_ingresos").value || 0),
-    aporte_voluntario_afc_fpv_cop: Number(document.getElementById("aporte_afc").value || 0),
-    gastos_fijos_vitales_cop: Number(document.getElementById("gastos_fijos").value || 0),
-    gastos_variables_estilo_vida_cop: Number(document.getElementById("gastos_variables").value || 0),
-    cuotas_deuda_mensual_cop: Number(document.getElementById("cuotas_deuda").value || 0),
-    liquidez_actual_fondo_emergencia_cop: Number(document.getElementById("liquidez_emergencia").value || 0),
-    cuotas_manejo_mensual_cop: Number(document.getElementById("cuotas_manejo").value || 0),
-    monto_movimientos_gmf_mensual_cop: Number(document.getElementById("movimientos_gmf").value || 0),
-    cuenta_exenta_4x1000: document.getElementById("cuenta_exenta").checked,
-    gastos_hormiga_mensual_cop: 0,
-    detalle_gastos_hormiga: itemsHormiga
-  };
-
+  const payload = obtenerPayloadFormulario();
   document.getElementById("lbl_bruto").textContent = fmtCOP(payload.ingreso_bruto_mensual_cop);
   document.getElementById("lbl_fijos").textContent = fmtCOP(payload.gastos_fijos_vitales_cop);
 
@@ -683,13 +892,80 @@ async function recalcular() {
   actualizarUI(data);
 }
 
+function renderTablaHistorial() {
+  document.getElementById("contador_historial").textContent = String(historialGuardado.length);
+  const cont = document.getElementById("contenedor_tabla_historial");
+  const mini = document.getElementById("mini_historial_sidebar");
+  if (!historialGuardado.length) {
+    cont.innerHTML = `<p style="color:var(--muted);">Aún no has guardado instantáneas manuales en el historial. Cambia el salario o modalidad a la izquierda y pulsa <strong>"💾 Guardar Información de Nómina y Modalidad"</strong>.</p>`;
+    if (mini) mini.innerHTML = "";
+    return;
+  }
+  if (mini) {
+    mini.innerHTML = `<div style="border-top:1px solid #bbf7d0; padding-top:5px; color:#14532d;"><strong>Guardados recientes (${historialGuardado.length}):</strong></div>` +
+      historialGuardado.slice(0, 3).map((it, idx) =>
+        `<div style="display:flex; justify-content:space-between; align-items:center; margin-top:3px;">
+          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:210px;">• ${it.nombre_escenario}</span>
+          <button class="btn-mini" style="padding:2px 6px;" onclick="restaurarDesdeHistorial(${idx})">Cargar</button>
+        </div>`
+      ).join("");
+  }
+  const rows = historialGuardado.map((item, idx) => {
+    const r = item.resumen_resultados || {};
+    return `<tr>
+      <td><strong>${item.nombre_escenario}</strong><br/><span style="font-size:11px;color:var(--muted);">${item.fecha_guardado_iso}</span></td>
+      <td>${r.modalidad_laboral || "-"}</td>
+      <td>${fmtCOP(r.ingreso_bruto_mensual_cop || 0)}</td>
+      <td>${fmtCOP(r.ingreso_neto_mensual_cop || 0)}</td>
+      <td style="font-weight:700; color:${(r.excedente_mensual_cop||0)>=0?'#15803d':'#b91c1c'};">${fmtCOP(r.excedente_mensual_cop || 0)}</td>
+      <td>
+        <button class="btn-mini" onclick="restaurarDesdeHistorial(${idx})">Cargar</button>
+        <button class="btn-mini" style="color:#b91c1c;" onclick="eliminarDelHistorial('${item.id_registro}')">Eliminar</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  cont.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Escenario / Fecha</th>
+          <th>Modalidad</th>
+          <th>Salario Bruto</th>
+          <th>Ingreso Neto (IDN)</th>
+          <th>Excedente Libre</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function restaurarDesdeHistorial(idx) {
+  const item = historialGuardado[idx];
+  if (!item || !item.parametros_entrada) return;
+  aplicarParametrosAlFormulario(item.parametros_entrada);
+  onNominaChanged();
+}
+
+async function eliminarDelHistorial(idRegistro) {
+  const res = await fetch("/api/eliminar_guardado", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id_registro: idRegistro })
+  });
+  const data = await res.json();
+  historialGuardado = data.historial || [];
+  renderTablaHistorial();
+}
+
 function actualizarUI(data) {
   const d = data.diagnostico;
   const nom = d.liquidacion_nomina;
   const fugas = d.radiografia_fugas;
   const plan = d.plan_accion_flujo_caja;
 
-  // Banner de estado
   const banner = document.getElementById("banner_estado");
   banner.className = "status-banner " + (
     d.estado_flujo_caja === "LISTO_PARA_INVERTIR" ? "status-OK" :
@@ -700,7 +976,6 @@ function actualizarUI(data) {
     <div style="font-size:12.5px;">${plan.recomendacion_ejecutiva}</div>
   `;
 
-  // Alerta normativa (ej. Salario Integral < 13 SMMLV)
   const alertaBox = document.getElementById("alerta_normativa_box");
   if (nom.alerta_normativa) {
     alertaBox.style.display = "block";
@@ -709,7 +984,6 @@ function actualizarUI(data) {
     alertaBox.style.display = "none";
   }
 
-  // KPIs
   document.getElementById("kpi_idn").textContent = fmtCOP(d.ingreso_neto_mensual_cop);
   document.getElementById("kpi_idn_sub").textContent =
     `Descuentos ley: ${fmtCOP(nom.total_descuentos_ley_cop)} (${nom.tasa_descuento_efectiva_pct}%)` +
@@ -757,8 +1031,8 @@ function dibujarSankeySVG(d) {
   const idn = d.ingreso_neto_mensual_cop;
 
   const destinos = [
-    { label: "Seg. Social", val: segSocial, color: "#ea580c", col: 1 },
-    { label: "Retefuente", val: rete, color: "#9a3412", col: 1 }
+    { label: "Seg. Social", val: segSocial, color: "#ea580c" },
+    { label: "Retefuente", val: rete, color: "#9a3412" }
   ].filter(x => x.val > 0);
 
   const salidasIdn = [
@@ -777,11 +1051,9 @@ function dibujarSankeySVG(d) {
   const hIn = Math.max(12, totalIn * scale);
   const y0 = 40;
 
-  // Nodo 0: Devengado Total
   svg += `<rect x="${x0}" y="${y0}" width="${bw}" height="${hIn}" fill="#0f4c81" rx="3"/>`;
   svg += `<text x="${x0}" y="${y0 - 8}" font-size="11.5" font-weight="700" fill="#0f172a">Devengado: ${fmtCOP(totalIn)}</text>`;
 
-  // Columna 1: Deducciones de Ley + IDN
   let cy0 = y0;
   let cy1 = 32;
   destinos.forEach(item => {
@@ -794,14 +1066,12 @@ function dibujarSankeySVG(d) {
     cy1 += h + 14;
   });
 
-  // Nodo IDN en Columna 1
   const yIdn = cy1 + 4;
   const hIdn = Math.max(14, idn * scale);
   svg += pathCurvo(x0 + bw, cy0, idn * scale, x1, yIdn, hIdn, "#0d9488", 0.28);
   svg += `<rect x="${x1}" y="${yIdn}" width="${bw}" height="${hIdn}" fill="#0d9488" rx="3"/>`;
   svg += `<text x="${x1 - 4}" y="${yIdn + hIdn + 14}" font-size="11.5" font-weight="700" fill="#0f766e">IDN: ${fmtCOP(idn)}</text>`;
 
-  // Columna 2: Distribución del IDN
   let cyIdnSrc = yIdn;
   let cy2 = 24;
   const sumSalidas = salidasIdn.reduce((s, x) => s + x.val, 0) || 1;
@@ -977,10 +1247,30 @@ function descargarContratoJSON() {
   a.click();
 }
 
-window.addEventListener("DOMContentLoaded", () => {
-  renderItemsHormiga();
-  onModalidadChange();
-});
+async function inicializarAplicacion() {
+  try {
+    const res = await fetch("/api/estado_guardado");
+    const guardado = await res.json();
+    historialGuardado = guardado.historial || [];
+    renderTablaHistorial();
+
+    if (guardado.existe_perfil_guardado && guardado.perfil_activo && guardado.perfil_activo.parametros_entrada) {
+      aplicarParametrosAlFormulario(guardado.perfil_activo.parametros_entrada);
+      document.getElementById("badge_autoguardado").textContent = "Restaurado";
+      document.getElementById("msg_guardado_detalle").textContent =
+        `Restaurado último salario/modalidad guardado (${guardado.perfil_activo.nombre_escenario}).`;
+    } else {
+      renderItemsHormiga();
+      actualizarEstadoARL();
+    }
+  } catch (e) {
+    renderItemsHormiga();
+    actualizarEstadoARL();
+  }
+  await recalcular();
+}
+
+window.addEventListener("DOMContentLoaded", inicializarAplicacion);
 </script>
 </body>
 </html>
@@ -988,7 +1278,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
 
 class Mod1RequestHandler(BaseHTTPRequestHandler):
-    """Servidor HTTP local que conecta la UI con `src/mod1_presupuesto.py`."""
+    """Servidor HTTP local que conecta la UI con `src/mod1_presupuesto.py` y su persistencia."""
+
+    ruta_activo: Path | None = None
+    ruta_historial: Path | None = None
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
         return  # Silenciar logs repetitivos en consola
@@ -997,15 +1290,17 @@ class Mod1RequestHandler(BaseHTTPRequestHandler):
         raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)
 
     def do_GET(self) -> None:  # noqa: N802
-        if self.path in ("/", "/index.html"):
+        if self.path == "/" or self.path.startswith("/?") or self.path.startswith("/index.html"):
             raw = HTML_DASHBOARD.encode("utf-8")
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
             self.send_header("Content-Length", str(len(raw)))
             self.end_headers()
             self.wfile.write(raw)
@@ -1015,71 +1310,122 @@ class Mod1RequestHandler(BaseHTTPRequestHandler):
             self._send_json({"status": "ok", "modulo": "mod1_presupuesto"})
             return
 
+        if self.path == "/api/estado_guardado":
+            estado = cargar_simulacion_presupuesto(
+                ruta_activo=self.ruta_activo,
+                ruta_historial=self.ruta_historial,
+            )
+            self._send_json(estado)
+            return
+
         self.send_error(HTTPStatus.NOT_FOUND, "Ruta no encontrada")
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.path != "/api/diagnostico":
-            self.send_error(HTTPStatus.NOT_FOUND, "Endpoint no encontrado")
-            return
-
         try:
             length = int(self.headers.get("Content-Length", "0"))
             body = json.loads(self.rfile.read(length).decode("utf-8")) if length > 0 else {}
 
-            diagnostico = diagnosticar_presupuesto_y_flujo_caja(
-                ingreso_bruto_mensual_cop=float(body.get("ingreso_bruto_mensual_cop", 0.0)),
-                gastos_fijos_vitales_cop=float(body.get("gastos_fijos_vitales_cop", 0.0)),
-                gastos_variables_estilo_vida_cop=float(body.get("gastos_variables_estilo_vida_cop", 0.0)),
-                gastos_hormiga_mensual_cop=float(body.get("gastos_hormiga_mensual_cop", 0.0)),
-                cuotas_deuda_mensual_cop=float(body.get("cuotas_deuda_mensual_cop", 0.0)),
-                liquidez_actual_fondo_emergencia_cop=float(body.get("liquidez_actual_fondo_emergencia_cop", 0.0)),
-                modalidad_laboral=str(body.get("modalidad_laboral", "Empleado")),
-                aporte_voluntario_afc_fpv_cop=float(body.get("aporte_voluntario_afc_fpv_cop", 0.0)),
-                clase_riesgo_arl=int(body.get("clase_riesgo_arl", 1)),
-                otros_ingresos_mensuales_cop=float(body.get("otros_ingresos_mensuales_cop", 0.0)),
-                cuotas_manejo_mensual_cop=float(body.get("cuotas_manejo_mensual_cop", 0.0)),
-                monto_movimientos_gmf_mensual_cop=float(body.get("monto_movimientos_gmf_mensual_cop", 0.0)),
-                cuenta_exenta_4x1000=bool(body.get("cuenta_exenta_4x1000", True)),
-                detalle_gastos_hormiga=body.get("detalle_gastos_hormiga"),
-                config=CONFIG_GLOBAL,
-            )
+            if self.path == "/api/guardar":
+                parametros = body.get("parametros", body)
+                resultado_guardado = guardar_simulacion_presupuesto(
+                    datos_entrada=parametros,
+                    nombre_escenario=body.get("nombre_escenario"),
+                    guardar_en_historial=bool(body.get("guardar_en_historial", False)),
+                    ruta_activo=self.ruta_activo,
+                    ruta_historial=self.ruta_historial,
+                    config=CONFIG_GLOBAL,
+                )
+                self._send_json(resultado_guardado)
+                return
 
-            comparativa = comparar_modalidades_laborales(
-                ingreso_bruto_mensual_cop=float(body.get("ingreso_bruto_mensual_cop", 0.0)),
-                aporte_voluntario_afc_fpv_cop=float(body.get("aporte_voluntario_afc_fpv_cop", 0.0)),
-                clase_riesgo_arl=int(body.get("clase_riesgo_arl", 1)),
-                config=CONFIG_GLOBAL,
-            )
+            if self.path == "/api/eliminar_guardado":
+                id_reg = str(body.get("id_registro", ""))
+                historial_actualizado = eliminar_simulacion_historial(
+                    id_registro=id_reg,
+                    ruta_historial=self.ruta_historial,
+                )
+                self._send_json({"eliminado": True, "historial": historial_actualizado})
+                return
 
-            contrato_completo = ejecutar_modulo_1_perfil_usuario(body, config=CONFIG_GLOBAL)
-            contrato_resumen = {
-                "usuario_id": contrato_completo.get("usuario_id", "usr_oed_demo_001"),
-                "modalidad_laboral": diagnostico["liquidacion_nomina"]["modalidad_laboral"],
-                "ingreso_bruto_mensual_cop": diagnostico["liquidacion_nomina"]["ingreso_bruto_mensual_cop"],
-                "ingreso_neto_mensual_cop": contrato_completo["ingreso_neto_mensual_cop"],
-                "excedente_mensual_cop": contrato_completo["excedente_mensual_cop"],
-                "meses_fondo_emergencia": contrato_completo["meses_fondo_emergencia"],
-                "costo_oportunidad_hormiga_10a_cop": contrato_completo["costo_oportunidad_hormiga_10a_cop"],
-                "estado_flujo_caja": diagnostico["estado_flujo_caja"],
-                "aporte_disponible_portafolio_mod2_cop": diagnostico["plan_accion_flujo_caja"][
-                    "aporte_disponible_portafolio_mod2_cop"
-                ],
-            }
+            if self.path == "/api/diagnostico":
+                diagnostico = diagnosticar_presupuesto_y_flujo_caja(
+                    ingreso_bruto_mensual_cop=float(body.get("ingreso_bruto_mensual_cop", 0.0)),
+                    gastos_fijos_vitales_cop=float(body.get("gastos_fijos_vitales_cop", 0.0)),
+                    gastos_variables_estilo_vida_cop=float(body.get("gastos_variables_estilo_vida_cop", 0.0)),
+                    gastos_hormiga_mensual_cop=float(body.get("gastos_hormiga_mensual_cop", 0.0)),
+                    cuotas_deuda_mensual_cop=float(body.get("cuotas_deuda_mensual_cop", 0.0)),
+                    liquidez_actual_fondo_emergencia_cop=float(
+                        body.get("liquidez_actual_fondo_emergencia_cop", 0.0)
+                    ),
+                    modalidad_laboral=str(body.get("modalidad_laboral", "Empleado")),
+                    aporte_voluntario_afc_fpv_cop=float(body.get("aporte_voluntario_afc_fpv_cop", 0.0)),
+                    clase_riesgo_arl=int(body.get("clase_riesgo_arl", 1)),
+                    otros_ingresos_mensuales_cop=float(body.get("otros_ingresos_mensuales_cop", 0.0)),
+                    cuotas_manejo_mensual_cop=float(body.get("cuotas_manejo_mensual_cop", 0.0)),
+                    monto_movimientos_gmf_mensual_cop=float(body.get("monto_movimientos_gmf_mensual_cop", 0.0)),
+                    cuenta_exenta_4x1000=bool(body.get("cuenta_exenta_4x1000", True)),
+                    detalle_gastos_hormiga=body.get("detalle_gastos_hormiga"),
+                    config=CONFIG_GLOBAL,
+                )
 
-            self._send_json(
-                {
-                    "diagnostico": diagnostico,
-                    "comparativa_modalidades": comparativa,
-                    "contrato_oed": contrato_resumen,
+                comparativa = comparar_modalidades_laborales(
+                    ingreso_bruto_mensual_cop=float(body.get("ingreso_bruto_mensual_cop", 0.0)),
+                    aporte_voluntario_afc_fpv_cop=float(body.get("aporte_voluntario_afc_fpv_cop", 0.0)),
+                    clase_riesgo_arl=int(body.get("clase_riesgo_arl", 1)),
+                    config=CONFIG_GLOBAL,
+                )
+
+                contrato_completo = ejecutar_modulo_1_perfil_usuario(body, config=CONFIG_GLOBAL)
+                contrato_resumen = {
+                    "usuario_id": contrato_completo.get("usuario_id", "usr_oed_demo_001"),
+                    "modalidad_laboral": diagnostico["liquidacion_nomina"]["modalidad_laboral"],
+                    "ingreso_bruto_mensual_cop": diagnostico["liquidacion_nomina"]["ingreso_bruto_mensual_cop"],
+                    "ingreso_neto_mensual_cop": contrato_completo["ingreso_neto_mensual_cop"],
+                    "excedente_mensual_cop": contrato_completo["excedente_mensual_cop"],
+                    "meses_fondo_emergencia": contrato_completo["meses_fondo_emergencia"],
+                    "costo_oportunidad_hormiga_10a_cop": contrato_completo["costo_oportunidad_hormiga_10a_cop"],
+                    "estado_flujo_caja": diagnostico["estado_flujo_caja"],
+                    "aporte_disponible_portafolio_mod2_cop": diagnostico["plan_accion_flujo_caja"][
+                        "aporte_disponible_portafolio_mod2_cop"
+                    ],
                 }
-            )
+
+                self._send_json(
+                    {
+                        "diagnostico": diagnostico,
+                        "comparativa_modalidades": comparativa,
+                        "contrato_oed": contrato_resumen,
+                    }
+                )
+                return
+
+            self.send_error(HTTPStatus.NOT_FOUND, "Endpoint no encontrado")
         except Exception as exc:
             self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
 
 
+class ExclusiveThreadingHTTPServer(ThreadingHTTPServer):
+    """Evita que en Windows dos procesos compartan silenciosamente el mismo puerto (`SO_REUSEADDR`)."""
+
+    allow_reuse_address = sys.platform != "win32"
+
+
 def iniciar_servidor(host: str = "127.0.0.1", port: int = 8501, abrir_navegador: bool = True) -> None:
-    url = f"http://{host}:{port}"
-    server = ThreadingHTTPServer((host, port), Mod1RequestHandler)
+    server: ThreadingHTTPServer | None = None
+    puerto_final = port
+    for intento in range(10):
+        candidato = port + intento
+        try:
+            server = ExclusiveThreadingHTTPServer((host, candidato), Mod1RequestHandler)
+            puerto_final = candidato
+            break
+        except OSError:
+            continue
+
+    if server is None:
+        raise RuntimeError(f"No fue posible encontrar un puerto libre entre {port} y {port + 9}.")
+
+    url = f"http://{host}:{puerto_final}"
     print("======================================================================", flush=True)
     print(" Interfaz Gráfica Local — Módulo 1 OED (Nidia Velásquez)", flush=True)
     print(f" URL activa: {url}", flush=True)
@@ -1092,7 +1438,7 @@ def iniciar_servidor(host: str = "127.0.0.1", port: int = 8501, abrir_navegador:
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nServidor detenido correctamente.")
+        print("\nServidor detenido correctamente.", flush=True)
     finally:
         server.server_close()
 

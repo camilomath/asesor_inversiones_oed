@@ -7,10 +7,13 @@ Compatible tanto con `pytest` como con ejecución directa en Python estándar.
 from src.finance import cargar_configuracion
 from src.mod1_presupuesto import (
     calcular_fsp_porcentaje,
+    cargar_simulacion_presupuesto,
     comparar_modalidades_laborales,
     cuantificar_gastos_hormiga_y_fugas,
     diagnosticar_presupuesto_y_flujo_caja,
     ejecutar_modulo_1_perfil_usuario,
+    eliminar_simulacion_historial,
+    guardar_simulacion_presupuesto,
     liquidar_ingreso_neto_colombia,
 )
 
@@ -174,47 +177,168 @@ def test_contrato_integracion_oed_y_comparador():
     assert [c["modalidad_laboral"] for c in comp] == ["Empleado", "Integral", "Independiente"]
 
 
+def test_persistencia_cambio_salario_y_modalidad():
+    """
+    Verifica que al cambiar el salario y la modalidad (Empleado -> Independiente -> Integral)
+    la información se guarde y recupere íntegramente desde disco (perfil activo e historial).
+    """
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        ruta_act = Path(tmpdir) / "perfil_activo.json"
+        ruta_hist = Path(tmpdir) / "historial.json"
+
+        # 1. Guardar cambio inicial como Empleado ($7.200.000)
+        g1 = guardar_simulacion_presupuesto(
+            datos_entrada={
+                "modalidad_laboral": "Empleado",
+                "ingreso_bruto_mensual_cop": 7_200_000.0,
+                "gastos_fijos_vitales_cop": 2_800_000.0,
+                "gastos_variables_estilo_vida_cop": 900_000.0,
+                "gastos_hormiga_mensual_cop": 250_000.0,
+            },
+            nombre_escenario="Cambio Sueldo Empleado",
+            guardar_en_historial=True,
+            ruta_activo=ruta_act,
+            ruta_historial=ruta_hist,
+        )
+        assert g1["guardado_exitoso"] is True
+        assert len(g1["historial"]) == 1
+
+        # 2. Cambiar modalidad a Independiente OPS ($9.500.000, ARL Clase II) y guardar
+        g2 = guardar_simulacion_presupuesto(
+            datos_entrada={
+                "modalidad_laboral": "Independiente",
+                "clase_riesgo_arl": 2,
+                "ingreso_bruto_mensual_cop": 9_500_000.0,
+                "gastos_fijos_vitales_cop": 3_000_000.0,
+                "gastos_variables_estilo_vida_cop": 1_000_000.0,
+                "gastos_hormiga_mensual_cop": 200_000.0,
+            },
+            nombre_escenario="Oferta OPS Independiente",
+            guardar_en_historial=True,
+            ruta_activo=ruta_act,
+            ruta_historial=ruta_hist,
+        )
+        assert g2["perfil_activo"]["parametros_entrada"]["modalidad_laboral"] == "Independiente"
+        assert g2["perfil_activo"]["parametros_entrada"]["ingreso_bruto_mensual_cop"] == 9_500_000.0
+        assert len(g2["historial"]) == 2
+
+        # 3. Recuperar desde disco simulando reinicio de la aplicación
+        recuperado = cargar_simulacion_presupuesto(ruta_activo=ruta_act, ruta_historial=ruta_hist)
+        assert recuperado["existe_perfil_guardado"] is True
+        assert recuperado["perfil_activo"]["parametros_entrada"]["ingreso_bruto_mensual_cop"] == 9_500_000.0
+        assert recuperado["perfil_activo"]["parametros_entrada"]["clase_riesgo_arl"] == 2
+        assert len(recuperado["historial"]) == 2
+
+        # 4. Eliminar el primer registro del historial
+        id_borrar = g1["item_historial_creado"]["id_registro"]
+        restante = eliminar_simulacion_historial(id_borrar, ruta_historial=ruta_hist)
+        assert len(restante) == 1
+        assert restante[0]["nombre_escenario"] == "Oferta OPS Independiente"
+
+
 def test_interfaz_grafica_local_endpoints():
     import json
+    import tempfile
     import threading
     import urllib.request
     from http.server import ThreadingHTTPServer
+    from pathlib import Path
 
     from app_mod1_local import Mod1RequestHandler
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Mod1RequestHandler)
-    port = server.server_address[1]
-    hilo = threading.Thread(target=server.serve_forever, daemon=True)
-    hilo.start()
-    try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/") as resp_html:
-            html = resp_html.read().decode("utf-8")
-            assert resp_html.status == 200
-            assert "Radiografía del Sueldo" in html
+    with tempfile.TemporaryDirectory() as tmpdir:
 
-        req = urllib.request.Request(
-            f"http://127.0.0.1:{port}/api/diagnostico",
-            data=json.dumps(
-                {
-                    "modalidad_laboral": "Empleado",
-                    "ingreso_bruto_mensual_cop": 6_500_000.0,
-                    "gastos_fijos_vitales_cop": 2_800_000.0,
-                    "gastos_variables_estilo_vida_cop": 950_000.0,
-                    "gastos_hormiga_mensual_cop": 320_000.0,
-                    "liquidez_actual_fondo_emergencia_cop": 6_000_000.0,
-                }
-            ).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req) as resp_api:
-            data = json.loads(resp_api.read().decode("utf-8"))
-            assert data["diagnostico"]["ingreso_neto_mensual_cop"] == 5_915_000.0
-            assert data["contrato_oed"]["excedente_mensual_cop"] == 1_845_000.0
-            assert len(data["comparativa_modalidades"]) == 3
-    finally:
-        server.shutdown()
-        server.server_close()
+        class TestHandler(Mod1RequestHandler):
+            ruta_activo = Path(tmpdir) / "ui_activo.json"
+            ruta_historial = Path(tmpdir) / "ui_historial.json"
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), TestHandler)
+        port = server.server_address[1]
+        hilo = threading.Thread(target=server.serve_forever, daemon=True)
+        hilo.start()
+        try:
+            # 1. Verificar UI HTML y presencia del símbolo de ahorro de fondo
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/") as resp_html:
+                html = resp_html.read().decode("utf-8")
+                assert resp_html.status == 200
+                assert "Radiografía del Sueldo" in html
+                assert "watermark-ahorro" in html
+                assert "background-image: url(\"data:image/svg+xml" in html
+
+            # 2. Probar guardado al cambiar salario y modalidad vía POST /api/guardar
+            req_save = urllib.request.Request(
+                f"http://127.0.0.1:{port}/api/guardar",
+                data=json.dumps(
+                    {
+                        "nombre_escenario": "Prueba Salario Integral",
+                        "guardar_en_historial": True,
+                        "parametros": {
+                            "modalidad_laboral": "Integral",
+                            "ingreso_bruto_mensual_cop": 20_000_000.0,
+                            "aporte_voluntario_afc_fpv_cop": 1_500_000.0,
+                            "gastos_fijos_vitales_cop": 5_500_000.0,
+                            "gastos_variables_estilo_vida_cop": 2_000_000.0,
+                            "gastos_hormiga_mensual_cop": 300_000.0,
+                            "liquidez_actual_fondo_emergencia_cop": 20_000_000.0,
+                        },
+                    }
+                ).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req_save) as resp_save:
+                saved = json.loads(resp_save.read().decode("utf-8"))
+                assert saved["guardado_exitoso"] is True
+                assert saved["perfil_activo"]["parametros_entrada"]["modalidad_laboral"] == "Integral"
+                assert saved["perfil_activo"]["parametros_entrada"]["ingreso_bruto_mensual_cop"] == 20_000_000.0
+                id_creado = saved["item_historial_creado"]["id_registro"]
+
+            # 3. Verificar restauración vía GET /api/estado_guardado
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/estado_guardado") as resp_est:
+                estado = json.loads(resp_est.read().decode("utf-8"))
+                assert estado["existe_perfil_guardado"] is True
+                assert estado["perfil_activo"]["parametros_entrada"]["ingreso_bruto_mensual_cop"] == 20_000_000.0
+                assert len(estado["historial"]) == 1
+
+            # 4. Probar eliminación de escenario guardado vía POST /api/eliminar_guardado
+            req_del = urllib.request.Request(
+                f"http://127.0.0.1:{port}/api/eliminar_guardado",
+                data=json.dumps({"id_registro": id_creado}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req_del) as resp_del:
+                borrado = json.loads(resp_del.read().decode("utf-8"))
+                assert borrado["eliminado"] is True
+                assert len(borrado["historial"]) == 0
+
+            # 5. Probar diagnóstico estándar vía POST /api/diagnostico
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{port}/api/diagnostico",
+                data=json.dumps(
+                    {
+                        "modalidad_laboral": "Empleado",
+                        "ingreso_bruto_mensual_cop": 6_500_000.0,
+                        "gastos_fijos_vitales_cop": 2_800_000.0,
+                        "gastos_variables_estilo_vida_cop": 950_000.0,
+                        "gastos_hormiga_mensual_cop": 320_000.0,
+                        "liquidez_actual_fondo_emergencia_cop": 6_000_000.0,
+                    }
+                ).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req) as resp_api:
+                data = json.loads(resp_api.read().decode("utf-8"))
+                assert data["diagnostico"]["ingreso_neto_mensual_cop"] == 5_915_000.0
+                assert data["contrato_oed"]["excedente_mensual_cop"] == 1_845_000.0
+                assert len(data["comparativa_modalidades"]) == 3
+        finally:
+            server.shutdown()
+            server.server_close()
 
 
 if __name__ == "__main__":
@@ -227,6 +351,7 @@ if __name__ == "__main__":
         test_gastos_hormiga_4x1000_y_costo_oportunidad,
         test_flujos_cu01_camino_feliz_fa01_y_fa02,
         test_contrato_integracion_oed_y_comparador,
+        test_persistencia_cambio_salario_y_modalidad,
         test_interfaz_grafica_local_endpoints,
     ]
     for fn in pruebas:
