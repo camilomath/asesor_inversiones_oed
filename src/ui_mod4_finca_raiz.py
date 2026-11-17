@@ -1,0 +1,977 @@
+"""
+MÓDULO DE INTERACCIÓN VISUAL (STREAMLIT + PLOTLY) — MÓDULO 4: FINCA RAÍZ COLOMBIANA.
+Responsable OED: Jesi (Administradora de Empresas - Magíster en Analítica).
+
+Diseñado con arquitectura dual:
+1. Ejecución autónoma en la rama `Jesi`:
+      py -m streamlit run src/ui_mod4_finca_raiz.py
+2. Integración directa en 1 línea dentro de `app.py` (Etapa 5 del Taller OED):
+      from src.ui_mod4_finca_raiz import render_modulo_4_finca_raiz
+      resultado_mod4 = render_modulo_4_finca_raiz(perfil_estado=estado_usuario)
+"""
+
+from __future__ import annotations
+
+import csv
+import io
+import sys
+from pathlib import Path
+from typing import Any, Dict, List
+
+# Permite ejecutar `streamlit run src/ui_mod4_finca_raiz.py` desde la raíz sin errores de importación
+if __package__ in (None, ""):
+    _PROJECT_ROOT = Path(__file__).resolve().parent.parent
+    if str(_PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(_PROJECT_ROOT))
+
+from src.finance import cargar_configuracion
+from src.mod4_finca_raiz import evaluar_inversion_finca_raiz
+
+
+# ==============================================================================
+# 1. ADAPTADORES PUROS DE ESTADO Y LENGUAJE CIUDADANO (TESTEABLES SIN UI)
+# ==============================================================================
+
+
+def extraer_valores_iniciales_desde_estado(
+    perfil_estado: Dict[str, Any] | None = None,
+    config: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """
+    Obtiene los valores por defecto para los controles interactivos del Módulo 4:
+    - Si vienen resultados previos de Nidia (Módulo 1) o Camilo (Módulo 2) en `perfil_estado`,
+      los conecta automáticamente.
+    - De lo contrario, usa el `perfil_semilla_taller` de `config/config.yaml` para trabajar sin bloqueos.
+    """
+    cfg = config or cargar_configuracion()
+    semilla = cfg.get("perfil_semilla_taller", {})
+    estado = perfil_estado or {}
+
+    ingreso_bruto_semilla = float(semilla.get("ingreso_bruto_mensual_cop", 6_500_000.0))
+    # Si Nidia (Módulo 1) ya calculó `ingreso_neto_mensual_cop`, lo tomamos; si no, estimamos ~91% neto
+    ingreso_titular_neto = float(
+        estado.get("ingreso_neto_mensual_cop", round(ingreso_bruto_semilla * 0.91, -3))
+    )
+    ingreso_pareja_neto = float(estado.get("ingreso_pareja_neto_cop", 3_500_000.0))
+
+    # Si Camilo (Módulo 2) ya proyectó capital o cuenta AFC previa, lo tomamos; si no, semilla $8M
+    ahorro_previo_afc = float(
+        estado.get(
+            "ahorro_previo_afc_cop",
+            estado.get("liquidez_actual_fondo_emergencia_cop", 8_000_000.0),
+        )
+    )
+
+    cesantias_y_primas_anuales = float(
+        estado.get("cesantias_y_primas_anuales_cop", round(ingreso_bruto_semilla * (2.0 / 1.18), -4))
+        if "cesantias_y_primas_anuales_cop" in estado
+        else 5_500_000.0
+    )
+
+    return {
+        "valor_inmueble_cop": float(estado.get("valor_inmueble_cop", 200_000_000.0)),
+        "ingreso_titular_neto_cop": ingreso_titular_neto,
+        "ingreso_pareja_neto_cop": ingreso_pareja_neto,
+        "ingreso_familiar_neto_cop": ingreso_titular_neto + ingreso_pareja_neto,
+        "porcentaje_cuota_inicial_pct": int(round(float(estado.get("porcentaje_cuota_inicial", 0.30)) * 100)),
+        "plazo_entrega_planos_meses": int(estado.get("plazo_entrega_planos_meses", 24)),
+        "plazo_credito_anios": int(estado.get("plazo_credito_anios", 15)),
+        "tasa_ea_pesos_pct": round(float(estado.get("tasa_ea_pesos", 0.115)) * 100.0, 2),
+        "tasa_ea_uvr_spread_pct": round(float(estado.get("tasa_ea_uvr_mas_spread", 0.065)) * 100.0, 2),
+        "costo_oportunidad_ea_pct": round(float(estado.get("costo_oportunidad_ea", 0.105)) * 100.0, 2),
+        "ahorro_previo_afc_cop": ahorro_previo_afc,
+        "cesantias_y_primas_anuales_cop": cesantias_y_primas_anuales,
+        "canon_arriendo_estimado_cop": float(estado.get("canon_arriendo_mensual_estimado_cop", 1_400_000.0)),
+        "modalidad_financiacion": str(estado.get("modalidad_financiacion", "HIPOTECARIO")).upper(),
+        "conectado_con_modulos_previos": "ingreso_neto_mensual_cop" in estado,
+    }
+
+
+def generar_resumen_ejecutivo_ciudadano(resultado: Dict[str, Any]) -> Dict[str, str]:
+    """
+    Traduce el dictamen técnico del Módulo 4 a un mensaje claro ('Para Dummies')
+    con nivel de semáforo ('success', 'warning', 'error') para mostrar en interfaz.
+    """
+    dictamen = resultado["dictamen_viabilidad_inmobiliaria"]
+    cuota_pesos = resultado["primera_cuota_credito_cop"]
+    tope_30 = resultado["tope_cuota_ley_546_30pct_cop"]
+
+    if dictamen == "VIABLE_COMPRA_EN_PESOS_OPTIMA":
+        return {
+            "nivel": "success",
+            "titulo": "Compra Viable y Rentable en Pesos (Cumple Ley 546 de 1999)",
+            "mensaje": (
+                f"La primera cuota en Pesos (${cuota_pesos:,.0f} COP) está dentro del tope legal del 30% "
+                f"de tus ingresos familiares (${tope_30:,.0f} COP) y el proyecto supera tu costo de oportunidad "
+                f"con una TIR del {resultado['tir_inmobiliaria_ea_pct']}% EA."
+            ),
+        }
+    if dictamen == "VIABLE_VIVIENDA_PROPIA_PERO_FIC_SUPERA_RENTA":
+        return {
+            "nivel": "info",
+            "titulo": "Viable para Vivienda Propia (Cumple Ley 546), pero Financieramente un FIC Rinde Más",
+            "mensaje": (
+                f"El banco sí puede aprobarte el crédito en Pesos (${cuota_pesos:,.0f} COP <= ${tope_30:,.0f} COP). "
+                "Como hogar propio es viable; sin embargo, si la compras solo como inversión para arrendar, "
+                "el Cap Rate neto es menor que invertir tu capital en un FIC Inmobiliario / CDT."
+            ),
+        }
+    if dictamen == "SOLO_CUMPLE_EN_UVR_CON_RIESGO_INFLACIONARIO":
+        return {
+            "nivel": "warning",
+            "titulo": "Precaución: Solo Cumple el 30% en UVR (No Alcanza en Cuota Fija en Pesos)",
+            "mensaje": (
+                f"En Pesos la cuota (${cuota_pesos:,.0f} COP) supera tu tope legal (${tope_30:,.0f} COP), "
+                f"mientras que en UVR (${resultado['primera_cuota_uvr_cop']:,.0f} COP) sí pasa raspando. "
+                "Cuidado: en UVR la cuota y el saldo en pesos suben con la inflación IPC."
+            ),
+        }
+    return {
+        "nivel": "error",
+        "titulo": "No Cumple la Regla del 30% de la Ley 546 de 1999 con las Condiciones Actuales",
+        "mensaje": (
+            f"La cuota mensual (${cuota_pesos:,.0f} COP) supera el máximo legal permitido para tu ingreso "
+            f"(${tope_30:,.0f} COP). Para lograr la aprobación necesitas sumar "
+            f"${resultado['deficit_ingreso_familiar_cop']:,.0f} COP de ingreso familiar mensual o aportar "
+            f"${resultado['cuota_inicial_extra_requerida_ley_546_cop']:,.0f} COP adicionales en la cuota inicial."
+        ),
+    }
+
+
+def _filas_a_csv_bytes(filas: List[Dict[str, Any]]) -> bytes:
+    """Convierte una lista de diccionarios en bytes CSV UTF-8 con BOM (compatible con Excel en Colombia)."""
+    if not filas:
+        return b""
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=list(filas[0].keys()))
+    writer.writeheader()
+    writer.writerows(filas)
+    return ("\ufeff" + buffer.getvalue()).encode("utf-8")
+
+
+# ==============================================================================
+# 2. CONSTRUCTORES DE GRÁFICAS INTERACTIVAS EN PLOTLY
+# ==============================================================================
+
+
+def construir_figuras_plotly_mod4(resultado: Dict[str, Any]) -> Dict[str, Any]:
+    """Construye las 3 figuras interactivas de Plotly del Módulo 4 a partir del resultado detallado."""
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+
+    plan = resultado["plan_cuota_inicial_detalle"]
+    amort = resultado["amortizacion_detalle"]
+
+    # --- Figura 1: Encargo Fiduciario Sobre Planos ---
+    cronograma = plan["cronograma_fiduciario_mensual"]
+    meses_fid = [r["mes"] for r in cronograma]
+    fig_planos = make_subplots(specs=[[{"secondary_y": True}]])
+    if cronograma:
+        fig_planos.add_trace(
+            go.Bar(
+                x=meses_fid,
+                y=[r["cuota_mensual_afc_cop"] for r in cronograma],
+                name="Cuota Mensual (Cuenta AFC)",
+                marker_color="#1f77b4",
+            ),
+            secondary_y=False,
+        )
+        fig_planos.add_trace(
+            go.Bar(
+                x=meses_fid,
+                y=[r["abono_extra_cesantias_primas_subsidio_cop"] for r in cronograma],
+                name="Cesantías, Primas y Subsidio",
+                marker_color="#2ca02c",
+            ),
+            secondary_y=False,
+        )
+        fig_planos.add_trace(
+            go.Scatter(
+                x=meses_fid,
+                y=[r["saldo_acumulado_encargo_cop"] for r in cronograma],
+                name="Saldo Acumulado en Fiducia",
+                mode="lines+markers",
+                line=dict(color="#ff7f0e", width=3),
+            ),
+            secondary_y=True,
+        )
+    fig_planos.update_layout(
+        barmode="stack",
+        title="Acumulación de la Cuota Inicial en Encargo Fiduciario + AFC",
+        xaxis_title="Mes de Entrega sobre Planos",
+        template="plotly_white",
+        height=400,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+    )
+    fig_planos.update_yaxes(title_text="Aporte del Mes (COP)", secondary_y=False)
+    fig_planos.update_yaxes(title_text="Saldo Acumulado (COP)", secondary_y=True)
+
+    # --- Figura 2: Comparativa Ley 546 (Cuotas y Saldos Pesos vs. UVR) ---
+    t_fija = amort["tabla_pesos_cuota_fija"]
+    t_const = amort["tabla_pesos_abono_constante"]
+    t_uvr = amort["tabla_uvr_ciclica"]
+    tope_ley_546 = resultado["tope_cuota_ley_546_30pct_cop"]
+
+    fig_amort = make_subplots(
+        rows=1,
+        cols=2,
+        subplot_titles=(
+            "Cuota Mensual (COP) vs. Tope 30% Ley 546",
+            "Saldo de la Deuda en Pesos (Efecto Inflación UVR)",
+        ),
+    )
+    fig_amort.add_trace(
+        go.Scatter(
+            x=[r["anio"] for r in t_fija],
+            y=[r["cuota_total_cop"] for r in t_fija],
+            name="Pesos Cuota Fija",
+            line=dict(color="#1f77b4", width=3),
+        ),
+        row=1,
+        col=1,
+    )
+    fig_amort.add_trace(
+        go.Scatter(
+            x=[r["anio"] for r in t_const],
+            y=[r["cuota_total_cop"] for r in t_const],
+            name="Abono Constante Capital",
+            line=dict(color="#2ca02c", width=2, dash="dot"),
+        ),
+        row=1,
+        col=1,
+    )
+    fig_amort.add_trace(
+        go.Scatter(
+            x=[r["anio"] for r in t_uvr],
+            y=[r["cuota_total_cop"] for r in t_uvr],
+            name="UVR Indexada al IPC",
+            line=dict(color="#d62728", width=3),
+        ),
+        row=1,
+        col=1,
+    )
+    fig_amort.add_hline(
+        y=tope_ley_546,
+        line_dash="dash",
+        line_color="#555555",
+        annotation_text=f"Tope 30% (${tope_ley_546:,.0f})",
+        row=1,
+        col=1,
+    )
+
+    fig_amort.add_trace(
+        go.Scatter(
+            x=[r["anio"] for r in t_fija],
+            y=[r["saldo_capital_cop"] for r in t_fija],
+            name="Saldo Pesos Fija",
+            line=dict(color="#1f77b4", width=3),
+            showlegend=False,
+        ),
+        row=1,
+        col=2,
+    )
+    fig_amort.add_trace(
+        go.Scatter(
+            x=[r["anio"] for r in t_const],
+            y=[r["saldo_capital_cop"] for r in t_const],
+            name="Saldo Abono Constante",
+            line=dict(color="#2ca02c", width=2, dash="dot"),
+            showlegend=False,
+        ),
+        row=1,
+        col=2,
+    )
+    fig_amort.add_trace(
+        go.Scatter(
+            x=[r["anio"] for r in t_uvr],
+            y=[r["saldo_capital_cop"] for r in t_uvr],
+            name="Saldo UVR en COP",
+            line=dict(color="#d62728", width=3),
+            showlegend=False,
+        ),
+        row=1,
+        col=2,
+    )
+    fig_amort.update_layout(
+        template="plotly_white",
+        height=430,
+        legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="left", x=0),
+    )
+    fig_amort.update_xaxes(title_text="Año del Crédito")
+    fig_amort.update_yaxes(title_text="Pesos Colombianos (COP)")
+
+    # --- Figura 3: Flujos del Inversionista y Comparativa Patrimonial a 10 años ---
+    comp = resultado["comparativa_estrategias_10a"]
+    flujos = resultado["flujos_anuales_inversionista_cop"]
+    estrategias = ["Comprar en Pesos", "Comprar en UVR", "Arrendar + FIC Inmobiliario"]
+    patrimonios = [
+        comp["comprar_pesos_patrimonio_10a_cop"],
+        comp["comprar_uvr_patrimonio_10a_cop"],
+        comp["arrendar_e_invertir_fic_patrimonio_10a_cop"],
+    ]
+
+    fig_renta = make_subplots(
+        rows=1,
+        cols=2,
+        subplot_titles=(
+            "Flujo de Caja Anual del Inversionista (Años 0 a 10)",
+            "Patrimonio Neto Consolidado al Año 10",
+        ),
+    )
+    fig_renta.add_trace(
+        go.Bar(
+            x=list(range(len(flujos))),
+            y=flujos,
+            marker_color=["#d62728" if f < 0 else "#2ca02c" for f in flujos],
+            name="Flujo Neto (COP)",
+        ),
+        row=1,
+        col=1,
+    )
+    fig_renta.add_trace(
+        go.Bar(
+            x=estrategias,
+            y=patrimonios,
+            marker_color=["#1f77b4", "#ff7f0e", "#9467bd"],
+            text=[f"${p / 1e6:,.1f}M" for p in patrimonios],
+            textposition="auto",
+            name="Patrimonio Año 10",
+        ),
+        row=1,
+        col=2,
+    )
+    fig_renta.update_layout(template="plotly_white", height=420, showlegend=False)
+    fig_renta.update_xaxes(title_text="Año", row=1, col=1)
+    fig_renta.update_yaxes(title_text="COP", row=1, col=1)
+    fig_renta.update_yaxes(title_text="Patrimonio Neto (COP)", row=1, col=2)
+
+    return {
+        "fig_planos": fig_planos,
+        "fig_amortizacion": fig_amort,
+        "fig_rentabilidad": fig_renta,
+    }
+
+
+# ==============================================================================
+# 3. COMPONENTE VISUAL DE STREAMLIT (AUTÓNOMO Y CONECTABLE A APP.PY)
+# ==============================================================================
+
+
+def render_modulo_4_finca_raiz(
+    perfil_estado: Dict[str, Any] | None = None,
+    config: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """
+    Renderiza la interfaz interactiva completa del Módulo 4 (Jesi) en Streamlit
+    y retorna el diccionario de resultados compatible con el Contrato de Integración OED.
+    """
+    import streamlit as st
+
+    cfg = config or cargar_configuracion()
+    macro = cfg["parametros_macro_colombia"]
+    estado_previo = perfil_estado if perfil_estado is not None else dict(st.session_state.get("perfil_usuario", {}))
+    defaults = extraer_valores_iniciales_desde_estado(estado_previo, cfg)
+
+    st.title("🏗️ Módulo 4: Compra Inteligente de Vivienda e Inversión en Finca Raíz")
+    st.caption(
+        "Responsable OED: **Jesi** | Marco Regulatorio Colombiano: **Ley 546 de 1999** (Tope 30% y UVR vs. Pesos), "
+        "**Art. 126-4 E.T.** (Cuentas AFC) y **Ley 820 de 2003** (Arrendamiento Urbano)."
+    )
+
+    if defaults["conectado_con_modulos_previos"]:
+        st.info("🔗 Datos de ingresos y ahorro conectados automáticamente desde los módulos previos del equipo OED.")
+    else:
+        st.info(
+            f"🌱 Modo Autónomo Activo: Usando valores iniciales del Usuario Semilla OED "
+            f"(SMMLV {macro['anio_vigencia']}: ${macro['smmlv_cop']:,.0f} COP | IPC DANE: {macro['ipc_anual_dane'] * 100:.1f}%)."
+        )
+
+    # --- Panel Interactivo de Entradas del Usuario ---
+    with st.expander("⚙️ 1. Ingresa los Datos de tu Hogar, del Apartamento y del Crédito", expanded=True):
+        col_hogar, col_inmueble, col_credito = st.columns(3)
+
+        with col_hogar:
+            st.subheader("👨‍👩‍👧 Ingresos y Ahorro")
+            ingreso_titular = st.number_input(
+                "Tu ingreso neto mensual (COP)",
+                min_value=0.0,
+                value=defaults["ingreso_titular_neto_cop"],
+                step=250_000.0,
+                format="%.0f",
+                help="Sueldo libre después de Salud, Pensión y Retefuente (entregado por el Módulo 1 de Nidia).",
+            )
+            ingreso_pareja = st.number_input(
+                "Ingreso neto mensual pareja / co-deudor (COP)",
+                min_value=0.0,
+                value=defaults["ingreso_pareja_neto_cop"],
+                step=250_000.0,
+                format="%.0f",
+                help="Pon 0 si compras de forma individual, o suma ingresos familiares para cumplir la Ley 546.",
+            )
+            ahorro_previo_afc = st.number_input(
+                "Ahorro previo disponible / Cuenta AFC (COP)",
+                min_value=0.0,
+                value=defaults["ahorro_previo_afc_cop"],
+                step=1_000_000.0,
+                format="%.0f",
+            )
+            cesantias_primas = st.number_input(
+                "Cesantías + Primas anuales para vivienda (COP)",
+                min_value=0.0,
+                value=defaults["cesantias_y_primas_anuales_cop"],
+                step=500_000.0,
+                format="%.0f",
+            )
+            aplicar_subsidio_ccf = st.checkbox(
+                "Aplicar Subsidio Caja de Compensación (si ingreso <= 4 SMMLV y es VIS/VIP)",
+                value=True,
+            )
+
+        with col_inmueble:
+            st.subheader("🏢 El Inmueble")
+            valor_inmueble = st.number_input(
+                "Valor comercial del inmueble (COP)",
+                min_value=50_000_000.0,
+                value=defaults["valor_inmueble_cop"],
+                step=5_000_000.0,
+                format="%.0f",
+            )
+            modalidad = st.selectbox(
+                "Modalidad de financiación",
+                options=["HIPOTECARIO", "LEASING"],
+                index=0 if defaults["modalidad_financiacion"] != "LEASING" else 1,
+                help="En Leasing Habitacional puedes financiar hasta 80%-85% y no desembolsas escrituración al inicio.",
+            )
+            pct_cuota_inicial = st.slider(
+                "Porcentaje de Cuota Inicial (%)",
+                min_value=15,
+                max_value=70,
+                value=defaults["porcentaje_cuota_inicial_pct"],
+                step=1,
+            )
+            plazo_planos_meses = st.slider(
+                "Plazo entrega sobre planos (meses en fiducia)",
+                min_value=1,
+                max_value=48,
+                value=defaults["plazo_entrega_planos_meses"],
+                step=1,
+            )
+
+        with col_credito:
+            st.subheader("🏦 Crédito y Renta")
+            plazo_anios = st.slider(
+                "Plazo del crédito (años)",
+                min_value=5,
+                max_value=30,
+                value=defaults["plazo_credito_anios"],
+                step=1,
+            )
+            tasa_ea_pesos_pct = st.number_input(
+                "Tasa crédito en Pesos (% EA)",
+                min_value=1.0,
+                max_value=26.0,
+                value=defaults["tasa_ea_pesos_pct"],
+                step=0.25,
+            )
+            tasa_uvr_spread_pct = st.number_input(
+                "Tasa real en UVR + Spread (% EA sin IPC)",
+                min_value=0.5,
+                max_value=18.0,
+                value=defaults["tasa_ea_uvr_spread_pct"],
+                step=0.25,
+            )
+            canon_estimado = st.number_input(
+                "Canon mensual de arriendo estimado (COP)",
+                min_value=200_000.0,
+                value=defaults["canon_arriendo_estimado_cop"],
+                step=100_000.0,
+                format="%.0f",
+                help="La Ley 820 de 2003 limita el canon mensual máximo al 1% del valor comercial.",
+            )
+            cok_ea_pct = st.number_input(
+                "Rentabilidad alternativa FIC / CDT (% EA)",
+                min_value=1.0,
+                max_value=25.0,
+                value=defaults["costo_oportunidad_ea_pct"],
+                step=0.25,
+            )
+
+    ingreso_familiar_total = ingreso_titular + ingreso_pareja
+
+    # --- Ejecución en Vivo del Motor Matemático de Jesi ---
+    resultado = evaluar_inversion_finca_raiz(
+        valor_inmueble_cop=valor_inmueble,
+        ingreso_familiar_neto_cop=max(1.0, ingreso_familiar_total),
+        porcentaje_cuota_inicial=pct_cuota_inicial / 100.0,
+        plazo_entrega_planos_meses=plazo_planos_meses,
+        cesantias_y_primas_anuales_cop=cesantias_primas,
+        plazo_credito_anios=plazo_anios,
+        tasa_ea_pesos=tasa_ea_pesos_pct / 100.0,
+        tasa_ea_uvr_mas_spread=tasa_uvr_spread_pct / 100.0,
+        canon_arriendo_mensual_estimado_cop=canon_estimado,
+        costo_oportunidad_ea=cok_ea_pct / 100.0,
+        ahorro_previo_afc_cop=ahorro_previo_afc,
+        aplicar_subsidio_ccf=aplicar_subsidio_ccf,
+        modalidad_financiacion=modalidad,
+        incluir_tablas_detalle=True,
+        config=cfg,
+    )
+
+    # --- Semáforo Ciudadano y KPIs Superiores ---
+    semaforo = generar_resumen_ejecutivo_ciudadano(resultado)
+    texto_banner = f"**{semaforo['titulo']}** — {semaforo['mensaje']}"
+    if semaforo["nivel"] == "success":
+        st.success(texto_banner)
+    elif semaforo["nivel"] == "info":
+        st.info(texto_banner)
+    elif semaforo["nivel"] == "warning":
+        st.warning(texto_banner)
+    else:
+        st.error(texto_banner)
+
+    for alerta in resultado["alertas_regulatorias"]:
+        st.warning(f"⚖️ {alerta}")
+
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric(
+        "Clasificación Inmueble",
+        resultado["codigo_segmento"],
+        f"{resultado['valor_inmueble_smmlv']} SMMLV",
+    )
+    k2.metric(
+        f"Cuota Inicial Mensual ({plazo_planos_meses}m)",
+        f"${resultado['cuota_inicial_mensual_cop']:,.0f}",
+        f"Total inicial: ${resultado['cuota_inicial_total_cop']:,.0f}",
+    )
+    diferencia_ley_546 = resultado["tope_cuota_ley_546_30pct_cop"] - resultado["primera_cuota_credito_cop"]
+    k3.metric(
+        "1ra Cuota Crédito en Pesos",
+        f"${resultado['primera_cuota_credito_cop']:,.0f}",
+        f"Margen Ley 546: ${diferencia_ley_546:,.0f}",
+    )
+    k4.metric(
+        "TIR Inmobiliaria (10 años)",
+        f"{resultado['tir_inmobiliaria_ea_pct']}% EA",
+        f"Cap Rate Neto: {resultado['cap_rate_neto_pct']}%",
+    )
+
+    figuras = construir_figuras_plotly_mod4(resultado)
+
+    # --- Pestañas Analíticas ---
+    tab1, tab2, tab3, tab4 = st.tabs(
+        [
+            "🏗️ 1. Cuota Inicial & AFC",
+            "⚖️ 2. Ley 546: Pesos vs. UVR",
+            "📈 3. Renta (Ley 820) vs. FIC",
+            "📋 4. Tablas & Integración OED",
+        ]
+    )
+
+    with tab1:
+        plan_det = resultado["plan_cuota_inicial_detalle"]
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Subsidio CCF Aplicado", f"${plan_det['subsidio_ccf_aplicado_cop']:,.0f} COP")
+        c2.metric("Ahorro Tributario AFC Estimado", f"${plan_det['ahorro_tributario_afc_total_cop']:,.0f} COP")
+        c3.metric("Rendimientos Fiducia", f"${plan_det['rendimientos_encargo_fiduciario_cop']:,.0f} COP")
+        st.plotly_chart(figuras["fig_planos"], use_container_width=True)
+
+    with tab2:
+        amort_det = resultado["amortizacion_detalle"]
+        st.plotly_chart(figuras["fig_amortizacion"], use_container_width=True)
+        sens = amort_det["sensibilidad_cuota_uvr_anio_5"]
+        s1, s2, s3 = st.columns(3)
+        s1.metric("Cuota UVR Año 5 (IPC Bajo 3.5%)", f"${sens['ipc_bajo_3_5pct_cop']:,.0f} COP")
+        s2.metric("Cuota UVR Año 5 (IPC Base DANE)", f"${sens['ipc_base_dane_cop']:,.0f} COP")
+        s3.metric("Cuota UVR Año 5 (Choque IPC 8.5%)", f"${sens['ipc_alto_choque_8_5pct_cop']:,.0f} COP")
+
+    with tab3:
+        r1, r2, r3 = st.columns(3)
+        r1.metric("Canon Aplicado (Ley 820 <= 1%)", f"${resultado['canon_mensual_aplicado_cop']:,.0f} COP/mes")
+        r2.metric("Cash-on-Cash Año 1", f"{resultado['cash_on_cash_anual_pct']}%")
+        r3.metric("VPN Inmobiliario (10 años)", f"${resultado['vpn_inmobiliario_cop']:,.0f} COP")
+        st.plotly_chart(figuras["fig_rentabilidad"], use_container_width=True)
+
+    with tab4:
+        amort_det = resultado["amortizacion_detalle"]
+        sistema_elegido = st.selectbox(
+            "Selecciona la tabla mensual a consultar o descargar en Excel/CSV:",
+            options=[
+                "Crédito en Pesos — Cuota Fija (Francés)",
+                "Crédito en Pesos — Abono Constante a Capital",
+                "Crédito en UVR — Cuota Cíclica Indexada a IPC",
+                "Plan de Encargo Fiduciario — Cuota Inicial Sobre Planos",
+            ],
+        )
+        mapa_tablas = {
+            "Crédito en Pesos — Cuota Fija (Francés)": amort_det["tabla_pesos_cuota_fija"],
+            "Crédito en Pesos — Abono Constante a Capital": amort_det["tabla_pesos_abono_constante"],
+            "Crédito en UVR — Cuota Cíclica Indexada a IPC": amort_det["tabla_uvr_ciclica"],
+            "Plan de Encargo Fiduciario — Cuota Inicial Sobre Planos": resultado["plan_cuota_inicial_detalle"][
+                "cronograma_fiduciario_mensual"
+            ],
+        }
+        filas_mostrar = mapa_tablas[sistema_elegido]
+        st.dataframe(filas_mostrar[:36], use_container_width=True)
+        st.download_button(
+            label="📥 Descargar tabla completa en CSV (compatible con Excel)",
+            data=_filas_a_csv_bytes(filas_mostrar),
+            file_name="tabla_modulo4_finca_raiz_jesi.csv",
+            mime="text/csv",
+        )
+        with st.expander("🔌 Ver Contrato de Datos entregado al Módulo 5 (Nelson)"):
+            resumen_contrato = {
+                k: v
+                for k, v in resultado.items()
+                if k not in ("plan_cuota_inicial_detalle", "amortizacion_detalle")
+            }
+            st.json(resumen_contrato)
+
+    # Guardar en sesión de Streamlit para que el Módulo 5 de Nelson pueda leerlo en Etapa 5
+    st.session_state["resultado_mod4_finca_raiz"] = resultado
+    return resultado
+
+
+def _corriendo_dentro_de_streamlit() -> bool:
+    """Detecta si el archivo fue invocado mediante `streamlit run`."""
+    if "streamlit" not in sys.modules:
+        return False
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx  # type: ignore
+
+        return get_script_run_ctx() is not None
+    except Exception:
+        return False
+
+
+def procesar_simulacion_api_local(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Ejecuta el motor de Jesi desde el servidor web local sin requerir librerías externas."""
+    cfg = cargar_configuracion()
+    ingreso_titular = float(payload.get("ingreso_titular_cop", 5_915_000.0))
+    ingreso_pareja = float(payload.get("ingreso_pareja_cop", 3_500_000.0))
+    resultado = evaluar_inversion_finca_raiz(
+        valor_inmueble_cop=float(payload.get("valor_inmueble_cop", 200_000_000.0)),
+        ingreso_familiar_neto_cop=max(1.0, ingreso_titular + ingreso_pareja),
+        porcentaje_cuota_inicial=float(payload.get("porcentaje_cuota_inicial_pct", 30.0)) / 100.0,
+        plazo_entrega_planos_meses=int(payload.get("plazo_planos_meses", 24)),
+        cesantias_y_primas_anuales_cop=float(payload.get("cesantias_primas_cop", 5_500_000.0)),
+        plazo_credito_anios=int(payload.get("plazo_credito_anios", 15)),
+        tasa_ea_pesos=float(payload.get("tasa_ea_pesos_pct", 11.5)) / 100.0,
+        tasa_ea_uvr_mas_spread=float(payload.get("tasa_uvr_spread_pct", 6.5)) / 100.0,
+        canon_arriendo_mensual_estimado_cop=float(payload.get("canon_estimado_cop", 1_400_000.0)),
+        costo_oportunidad_ea=float(payload.get("cok_ea_pct", 10.5)) / 100.0,
+        ahorro_previo_afc_cop=float(payload.get("ahorro_previo_afc_cop", 8_000_000.0)),
+        aplicar_subsidio_ccf=bool(payload.get("aplicar_subsidio_ccf", True)),
+        modalidad_financiacion=str(payload.get("modalidad_financiacion", "HIPOTECARIO")),
+        incluir_tablas_detalle=True,
+        config=cfg,
+    )
+    return {
+        "resultado": resultado,
+        "semaforo": generar_resumen_ejecutivo_ciudadano(resultado),
+    }
+
+
+_HTML_DASHBOARD_LOCAL = """<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Módulo 4: Finca Raíz OED — Jesi</title>
+<style>
+  :root { --bg:#f4f7fb; --card:#ffffff; --ink:#17253a; --muted:#5c6b82; --blue:#1d4ed8; --green:#15803d; --amber:#b45309; --red:#b91c1c; --border:#dde4ee; }
+  * { box-sizing:border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+  body { margin:0; background:var(--bg); color:var(--ink); padding:20px; }
+  .wrap { max-width:1260px; margin:0 auto; }
+  header { background:linear-gradient(135deg,#0f294a,#1d4ed8); color:#fff; padding:20px 24px; border-radius:14px; margin-bottom:16px; }
+  header h1 { margin:0 0 6px 0; font-size:22px; }
+  header p { margin:0; opacity:0.9; font-size:13.5px; }
+  .grid3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:14px; margin-bottom:16px; }
+  .grid4 { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:16px; }
+  .grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(420px,1fr)); gap:14px; margin-bottom:16px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:0 2px 6px rgba(15,41,74,0.04); }
+  .card h3 { margin:0 0 12px 0; font-size:15px; color:#0f294a; border-bottom:1px solid var(--border); padding-bottom:6px; }
+  label { display:block; font-size:12.5px; color:var(--muted); margin:8px 0 3px; font-weight:600; }
+  input, select { width:100%; padding:7px 9px; border:1px solid #cbd5e1; border-radius:7px; font-size:13.5px; }
+  .chk { display:flex; align-items:center; gap:8px; margin-top:12px; font-size:12.5px; }
+  .chk input { width:auto; }
+  .btn { background:var(--blue); color:#fff; border:none; padding:10px 16px; border-radius:8px; font-weight:600; cursor:pointer; font-size:13.5px; }
+  .btn-sec { background:#0f766e; }
+  .banner { padding:14px 16px; border-radius:10px; margin-bottom:12px; font-size:14px; border-left:5px solid; }
+  .b-success { background:#dcfce7; color:#14532d; border-color:var(--green); }
+  .b-info { background:#dbeafe; color:#1e3a8a; border-color:var(--blue); }
+  .b-warning { background:#fef3c7; color:#78350f; border-color:var(--amber); }
+  .b-error { background:#fee2e2; color:#7f1d1d; border-color:var(--red); }
+  .kpi-title { font-size:12px; color:var(--muted); font-weight:600; }
+  .kpi-val { font-size:21px; font-weight:700; margin:4px 0; color:#0f294a; }
+  .kpi-sub { font-size:12px; color:var(--blue); }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th, td { padding:7px 8px; border-bottom:1px solid var(--border); text-align:right; }
+  th:first-child, td:first-child { text-align:left; }
+  th { background:#f8fafc; color:#334155; }
+  svg { width:100%; height:250px; background:#fff; border-radius:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🏗️ Módulo 4: Compra Inteligente de Vivienda e Inversión en Finca Raíz</h1>
+    <p>Responsable OED: <b>Jesi</b> | Simulador Local Activo (100% Offline) — Ley 546 de 1999, Cuentas AFC (Art. 126-4 E.T.) y Ley 820 de 2003</p>
+  </header>
+
+  <div class="grid3">
+    <div class="card">
+      <h3>👨‍👩‍👧 1. Hogar y Ahorros</h3>
+      <label>Tu ingreso neto mensual (COP)</label>
+      <input type="number" id="ingreso_titular_cop" value="5915000" step="250000">
+      <label>Ingreso neto pareja / co-deudor (COP)</label>
+      <input type="number" id="ingreso_pareja_cop" value="3500000" step="250000">
+      <label>Ahorro previo / Cuenta AFC (COP)</label>
+      <input type="number" id="ahorro_previo_afc_cop" value="8000000" step="1000000">
+      <label>Cesantías + Primas anuales (COP)</label>
+      <input type="number" id="cesantias_primas_cop" value="5500000" step="500000">
+      <label class="chk"><input type="checkbox" id="aplicar_subsidio_ccf" checked> Aplicar Subsidio Caja Compensación (si <= 4 SMMLV y VIS)</label>
+    </div>
+
+    <div class="card">
+      <h3>🏢 2. El Inmueble y Cuota Inicial</h3>
+      <label>Valor comercial del inmueble (COP)</label>
+      <input type="number" id="valor_inmueble_cop" value="200000000" step="5000000">
+      <label>Modalidad de financiación</label>
+      <select id="modalidad_financiacion">
+        <option value="HIPOTECARIO">Crédito Hipotecario Tradicional</option>
+        <option value="LEASING">Leasing Habitacional</option>
+      </select>
+      <label>Porcentaje de Cuota Inicial (%): <span id="lbl_ci">30%</span></label>
+      <input type="range" id="porcentaje_cuota_inicial_pct" min="15" max="70" value="30" oninput="document.getElementById('lbl_ci').innerText=this.value+'%'; simular();">
+      <label>Plazo sobre planos en fiducia (meses): <span id="lbl_pl">24</span></label>
+      <input type="range" id="plazo_planos_meses" min="1" max="48" value="24" oninput="document.getElementById('lbl_pl').innerText=this.value; simular();">
+    </div>
+
+    <div class="card">
+      <h3>🏦 3. Crédito y Renta (Ley 820)</h3>
+      <label>Plazo del crédito (años): <span id="lbl_an">15</span></label>
+      <input type="range" id="plazo_credito_anios" min="5" max="30" value="15" oninput="document.getElementById('lbl_an').innerText=this.value; simular();">
+      <label>Tasa Crédito en Pesos (% EA)</label>
+      <input type="number" id="tasa_ea_pesos_pct" value="11.5" step="0.25">
+      <label>Tasa Real UVR + Spread (% EA sin IPC)</label>
+      <input type="number" id="tasa_uvr_spread_pct" value="6.5" step="0.25">
+      <label>Canon mensual arriendo estimado (COP)</label>
+      <input type="number" id="canon_estimado_cop" value="1400000" step="100000">
+      <label>Rentabilidad alternativa FIC / CDT (% EA)</label>
+      <input type="number" id="cok_ea_pct" value="10.5" step="0.25">
+    </div>
+  </div>
+
+  <div style="margin-bottom:14px; display:flex; gap:10px;">
+    <button class="btn" onclick="simular()">🔄 Recalcular Simulación</button>
+    <button class="btn btn-sec" onclick="descargarCSV()">📥 Descargar Tabla Amortización Pesos (CSV Excel)</button>
+  </div>
+
+  <div id="semaforo_box"></div>
+  <div id="alertas_box"></div>
+
+  <div class="grid4">
+    <div class="card"><div class="kpi-title">Clasificación Regulatoria</div><div class="kpi-val" id="k_seg">-</div><div class="kpi-sub" id="k_smmlv">-</div></div>
+    <div class="card"><div class="kpi-title">Cuota Inicial Mensual (Planos)</div><div class="kpi-val" id="k_cim">-</div><div class="kpi-sub" id="k_cit">-</div></div>
+    <div class="card"><div class="kpi-title">1ra Cuota en Pesos vs. Ley 546</div><div class="kpi-val" id="k_cuota">-</div><div class="kpi-sub" id="k_tope">-</div></div>
+    <div class="card"><div class="kpi-title">TIR Inmobiliaria (10 años)</div><div class="kpi-val" id="k_tir">-</div><div class="kpi-sub" id="k_cap">-</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>⚖️ Evolución de Cuota Mensual: Pesos Fija vs. Abono Capital vs. UVR</h3>
+      <svg id="svg_cuotas" viewBox="0 0 540 240"></svg>
+      <div style="font-size:12px; color:#475569; margin-top:6px;">
+        🔵 Pesos Cuota Fija &nbsp;|&nbsp; 🟢 Abono Constante Capital &nbsp;|&nbsp; 🔴 UVR Indexada IPC &nbsp;|&nbsp; ⚫ Línea Punteada: Tope 30% Ley 546
+      </div>
+    </div>
+    <div class="card">
+      <h3>📈 Patrimonio Neto al Año 10: Comprar vs. Arrendar + Invertir en FIC</h3>
+      <svg id="svg_patrimonio" viewBox="0 0 540 240"></svg>
+      <div id="resumen_renta" style="font-size:12px; color:#475569; margin-top:6px;"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📋 Comparativa de los 3 Sistemas de Amortización Vigilados por la SFC</h3>
+    <table id="tabla_sistemas"></table>
+  </div>
+</div>
+
+<script>
+let ultimoResultado = null;
+const cop = n => '$' + Math.round(n).toLocaleString('es-CO');
+
+function dibujarLineas(svgId, series, topeY) {
+  const svg = document.getElementById(svgId);
+  const W = 540, H = 240, padL = 72, padR = 18, padT = 18, padB = 30;
+  let maxY = topeY || 1;
+  series.forEach(s => s.datos.forEach(v => { if (v > maxY) maxY = v; }));
+  maxY *= 1.1;
+  const n = series[0].datos.length;
+  const x = i => padL + (i / Math.max(1, n - 1)) * (W - padL - padR);
+  const y = v => padT + (1 - v / maxY) * (H - padT - padB);
+  let html = `<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="#cbd5e1"/>`;
+  for (let g = 0; g <= 4; g++) {
+    const val = (maxY * g) / 4;
+    const yy = y(val);
+    html += `<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" stroke="#f1f5f9"/>`;
+    html += `<text x="${padL-6}" y="${yy+4}" font-size="10" fill="#64748b" text-anchor="end">$${(val/1e6).toFixed(1)}M</text>`;
+  }
+  if (topeY) {
+    const yt = y(topeY);
+    html += `<line x1="${padL}" y1="${yt}" x2="${W-padR}" y2="${yt}" stroke="#334155" stroke-dasharray="5,4" stroke-width="1.5"/>`;
+  }
+  series.forEach(s => {
+    const pts = s.datos.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    html += `<polyline fill="none" stroke="${s.color}" stroke-width="2.5" points="${pts}"/>`;
+  });
+  svg.innerHTML = html;
+}
+
+function dibujarBarras(svgId, etiquetas, valores, colores) {
+  const svg = document.getElementById(svgId);
+  const W = 540, H = 240, padL = 70, padR = 20, padT = 26, padB = 38;
+  const maxY = Math.max(...valores, 1) * 1.15;
+  const bw = 95, gap = (W - padL - padR - bw * valores.length) / (valores.length + 1);
+  let html = `<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="#cbd5e1"/>`;
+  valores.forEach((v, i) => {
+    const bx = padL + gap * (i + 1) + bw * i;
+    const bh = ((v / maxY) * (H - padT - padB));
+    const by = H - padB - bh;
+    html += `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="6" fill="${colores[i]}"/>`;
+    html += `<text x="${bx + bw/2}" y="${by - 6}" font-size="11" font-weight="700" fill="#0f294a" text-anchor="middle">$${(v/1e6).toFixed(1)}M</text>`;
+    html += `<text x="${bx + bw/2}" y="${H - 14}" font-size="11" fill="#334155" text-anchor="middle">${etiquetas[i]}</text>`;
+  });
+  svg.innerHTML = html;
+}
+
+async function simular() {
+  const ids = ['ingreso_titular_cop','ingreso_pareja_cop','ahorro_previo_afc_cop','cesantias_primas_cop',
+    'valor_inmueble_cop','modalidad_financiacion','porcentaje_cuota_inicial_pct','plazo_planos_meses',
+    'plazo_credito_anios','tasa_ea_pesos_pct','tasa_uvr_spread_pct','canon_estimado_cop','cok_ea_pct'];
+  const payload = {};
+  ids.forEach(id => payload[id] = document.getElementById(id).value);
+  payload.aplicar_subsidio_ccf = document.getElementById('aplicar_subsidio_ccf').checked;
+
+  const resp = await fetch('/api/evaluar', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+  const data = await resp.json();
+  const r = data.resultado, sem = data.semaforo;
+  ultimoResultado = r;
+
+  document.getElementById('semaforo_box').innerHTML = `<div class="banner b-${sem.nivel}"><b>${sem.titulo}</b><br>${sem.mensaje}</div>`;
+  document.getElementById('alertas_box').innerHTML = r.alertas_regulatorias.map(a => `<div class="banner b-warning">⚖️ ${a}</div>`).join('');
+
+  document.getElementById('k_seg').innerText = r.codigo_segmento;
+  document.getElementById('k_smmlv').innerText = `${r.valor_inmueble_smmlv} SMMLV`;
+  document.getElementById('k_cim').innerText = cop(r.cuota_inicial_mensual_cop);
+  document.getElementById('k_cit').innerText = `Inicial total: ${cop(r.cuota_inicial_total_cop)}`;
+  document.getElementById('k_cuota').innerText = cop(r.primera_cuota_credito_cop);
+  document.getElementById('k_tope').innerText = `Tope 30% Ley 546: ${cop(r.tope_cuota_ley_546_30pct_cop)}`;
+  document.getElementById('k_tir').innerText = `${r.tir_inmobiliaria_ea_pct}% EA`;
+  document.getElementById('k_cap').innerText = `Cap Rate Neto: ${r.cap_rate_neto_pct}% | VPN: ${cop(r.vpn_inmobiliario_cop)}`;
+
+  const am = r.amortizacion_detalle;
+  dibujarLineas('svg_cuotas', [
+    {color:'#1d4ed8', datos: am.tabla_pesos_cuota_fija.map(x => x.cuota_total_cop)},
+    {color:'#15803d', datos: am.tabla_pesos_abono_constante.map(x => x.cuota_total_cop)},
+    {color:'#dc2626', datos: am.tabla_uvr_ciclica.map(x => x.cuota_total_cop)}
+  ], r.tope_cuota_ley_546_30pct_cop);
+
+  const c = r.comparativa_estrategias_10a;
+  dibujarBarras('svg_patrimonio',
+    ['Comprar Pesos', 'Comprar UVR', 'Arrendar + FIC'],
+    [c.comprar_pesos_patrimonio_10a_cop, c.comprar_uvr_patrimonio_10a_cop, c.arrendar_e_invertir_fic_patrimonio_10a_cop],
+    ['#1d4ed8', '#ea580c', '#7c3aed']
+  );
+  document.getElementById('resumen_renta').innerText =
+    `Canon aplicado (Ley 820 <= 1%): ${cop(r.canon_mensual_aplicado_cop)}/mes | Beneficio AFC est.: ${cop(r.ahorro_tributario_afc_total_cop)}`;
+
+  document.getElementById('tabla_sistemas').innerHTML = `
+    <tr><th>Sistema SFC (Ley 546/1999)</th><th>1ra Cuota</th><th>¿Cumple 30%?</th><th>Total Intereses</th><th>Total Pagado</th></tr>
+    <tr><td>1. Pesos — Cuota Fija</td><td>${cop(am.primera_cuota_pesos_fija_cop)}</td><td>${r.cumple_ley_546_30pct?'✅ Sí':'❌ No'}</td><td>${cop(am.total_intereses_pesos_fija_cop)}</td><td>${cop(am.total_pagado_pesos_fija_cop)}</td></tr>
+    <tr><td>2. Pesos — Abono Constante Capital</td><td>${cop(am.primera_cuota_abono_constante_cop)}</td><td>${am.primera_cuota_abono_constante_cop<=r.tope_cuota_ley_546_30pct_cop?'✅ Sí':'❌ No'}</td><td>${cop(am.total_intereses_abono_constante_cop)}</td><td>${cop(am.total_pagado_abono_constante_cop)}</td></tr>
+    <tr><td>3. UVR — Indexado a Inflación IPC</td><td>${cop(am.primera_cuota_uvr_cop)}</td><td>${r.cumple_ley_546_en_uvr?'✅ Sí':'❌ No'}</td><td>${cop(am.total_intereses_uvr_cop)}</td><td>${cop(am.total_pagado_uvr_cop)}</td></tr>
+  `;
+}
+
+function descargarCSV() {
+  if (!ultimoResultado) return;
+  const filas = ultimoResultado.amortizacion_detalle.tabla_pesos_cuota_fija;
+  const cols = Object.keys(filas[0]);
+  const csv = '\\uFEFF' + [cols.join(','), ...filas.map(f => cols.map(k => f[k]).join(','))].join('\\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
+  a.download = 'amortizacion_modulo4_jesi.csv';
+  a.click();
+}
+
+document.querySelectorAll('input, select').forEach(el => el.addEventListener('change', simular));
+simular();
+</script>
+</body>
+</html>
+"""
+
+
+def iniciar_servidor_web_local_autonomo(puerto: int = 8504, abrir_navegador: bool = True) -> None:
+    """
+    Levanta una calculadora web interactiva en `http://127.0.0.1:8504` usando únicamente la
+    librería estándar de Python, ideal cuando la red corporativa demora la instalación de Streamlit.
+    """
+    import json
+    import webbrowser
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    class Mod4Handler(BaseHTTPRequestHandler):
+        def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+            return
+
+        def do_GET(self) -> None:  # noqa: N802
+            cuerpo = _HTML_DASHBOARD_LOCAL.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(cuerpo)))
+            self.end_headers()
+            self.wfile.write(cuerpo)
+
+        def do_POST(self) -> None:  # noqa: N802
+            longitud = int(self.headers.get("Content-Length", "0"))
+            raw = self.rfile.read(longitud).decode("utf-8") if longitud > 0 else "{}"
+            respuesta = json.dumps(procesar_simulacion_api_local(json.loads(raw))).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(respuesta)))
+            self.end_headers()
+            self.wfile.write(respuesta)
+
+    url = f"http://127.0.0.1:{puerto}"
+    servidor = HTTPServer(("127.0.0.1", puerto), Mod4Handler)
+    print("=" * 72)
+    print(f"DASHBOARD WEB MÓDULO 4 (JESI) ACTIVO EN: {url}")
+    print("Presiona Ctrl + C en esta terminal cuando quieras detenerlo.")
+    print("=" * 72)
+    if abrir_navegador:
+        webbrowser.open(url)
+    try:
+        servidor.serve_forever()
+    except KeyboardInterrupt:
+        print("\nServidor detenido correctamente.")
+    finally:
+        servidor.server_close()
+
+
+if __name__ == "__main__":
+    if _corriendo_dentro_de_streamlit():
+        import streamlit as st
+
+        st.set_page_config(
+            page_title="Módulo 4: Finca Raíz OED — Jesi",
+            page_icon="🏗️",
+            layout="wide",
+        )
+        render_modulo_4_finca_raiz()
+    else:
+        iniciar_servidor_web_local_autonomo()
+
+
