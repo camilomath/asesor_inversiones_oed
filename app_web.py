@@ -39,6 +39,8 @@ from src.mod6_educacion_financiera import (
     simular_trayectoria_mensual_azar_vs_inversion,
     detectar_esquema_piramidal_ponzi,
     obtener_trivias_cultura_financiera,
+    simular_portafolio_realista_segun_perfil,
+    CATALOGO_ACTIVOS_COLOMBIA,
 )
 
 app = FastAPI(title="Asesor Financiero OED", description="Plataforma Local de Asesoría Financiera Colombiana")
@@ -46,6 +48,14 @@ app = FastAPI(title="Asesor Financiero OED", description="Plataforma Local de As
 
 class SuitabilityRequest(BaseModel):
     respuestas: Dict[str, int]
+
+
+class PortafolioRequest(BaseModel):
+    perfil_riesgo: str = "Moderado"
+    capacidad_inversion_mensual_cop: float = 1_000_000.0
+    capital_inicial_cop: float = 2_000_000.0
+    horizonte_anios: int = 10
+    gasto_recreativo_azar_cop: float = 50_000.0
 
 
 class AzarRequest(BaseModel):
@@ -78,6 +88,22 @@ def api_cuestionario():
 @app.post("/api/evaluar-suitability")
 def api_evaluar_suitability(req: SuitabilityRequest):
     return evaluar_cuestionario_suitability_completo(req.respuestas)
+
+
+@app.post("/api/portafolio-realista")
+def api_portafolio_realista(req: PortafolioRequest):
+    return simular_portafolio_realista_segun_perfil(
+        perfil_riesgo=req.perfil_riesgo,
+        capacidad_inversion_mensual_cop=req.capacidad_inversion_mensual_cop,
+        capital_inicial_cop=req.capital_inicial_cop,
+        horizonte_anios=req.horizonte_anios,
+        gasto_recreativo_azar_cop=req.gasto_recreativo_azar_cop,
+    )
+
+
+@app.get("/api/catalogo-activos")
+def api_catalogo_activos():
+    return CATALOGO_ACTIVOS_COLOMBIA
 
 
 @app.post("/api/azar-vs-inversion")
@@ -231,130 +257,24 @@ HTML_CONTENT = """<!DOCTYPE html>
     
     <!-- VISTA MÓDULO 6: SALIN -->
     <div id="vista-mod6" class="space-y-8">
-      <!-- Sección Azar vs Inversión -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-6 shadow-xl">
-          <h2 class="text-base font-bold text-emerald-400 flex items-center space-x-2">
-            <span>🎲</span>
-            <span>Simulador Azar vs. Interés Compuesto</span>
-          </h2>
-          <p class="text-xs text-slate-400 mt-1">Modela el costo de oportunidad de loterías, Baloto y apuestas frente a inversión legal SFC.</p>
-          
-          <form id="formAzar" onsubmit="event.preventDefault(); calcularAzar(); return false;" class="mt-5 space-y-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-300">Gasto Mensual en Azar/Apuestas (COP)</label>
-              <input type="number" id="inpMontoAzar" value="200000" step="10000" min="10000" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
-              <span class="text-[11px] text-slate-500">Ejemplo: $50.000 COP semanales = $200.000 COP/mes</span>
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-slate-300">Horizonte de Tiempo</label>
-              <select id="inpAniosAzar" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
-                <option value="3">3 años (36 meses)</option>
-                <option value="5">5 años (60 meses)</option>
-                <option value="10" selected>10 años (120 meses)</option>
-                <option value="15">15 años (180 meses)</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-slate-300">Rentabilidad Estimada Inversión Regulada</label>
-              <input type="number" id="inpTasaAzar" value="11.0" step="0.5" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
-              <span class="text-[11px] text-slate-500">Tasa Efectiva Anual (EA) de portafolio balanceado</span>
-            </div>
-
-            <button type="button" onclick="calcularAzar()" id="btnCalcularAzar" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold py-2.5 rounded-lg text-sm shadow-lg shadow-emerald-500/20 transition">
-              🎲 Calcular Comparativa
-            </button>
-            <div id="statusCalculoAzar" class="hidden text-xs text-center font-medium text-emerald-400 mt-2 bg-emerald-500/10 border border-emerald-500/20 py-1.5 px-3 rounded-lg"></div>
-          </form>
-        </div>
-
-        <!-- Resultados Azar -->
-        <div class="lg:col-span-2 bg-slate-800/60 border border-slate-700/80 rounded-2xl p-6 shadow-xl space-y-6">
-          <div class="flex items-center justify-between border-b border-slate-700/60 pb-4">
-            <div>
-              <h3 class="font-bold text-white text-base">Impacto Patrimonial a <span id="lblAnios" class="text-emerald-400">10</span> Años</h3>
-              <p class="text-xs text-slate-400">Desembolsando <span id="lblTotalDesembolsado" class="font-bold text-slate-200">$24,000,000 COP</span></p>
-            </div>
-            <div class="text-right">
-              <span class="text-xs text-slate-400 block">Brecha Neta a Favor del Ahorro</span>
-              <span id="lblBrecha" class="text-xl font-extrabold text-emerald-400">+$30,965,950 COP</span>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-rose-950/30 border border-rose-900/50 rounded-xl p-4">
-              <span class="text-xs font-semibold text-rose-300 uppercase tracking-wider block">Juegos de Azar (E[X])</span>
-              <span id="lblAzar" class="text-lg font-bold text-rose-400 mt-1 block">$11,520,000 COP</span>
-              <p class="text-[11px] text-rose-300/70 mt-1">Pérdida matemática: <span id="lblPerdidaAzar" class="font-bold">-$12,480,000 COP</span></p>
-            </div>
-
-            <div class="bg-blue-950/30 border border-blue-900/50 rounded-xl p-4">
-              <span class="text-xs font-semibold text-blue-300 uppercase tracking-wider block">Capital Aportado Puro</span>
-              <span id="lblCapital" class="text-lg font-bold text-blue-400 mt-1 block">$24,000,000 COP</span>
-              <p class="text-[11px] text-blue-300/70 mt-1">Ahorro en alcancía (sin rentabilidad)</p>
-            </div>
-
-            <div class="bg-emerald-950/30 border border-emerald-900/50 rounded-xl p-4">
-              <span class="text-xs font-semibold text-emerald-300 uppercase tracking-wider block">Inversión Regulada SFC</span>
-              <span id="lblInversion" class="text-lg font-bold text-emerald-400 mt-1 block">$42,485,950 COP</span>
-              <p class="text-[11px] text-emerald-300/70 mt-1">Interés compuesto: <span id="lblIntereses" class="font-bold">+$18,485,950 COP</span></p>
-            </div>
-          </div>
-
-          <div class="bg-slate-900/80 rounded-xl p-4 border border-slate-700/50">
-            <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Probabilidades Exactas en Colombia</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-              <div class="bg-slate-800/80 rounded-lg p-3">
-                <span class="text-slate-400 block">Baloto (5 cifras + súper balota):</span>
-                <span id="lblBaloto" class="font-mono text-amber-400 font-semibold">1 en 15,401,568 (0.00000649%)</span>
-              </div>
-              <div class="bg-slate-800/80 rounded-lg p-3">
-                <span class="text-slate-400 block">Chance de 4 cifras:</span>
-                <span id="lblChance" class="font-mono text-amber-400 font-semibold">1 en 10,000 (0.0100%)</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Trayectoria Anualizada Dinámica -->
-          <div class="bg-slate-900/80 rounded-xl p-4 border border-slate-700/50">
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Evolución Anual: Desembolso vs. Inversión Regulada</h4>
-              <span id="lblBadgeTrayectoria" class="text-[11px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Dinámico</span>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-xs text-left">
-                <thead class="text-slate-400 border-b border-slate-800">
-                  <tr>
-                    <th class="py-2 px-2">Año</th>
-                    <th class="py-2 px-2">Total Aportado</th>
-                    <th class="py-2 px-2 text-rose-400">Pérdida Azar E[X]</th>
-                    <th class="py-2 px-2 text-emerald-400">Inversión SFC</th>
-                    <th class="py-2 px-2 text-right text-emerald-300 font-bold">Brecha Ganada</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyTrayectoria" class="divide-y divide-slate-800/80 text-slate-300 font-mono">
-                  <!-- Inyectado dinámicamente por JS -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Test de Idoneidad SFC (8 Preguntas) -->
+      
+      <!-- PASO 1: TEST DE IDONEIDAD SFC (Decreto 2555 de 2010) -->
       <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-6 shadow-xl">
         <div class="flex items-center justify-between mb-4 border-b border-slate-700/60 pb-3">
           <div>
-            <h3 class="text-base font-bold text-white flex items-center space-x-2">
+            <div class="inline-flex items-center space-x-2 text-xs font-semibold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 mb-1">
+              <span>Paso 1 de 2</span>
+              <span>•</span>
+              <span>Deber de Asesoría SFC</span>
+            </div>
+            <h2 class="text-base font-bold text-white flex items-center space-x-2">
               <span>📋</span>
-              <span>Test de Idoneidad y Perfil de Riesgo (Decreto 2555 de 2010 SFC)</span>
-            </h3>
-            <p class="text-xs text-slate-400 mt-0.5">Evalúa el horizonte, capacidad patrimonial y psicología ante fluctuaciones de mercado.</p>
+              <span>Test de Idoneidad y Perfil de Riesgo (Decreto 2555 de 2010)</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Determina su perfil regulatorio (Conservador, Moderado o Agresivo) y detecta inconsistencias conductuales.</p>
           </div>
-          <button onclick="evaluarTestSFC()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-lg text-xs transition">
-            Diagnosticar Mi Perfil
+          <button type="button" onclick="evaluarTestSFC()" id="btnDiagnosticarSFC" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-lg text-xs shadow-lg shadow-emerald-600/20 transition">
+            📋 Diagnosticar Perfil de Riesgo
           </button>
         </div>
 
@@ -365,7 +285,7 @@ HTML_CONTENT = """<!DOCTYPE html>
         <!-- Resultado Idoneidad -->
         <div id="resultadoIdoneidad" class="mt-6 hidden bg-slate-950 border border-emerald-500/40 rounded-xl p-5 space-y-3">
           <div class="flex items-center justify-between">
-            <span class="text-xs uppercase tracking-wider text-slate-400">Resultado de Idoneidad SFC</span>
+            <span class="text-xs uppercase tracking-wider text-slate-400">Resultado Oficial de Idoneidad SFC</span>
             <span id="resPerfilBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
               Moderado
             </span>
@@ -374,6 +294,276 @@ HTML_CONTENT = """<!DOCTYPE html>
           <div id="resAlertaSuitability" class="hidden text-xs bg-amber-500/10 border border-amber-500/30 text-amber-300 p-3 rounded-lg"></div>
         </div>
       </div>
+
+      <!-- PASO 2: CAPACIDAD FINANCIERA Y PORTAFOLIO REALISTA (RENTA FIJA VS RENTA VARIABLE) -->
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-6 shadow-xl space-y-6">
+        <div>
+          <div class="inline-flex items-center space-x-2 text-xs font-semibold uppercase tracking-wider text-teal-400 bg-teal-500/10 px-2.5 py-0.5 rounded-full border border-teal-500/20 mb-1">
+            <span>Paso 2 de 2</span>
+            <span>•</span>
+            <span>Estrategia de Asignación de Activos</span>
+          </div>
+          <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+            <span>💼</span>
+            <span>Portafolio Realista: Renta Fija (CDTs/FICs/TES) y Renta Variable (ETFs y Acciones Libres)</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Nadie apuesta todo: este modelo asigna su capacidad real de ahorro entre instrumentos regulados, dimensiona su ocio y genera recomendaciones de inversión accionables para Colombia.</p>
+        </div>
+
+        <!-- Grid de Parámetros y Macro Asignación -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Columna Inputs -->
+          <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-5 space-y-4">
+            <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider">Parámetros Financieros</h3>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300">Capacidad de Inversión Mensual (COP)</label>
+              <input type="number" id="inpCapacidadMensual" value="1000000" step="50000" min="50000" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500 font-mono">
+              <span class="text-[11px] text-slate-500">Aporte constante mensual sugerido</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300">Capital Inicial Disponible (COP)</label>
+              <input type="number" id="inpCapitalInicial" value="2000000" step="100000" min="0" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500 font-mono">
+              <span class="text-[11px] text-slate-500">Monto único al iniciar el portafolio</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300">Horizonte</label>
+                <select id="inpAniosPortafolio" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-teal-500">
+                  <option value="3">3 años</option>
+                  <option value="5">5 años</option>
+                  <option value="10" selected>10 años</option>
+                  <option value="15">15 años</option>
+                  <option value="20">20 años</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-300">Perfil de Riesgo</label>
+                <select id="inpPerfilRiesgo" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-teal-500 font-semibold">
+                  <option value="Conservador">Conservador</option>
+                  <option value="Moderado" selected>Moderado</option>
+                  <option value="Agresivo">Agresivo</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300">Gasto Recreativo en Azar/Apuestas (COP/mes)</label>
+              <input type="number" id="inpOcioAzar" value="50000" step="10000" min="0" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500 font-mono">
+              <span class="text-[11px] text-slate-500">Ocio controlado (máx. 2-5% del presupuesto)</span>
+            </div>
+
+            <button type="button" onclick="generarPortafolioRealista()" id="btnGenerarPortafolio" class="w-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold py-2.5 rounded-lg text-xs shadow-lg shadow-teal-500/20 transition">
+              🚀 Generar Escenarios y Recomendaciones
+            </button>
+            <div id="statusPortafolio" class="hidden text-xs text-center font-medium text-teal-400 mt-2 bg-teal-500/10 border border-teal-500/20 py-1.5 px-3 rounded-lg"></div>
+          </div>
+
+          <!-- Columna Resultados Macro y Escenarios -->
+          <div class="lg:col-span-2 space-y-4">
+            <!-- Macro Tarjetas -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="bg-blue-950/40 border border-blue-800/50 rounded-xl p-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-blue-300 uppercase tracking-wider">Renta Fija</span>
+                  <span id="lblMacroRentaFijaPct" class="text-xs px-2 py-0.5 rounded font-mono font-bold bg-blue-500/20 text-blue-300">55%</span>
+                </div>
+                <div id="lblMacroRentaFijaCOP" class="text-lg font-extrabold text-blue-400 mt-1">$550,000 COP/mes</div>
+                <p class="text-[11px] text-blue-200/70 mt-1">CDTs Digitales, FICs Liquidez y Bonos TES</p>
+              </div>
+
+              <div class="bg-purple-950/40 border border-purple-800/50 rounded-xl p-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-purple-300 uppercase tracking-wider">Renta Variable</span>
+                  <span id="lblMacroRentaVariablePct" class="text-xs px-2 py-0.5 rounded font-mono font-bold bg-purple-500/20 text-purple-300">45%</span>
+                </div>
+                <div id="lblMacroRentaVariableCOP" class="text-lg font-extrabold text-purple-400 mt-1">$450,000 COP/mes</div>
+                <p class="text-[11px] text-purple-200/70 mt-1">ETFs S&P 500 (CSPX/VOO), HCOLSEL y Acciones</p>
+              </div>
+
+              <div class="bg-emerald-950/40 border border-emerald-800/50 rounded-xl p-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Tasa Ponderada</span>
+                  <span id="lblMacroTasaPonderada" class="text-xs px-2 py-0.5 rounded font-mono font-bold bg-emerald-500/20 text-emerald-300">11.45% EA</span>
+                </div>
+                <div id="lblMacroPatrimonioEsperado" class="text-lg font-extrabold text-emerald-400 mt-1">$221,528,652 COP</div>
+                <p class="text-[11px] text-emerald-200/70 mt-1">Patrimonio proyectado a <span id="lblMacroAnios" class="font-bold">10</span> años</p>
+              </div>
+            </div>
+
+            <!-- Escenarios Proyectados (Pesimista, Esperado, Optimista) -->
+            <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-4">
+              <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">Escenarios Proyectados de Crecimiento Compuesto</h4>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                  <span class="text-slate-400 block font-medium">Escenario Pesimista (<span id="lblTasaPesimista">8.0% EA</span>)</span>
+                  <span id="lblPatrimonioPesimista" class="text-sm font-bold text-slate-200 font-mono block mt-1">$175,412,000 COP</span>
+                  <span class="text-[11px] text-slate-500">Mercados bajistas o inflación elevada</span>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-lg border border-emerald-500/40">
+                  <span class="text-emerald-400 block font-bold">Escenario Esperado (<span id="lblTasaEsperada">11.5% EA</span>)</span>
+                  <span id="lblPatrimonioEsperadoTab" class="text-sm font-extrabold text-emerald-400 font-mono block mt-1">$221,528,652 COP</span>
+                  <span class="text-[11px] text-emerald-300/70">Rendimiento histórico ponderado</span>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                  <span class="text-teal-400 block font-medium">Escenario Optimista (<span id="lblTasaOptimista">15.0% EA</span>)</span>
+                  <span id="lblPatrimonioOptimista" class="text-sm font-bold text-teal-300 font-mono block mt-1">$284,150,000 COP</span>
+                  <span class="text-[11px] text-slate-500">Expansión bursátil y dividendos altos</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Análisis de Ocio / Azar Realista -->
+            <div id="boxAnalisisOcio" class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-4 text-xs space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-amber-400">⚖️ Dimensión Realista del Ocio / Rifas / Apuestas</span>
+                <span id="lblPctAzarFlujo" class="font-mono text-amber-300 font-bold">4.8% del flujo mensual</span>
+              </div>
+              <p class="text-slate-300" id="lblDetalleOcioAzar">
+                Usted destina $50.000 COP/mes a entretenimiento en azar. El <strong>95.2% restante ($1.000.000 COP/mes)</strong> va a su portafolio patrimonial regulado.
+                Esto demuestra que no se necesita prohibir el ocio, sino calibrarlo estrictamente como presupuesto recreativo sin poner en riesgo la libertad financiera.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla Detallada de Instrumentos y Fuentes Oficiales -->
+        <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
+            <div>
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider">Desglose Detallado de Instrumentos y Fuentes Oficiales Aproximadas</h4>
+              <p class="text-[11px] text-slate-400">Renta Fija garantizada y Renta Variable con ETFs indexados y acciones libres</p>
+            </div>
+            <span class="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded font-mono">Regulación SFC / BVC</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="py-2 px-2">Instrumento / Vehículo</th>
+                  <th class="py-2 px-2">Clase</th>
+                  <th class="py-2 px-2">% Asignado</th>
+                  <th class="py-2 px-2">Aporte Mensual</th>
+                  <th class="py-2 px-2">Tasa Estimada EA</th>
+                  <th class="py-2 px-2">Fuente Oficial Aproximada</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyPortafolioDetalle" class="divide-y divide-slate-800 text-slate-300">
+                <!-- Inyectado vía JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recomendaciones de Inversión Finales -->
+        <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-5 space-y-4">
+          <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5">
+            <span>💡</span>
+            <span>Recomendaciones Finales de Inversión (Normativa y Ejecución Práctica en Colombia)</span>
+          </h4>
+          <div id="gridRecomendaciones" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <!-- Inyectado vía JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- HERRAMIENTA COMPLEMENTARIA: LABORATORIO AZAR VS INVERSIÓN -->
+      <div class="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-6 shadow-xl space-y-6">
+        <div class="border-b border-slate-700/60 pb-3 flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-slate-200 flex items-center space-x-2">
+              <span>🎲</span>
+              <span>Laboratorio Complementario: Azar vs. Interés Compuesto (Baloto y Chance)</span>
+            </h3>
+            <p class="text-xs text-slate-400">Demostración matemática del Valor Esperado E[X] negativo de rifas y apuestas frente a la inversión legal.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="bg-slate-900/80 border border-slate-700/80 rounded-xl p-5 space-y-4">
+            <form id="formAzar" onsubmit="event.preventDefault(); calcularAzar(); return false;" class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300">Gasto Mensual en Azar/Apuestas (COP)</label>
+                <input type="number" id="inpMontoAzar" value="200000" step="10000" min="10000" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
+                <span class="text-[11px] text-slate-500">Ejemplo: $50.000 COP semanales = $200.000 COP/mes</span>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-300">Horizonte de Tiempo</label>
+                <select id="inpAniosAzar" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                  <option value="3">3 años (36 meses)</option>
+                  <option value="5">5 años (60 meses)</option>
+                  <option value="10" selected>10 años (120 meses)</option>
+                  <option value="15">15 años (180 meses)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-300">Rentabilidad Estimada Inversión Regulada</label>
+                <input type="number" id="inpTasaAzar" value="11.0" step="0.5" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono">
+                <span class="text-[11px] text-slate-500">Tasa Efectiva Anual (EA) de portafolio</span>
+              </div>
+
+              <button type="button" onclick="calcularAzar()" id="btnCalcularAzar" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold py-2 rounded-lg text-xs shadow-lg shadow-emerald-500/20 transition">
+                🎲 Calcular Comparativa
+              </button>
+              <div id="statusCalculoAzar" class="hidden text-xs text-center font-medium text-emerald-400 mt-2 bg-emerald-500/10 border border-emerald-500/20 py-1 px-2 rounded-lg"></div>
+            </form>
+          </div>
+
+          <!-- Resultados Azar -->
+          <div class="lg:col-span-2 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="bg-rose-950/30 border border-rose-900/50 rounded-xl p-3">
+                <span class="text-xs font-semibold text-rose-300 uppercase tracking-wider block">Juegos de Azar (E[X])</span>
+                <span id="lblAzar" class="text-base font-bold text-rose-400 mt-1 block">$11,520,000 COP</span>
+                <p class="text-[11px] text-rose-300/70 mt-1">Pérdida esperada: <span id="lblPerdidaAzar" class="font-bold">-$12,480,000 COP</span></p>
+              </div>
+
+              <div class="bg-blue-950/30 border border-blue-900/50 rounded-xl p-3">
+                <span class="text-xs font-semibold text-blue-300 uppercase tracking-wider block">Capital Desembolsado</span>
+                <span id="lblCapital" class="text-base font-bold text-blue-400 mt-1 block">$24,000,000 COP</span>
+                <p class="text-[11px] text-blue-300/70 mt-1">Total aportado a <span id="lblAnios">10</span> años</p>
+              </div>
+
+              <div class="bg-emerald-950/30 border border-emerald-900/50 rounded-xl p-3">
+                <span class="text-xs font-semibold text-emerald-300 uppercase tracking-wider block">Inversión Regulada SFC</span>
+                <span id="lblInversion" class="text-base font-bold text-emerald-400 mt-1 block">$42,485,950 COP</span>
+                <p class="text-[11px] text-emerald-300/70 mt-1">Brecha a favor: <span id="lblBrecha" class="font-bold text-emerald-300">+$30,965,950 COP</span></p>
+              </div>
+            </div>
+
+            <!-- Tabla de Trayectoria Anual Dinámica -->
+            <div class="bg-slate-900/80 rounded-xl p-4 border border-slate-700/50">
+              <div class="flex items-center justify-between mb-2">
+                <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Evolución Anual: Desembolso vs. Inversión Regulada</h4>
+                <span id="lblBadgeTrayectoria" class="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Dinámico</span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-xs text-left">
+                  <thead class="text-slate-400 border-b border-slate-800">
+                    <tr>
+                      <th class="py-1.5 px-2">Año</th>
+                      <th class="py-1.5 px-2">Total Aportado</th>
+                      <th class="py-1.5 px-2 text-rose-400">Pérdida Azar E[X]</th>
+                      <th class="py-1.5 px-2 text-emerald-400">Inversión SFC</th>
+                      <th class="py-1.5 px-2 text-right text-emerald-300 font-bold">Brecha Ganada</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyTrayectoria" class="divide-y divide-slate-800/80 text-slate-300 font-mono">
+                    <!-- Inyectado dinámicamente por JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- VISTA CONSULTA MÉDICA COMPLETA -->
@@ -408,7 +598,7 @@ HTML_CONTENT = """<!DOCTYPE html>
         </h2>
         <p class="text-xs text-slate-400 mt-1">Evalúa una promesa de rentabilidad para comprobar si colapsa matemáticamente.</p>
 
-        <form onsubmit="evaluarPonzi(event)" class="mt-6 space-y-4">
+        <form id="formPonzi" onsubmit="event.preventDefault(); evaluarPonzi(); return false;" class="mt-6 space-y-4">
           <div>
             <label class="block text-xs font-semibold text-slate-300">Rentabilidad Mensual Prometida (%)</label>
             <input type="number" id="inpTasaPonzi" value="10.0" step="0.5" min="1" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500">
@@ -420,8 +610,8 @@ HTML_CONTENT = """<!DOCTYPE html>
             <input type="number" id="inpPersonasPonzi" value="3" min="2" max="10" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500">
           </div>
 
-          <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-lg text-sm shadow-lg shadow-rose-600/20 transition">
-            Analizar Viabilidad Matemática
+          <button type="button" onclick="evaluarPonzi()" id="btnEvaluarPonzi" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-lg text-sm shadow-lg shadow-rose-600/20 transition">
+            ⚠️ Analizar Viabilidad Matemática
           </button>
         </form>
 
@@ -462,7 +652,8 @@ HTML_CONTENT = """<!DOCTYPE html>
       const trivias = await rTrivias.json();
       renderTrivias(trivias);
 
-      // Calcular comparativa inicial para poblar datos dinámicos y tabla
+      // Generar portafolio realista y comparativa inicial
+      await generarPortafolioRealista();
       await calcularAzar();
     }
 
@@ -574,29 +765,186 @@ HTML_CONTENT = """<!DOCTYPE html>
     }
 
     async function evaluarTestSFC() {
+      const btn = document.getElementById('btnDiagnosticarSFC');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Diagnosticando...';
+      }
+
       const respuestas = {};
       cuestionarioData.forEach(p => {
         respuestas[p.id] = parseInt(document.getElementById(`sel_${p.id}`).value);
       });
 
-      const res = await fetch('/api/evaluar-suitability', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({respuestas})
-      });
-      const diag = await res.json();
+      try {
+        const res = await fetch('/api/evaluar-suitability', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({respuestas})
+        });
+        const diag = await res.json();
 
-      const box = document.getElementById('resultadoIdoneidad');
-      box.classList.remove('hidden');
-      document.getElementById('resPerfilBadge').innerText = diag.perfil_riesgo + ' (' + diag.puntaje_idoneidad_100 + '/100)';
-      document.getElementById('resDictamen').innerText = diag.recomendacion_normativa;
+        const box = document.getElementById('resultadoIdoneidad');
+        box.classList.remove('hidden');
+        document.getElementById('resPerfilBadge').innerText = diag.perfil_riesgo + ' (' + diag.puntaje_idoneidad_100 + '/100)';
+        document.getElementById('resDictamen').innerText = diag.recomendacion_normativa;
 
-      const alerta = document.getElementById('resAlertaSuitability');
-      if (diag.alerta_conductual_suitability) {
-        alerta.innerText = diag.alerta_conductual_suitability;
-        alerta.classList.remove('hidden');
-      } else {
-        alerta.classList.add('hidden');
+        const alerta = document.getElementById('resAlertaSuitability');
+        if (diag.alerta_conductual_suitability) {
+          alerta.innerText = diag.alerta_conductual_suitability;
+          alerta.classList.remove('hidden');
+        } else {
+          alerta.classList.add('hidden');
+        }
+
+        // Sincronizar con el selector del portafolio realista y recalcular
+        const selPerfil = document.getElementById('inpPerfilRiesgo');
+        if (selPerfil) {
+          selPerfil.value = diag.perfil_riesgo;
+        }
+        await generarPortafolioRealista();
+
+        if (btn) {
+          btn.innerHTML = '✓ ¡Perfil Asignado!';
+          btn.className = 'bg-emerald-500 text-white font-semibold px-4 py-2 rounded-lg text-xs shadow-lg transition';
+          setTimeout(() => {
+            btn.innerHTML = '📋 Diagnosticar Perfil de Riesgo';
+            btn.className = 'bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-lg text-xs shadow-lg shadow-emerald-600/20 transition';
+            btn.disabled = false;
+          }, 1500);
+        }
+      } catch (err) {
+        console.error("Error al diagnosticar perfil:", err);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '📋 Diagnosticar Perfil de Riesgo';
+        }
+      }
+    }
+
+    async function generarPortafolioRealista() {
+      const btn = document.getElementById('btnGenerarPortafolio');
+      const statusBox = document.getElementById('statusPortafolio');
+      const capacidad = parseFloat(document.getElementById('inpCapacidadMensual').value) || 1000000;
+      const capital = parseFloat(document.getElementById('inpCapitalInicial').value) || 0;
+      const anios = parseInt(document.getElementById('inpAniosPortafolio').value) || 10;
+      const ocio = parseFloat(document.getElementById('inpOcioAzar').value) || 0;
+      const perfil = document.getElementById('inpPerfilRiesgo').value || 'Moderado';
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Construyendo Portafolio...';
+      }
+
+      try {
+        const res = await fetch('/api/portafolio-realista', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            perfil_riesgo: perfil,
+            capacidad_inversion_mensual_cop: capacidad,
+            capital_inicial_cop: capital,
+            horizonte_anios: anios,
+            gasto_recreativo_azar_cop: ocio
+          })
+        });
+
+        if (!res.ok) throw new Error('Error HTTP ' + res.status);
+        const data = await res.json();
+
+        // Macro Cards
+        document.getElementById('lblMacroRentaFijaPct').innerText = data.asignacion_macro.renta_fija_pct + '%';
+        document.getElementById('lblMacroRentaFijaCOP').innerText = '$' + Math.round(data.asignacion_macro.monto_mensual_renta_fija_cop).toLocaleString('es-CO') + ' COP/mes';
+        document.getElementById('lblMacroRentaVariablePct').innerText = data.asignacion_macro.renta_variable_pct + '%';
+        document.getElementById('lblMacroRentaVariableCOP').innerText = '$' + Math.round(data.asignacion_macro.monto_mensual_renta_variable_cop).toLocaleString('es-CO') + ' COP/mes';
+        document.getElementById('lblMacroTasaPonderada').innerText = data.tasa_ponderada_esperada_ea_pct + '% EA';
+        document.getElementById('lblMacroPatrimonioEsperado').innerText = '$' + Math.round(data.proyeccion_escenarios.esperado.patrimonio_final_cop).toLocaleString('es-CO') + ' COP';
+        document.getElementById('lblMacroAnios').innerText = data.horizonte_anios;
+
+        // Escenarios
+        document.getElementById('lblTasaPesimista').innerText = data.proyeccion_escenarios.pesimista.tasa_ea_pct + '% EA';
+        document.getElementById('lblPatrimonioPesimista').innerText = '$' + Math.round(data.proyeccion_escenarios.pesimista.patrimonio_final_cop).toLocaleString('es-CO') + ' COP';
+        document.getElementById('lblTasaEsperada').innerText = data.proyeccion_escenarios.esperado.tasa_ea_pct + '% EA';
+        document.getElementById('lblPatrimonioEsperadoTab').innerText = '$' + Math.round(data.proyeccion_escenarios.esperado.patrimonio_final_cop).toLocaleString('es-CO') + ' COP';
+        document.getElementById('lblTasaOptimista').innerText = data.proyeccion_escenarios.optimista.tasa_ea_pct + '% EA';
+        document.getElementById('lblPatrimonioOptimista').innerText = '$' + Math.round(data.proyeccion_escenarios.optimista.patrimonio_final_cop).toLocaleString('es-CO') + ' COP';
+
+        // Análisis Ocio / Azar
+        const o = data.analisis_recreativo_azar;
+        document.getElementById('lblPctAzarFlujo').innerText = o.porcentaje_sobre_flujo_pct + '% del flujo mensual';
+        document.getElementById('lblDetalleOcioAzar').innerHTML = `
+          Usted destina $${Math.round(o.gasto_mensual_azar_cop).toLocaleString('es-CO')} COP/mes a entretenimiento en azar (${o.porcentaje_sobre_flujo_pct}% del flujo).
+          El <strong>${(100 - o.porcentaje_sobre_flujo_pct).toFixed(1)}% restante ($${Math.round(capacidad).toLocaleString('es-CO')} COP/mes)</strong> va a su portafolio regulado.
+          En ${anios} años, el azar sumará $${Math.round(o.desembolso_acumulado_azar_cop).toLocaleString('es-CO')} COP (pérdida esperada E[X]: -$${Math.round(o.perdida_matematica_esperada_cop).toLocaleString('es-CO')} COP),
+          mientras que su inversión regulada alcanzará <strong>$${Math.round(data.proyeccion_escenarios.esperado.patrimonio_final_cop).toLocaleString('es-CO')} COP</strong>.
+        `;
+
+        // Tabla Detallada de Activos
+        const fuentesMap = {
+          "CDTs": "SFC - Tasas Semanales Captación CDT / FOGAFÍN (hasta $50M)",
+          "FICs": "SFC - Boletín Diario Fiduciarias (D+0 / D+1)",
+          "TES": "Banco de la República / MinHacienda (Deuda Soberana)",
+          "S&P 500": "S&P Dow Jones / BVC Mercado Global Colombiano (CSPX/VOO)",
+          "Emergente": "Vanguard / MSCI ACWI (VT / EIMI)",
+          "HCOLSEL": "BVC - Índice MSCI Colcap (HCOLSEL - Dividendo ~8%)",
+          "Acciones": "BVC / Trii - Dividendos y Valorización Corporativa"
+        };
+
+        const tbody = document.getElementById('tbodyPortafolioDetalle');
+        tbody.innerHTML = data.distribucion_mensual_detalle.map(item => {
+          let fuente = "Superintendencia Financiera de Colombia (SFC) / BVC";
+          for (let k in fuentesMap) {
+            if (item.activo.includes(k) || item.clase.includes(k)) {
+              fuente = fuentesMap[k];
+              break;
+            }
+          }
+          return `
+            <tr class="hover:bg-slate-800/40 transition">
+              <td class="py-2.5 px-2 font-bold text-white">${item.activo}</td>
+              <td class="py-2.5 px-2 text-slate-400 text-[11px]">${item.clase}</td>
+              <td class="py-2.5 px-2 text-emerald-400 font-mono font-semibold">${item.porcentaje_pct}%</td>
+              <td class="py-2.5 px-2 text-slate-200 font-mono">$${Math.round(item.monto_mensual_cop).toLocaleString('es-CO')} COP</td>
+              <td class="py-2.5 px-2 text-teal-300 font-mono">${item.tasa_ea_esperada_pct}% EA</td>
+              <td class="py-2.5 px-2 text-slate-400 text-[11px] italic">${fuente}</td>
+            </tr>
+          `;
+        }).join('');
+
+        // Grid Recomendaciones
+        const gridRec = document.getElementById('gridRecomendaciones');
+        gridRec.innerHTML = data.recomendaciones_inversion.map(rec => `
+          <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1.5 hover:border-slate-700 transition">
+            <div class="text-xs font-bold text-emerald-400">${rec.titulo}</div>
+            <p class="text-[11px] text-slate-300 leading-relaxed whitespace-pre-line">${rec.detalle}</p>
+          </div>
+        `).join('');
+
+        if (statusBox) {
+          statusBox.innerText = `✓ Portafolio ${perfil} proyectado a ${anios} años (${data.tasa_ponderada_esperada_ea_pct}% EA)`;
+          statusBox.className = 'text-xs text-center font-medium text-teal-400 mt-2 bg-teal-500/10 border border-teal-500/20 py-1.5 px-3 rounded-lg block';
+          setTimeout(() => statusBox.className = 'hidden text-xs text-center font-medium text-teal-400 mt-2 bg-teal-500/10 border border-teal-500/20 py-1.5 px-3 rounded-lg', 3500);
+        }
+
+        if (btn) {
+          btn.innerHTML = '✓ ¡Portafolio Generado!';
+          btn.className = 'w-full bg-teal-500 hover:bg-teal-400 text-white font-bold py-2.5 rounded-lg text-xs shadow-lg shadow-teal-500/30 transition';
+          setTimeout(() => {
+            btn.innerHTML = '🚀 Generar Escenarios y Recomendaciones';
+            btn.className = 'w-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold py-2.5 rounded-lg text-xs shadow-lg shadow-teal-500/20 transition';
+            btn.disabled = false;
+          }, 1500);
+        }
+      } catch (err) {
+        console.error("Error al generar portafolio:", err);
+        if (statusBox) {
+          statusBox.innerText = '❌ Error al generar portafolio: ' + err.message;
+          statusBox.className = 'text-xs text-center font-medium text-rose-400 mt-2 bg-rose-500/10 border border-rose-500/20 py-1.5 px-3 rounded-lg block';
+        }
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '🚀 Generar Escenarios y Recomendaciones';
+        }
       }
     }
 
@@ -627,21 +975,62 @@ HTML_CONTENT = """<!DOCTYPE html>
       }
     }
 
+    let listaTrivias = [];
+    let respuestasTriviaUsuario = {};
+
     function renderTrivias(trivias) {
+      listaTrivias = trivias;
       const list = document.getElementById('triviasList');
       list.innerHTML = trivias.map((t, idx) => `
-        <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-4 space-y-2">
-          <div class="text-xs font-bold text-slate-200">${idx + 1}. ${t.pregunta}</div>
-          <div class="space-y-1.5 pl-2">
+        <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-200">${idx + 1}. ${t.pregunta}</span>
+            <span id="badgeTrivia_${idx}" class="text-[10px] px-2 py-0.5 rounded font-mono bg-slate-800 text-slate-400">Sin responder</span>
+          </div>
+          <div class="space-y-1.5" id="opcionesTrivia_${idx}">
             ${t.opciones.map((opt, i) => `
-              <div class="text-xs ${i === t.respuesta_correcta_idx ? 'text-emerald-400 font-semibold' : 'text-slate-400'}">
-                ${i === t.respuesta_correcta_idx ? '✓' : '•'} ${opt}
-              </div>
+              <button type="button" onclick="responderTrivia(${idx}, ${i})" id="btnTrivia_${idx}_${i}" class="w-full text-left text-xs p-2.5 rounded-lg border border-slate-800 bg-slate-950/60 text-slate-300 hover:border-slate-600 hover:text-white transition">
+                <span class="font-bold text-slate-400 mr-1.5">${String.fromCharCode(65 + i)}.</span> ${opt}
+              </button>
             `).join('')}
           </div>
-          <p class="text-[11px] text-slate-400 border-t border-slate-800 pt-2 italic">Explicación: ${t.explicacion}</p>
+          <div id="explicacionTrivia_${idx}" class="hidden text-[11px] p-2.5 rounded-lg border border-slate-800 bg-slate-950 text-slate-300 italic"></div>
         </div>
       `).join('');
+    }
+
+    function responderTrivia(triviaIdx, opcionIdx) {
+      const t = listaTrivias[triviaIdx];
+      const esCorrecto = (opcionIdx === t.respuesta_correcta_idx);
+      respuestasTriviaUsuario[triviaIdx] = esCorrecto;
+
+      // Actualizar opciones
+      t.opciones.forEach((_, i) => {
+        const btn = document.getElementById(`btnTrivia_${triviaIdx}_${i}`);
+        btn.disabled = true;
+        if (i === t.respuesta_correcta_idx) {
+          btn.className = 'w-full text-left text-xs p-2.5 rounded-lg border border-emerald-500/50 bg-emerald-950/40 text-emerald-300 font-medium';
+        } else if (i === opcionIdx && !esCorrecto) {
+          btn.className = 'w-full text-left text-xs p-2.5 rounded-lg border border-rose-500/50 bg-rose-950/40 text-rose-300 font-medium';
+        } else {
+          btn.className = 'w-full text-left text-xs p-2.5 rounded-lg border border-slate-800 bg-slate-950/30 text-slate-500 opacity-60';
+        }
+      });
+
+      // Badge
+      const badge = document.getElementById(`badgeTrivia_${triviaIdx}`);
+      if (esCorrecto) {
+        badge.className = 'text-[10px] px-2 py-0.5 rounded font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+        badge.innerText = '✓ Correcto';
+      } else {
+        badge.className = 'text-[10px] px-2 py-0.5 rounded font-mono bg-rose-500/20 text-rose-400 border border-rose-500/30';
+        badge.innerText = '✗ Incorrecto';
+      }
+
+      // Explicación
+      const exp = document.getElementById(`explicacionTrivia_${triviaIdx}`);
+      exp.innerHTML = `<span class="font-bold text-amber-400 not-italic">Normativa / Explicación:</span> ${t.explicacion}`;
+      exp.classList.remove('hidden');
     }
 
     async function correrConsultaCompleta() {

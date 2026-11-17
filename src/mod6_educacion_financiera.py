@@ -395,3 +395,276 @@ def obtener_trivias_cultura_financiera() -> List[Dict[str, Any]]:
     """Retorna micro-cápsulas educativas y preguntas de cultura financiera colombiana."""
     return TRIVIAS_EDUCACION_FINANCIERA_COLOMBIA
 
+
+# ==============================================================================
+# CATÁLOGO DE ACTIVOS COLOMBIA: RENTA FIJA Y RENTA VARIABLE (ETFs / ACCIONES)
+# ==============================================================================
+
+CATALOGO_ACTIVOS_COLOMBIA = {
+    "renta_fija": [
+        {
+            "id": "cdts_digitales",
+            "categoria": "Renta Fija Plazo",
+            "nombre": "CDTs Digitales y Cuentas Remuneradas",
+            "ejemplos": "Nu, Pibank, Bancolombia, Davivienda, Banco Finandina",
+            "tasa_ea_referencial_pct": 11.0,
+            "horizonte_minimo_meses": 6,
+            "riesgo": "Bajo (Vigilado SFC)",
+            "seguro_deposito": "Fogafín hasta $50.000.000 COP por entidad bancaria",
+            "fuente": "Superintendencia Financiera de Colombia (SFC) - Tasas Semanales de Captación CDT 360 días (Promedio sistema 10.2% - 11.5% EA)",
+        },
+        {
+            "id": "fics_liquidez",
+            "categoria": "Renta Fija Líquida",
+            "nombre": "Fondos de Inversión Colectiva (FICs) a la Vista",
+            "ejemplos": "Fiducuenta (Fiduciaria Bancolombia), Fiduciaria Davivienda, Tyba Liquidez",
+            "tasa_ea_referencial_pct": 9.8,
+            "horizonte_minimo_meses": 1,
+            "riesgo": "Bajo - Muy Líquido (D+0 / D+1)",
+            "seguro_deposito": "Patrimonio autónomo separado del balance de la fiduciaria",
+            "fuente": "Boletín Diario de Fiduciarias - Superintendencia Financiera de Colombia (SFC)",
+        },
+        {
+            "id": "tes_deuda_publica",
+            "categoria": "Renta Fija Soberana",
+            "nombre": "Títulos de Deuda Pública de Colombia (TES Tasa Fija y UVR)",
+            "ejemplos": "TES COP Tasa Fija 2032/2034, TES UVR (protegidos contra inflación)",
+            "tasa_ea_referencial_pct": 10.5,
+            "horizonte_minimo_meses": 36,
+            "riesgo": "Riesgo Soberano de la República de Colombia",
+            "seguro_deposito": "Garantía de la Nación",
+            "fuente": "Ministerio de Hacienda y Crédito Público / Banco de la República de Colombia",
+        },
+    ],
+    "renta_variable": [
+        {
+            "id": "etfs_globales_sp500",
+            "categoria": "ETFs Indexados Internacionales",
+            "nombre": "ETFs Globales Indexados al S&P 500 (500 mayores empresas de EE.UU.)",
+            "tickers": "CSPX (acumulación en USD/COP), VOO, IVV",
+            "acceso_colombia": "Mercado Global Colombiano (MGC) de la BVC mediante Trii o Comisionistas locales",
+            "tasa_ea_referencial_pct": 12.8,
+            "volatilidad_anual_pct": 16.0,
+            "riesgo": "Moderado-Alto (Renta Variable Bursátil)",
+            "fuente": "S&P Dow Jones Indices / BVC - Rendimiento histórico anualizado compuesto S&P 500 (~10-11% USD + efecto cambiario TRM histórico largo plazo)",
+        },
+        {
+            "id": "etfs_globales_diversificados",
+            "categoria": "ETFs Globales Todo Mundo",
+            "nombre": "ETFs Globales Diversificados (Mundo Desarrollado + Emergentes)",
+            "tickers": "VT (Vanguard Total World Stock), EIMI (iShares Emerging Markets)",
+            "acceso_colombia": "Brokers internacionales regulados / Mercado Global Colombiano BVC",
+            "tasa_ea_referencial_pct": 11.5,
+            "volatilidad_anual_pct": 15.0,
+            "riesgo": "Alto (Diversificación mundial en más de 40 países)",
+            "fuente": "Vanguard / BlackRock iShares / Índices MSCI All Country World Index (ACWI)",
+        },
+        {
+            "id": "etf_local_hcolsel",
+            "categoria": "ETFs Renta Variable Colombia",
+            "nombre": "ETF HCOLSEL (Índice MSCI Colcap - 20 principales empresas de Colombia)",
+            "tickers": "HCOLSEL (Bolsa de Valores de Colombia)",
+            "acceso_colombia": "BVC directa a través de Trii, Valores Bancolombia, Corredores Davivienda",
+            "tasa_ea_referencial_pct": 12.2,
+            "dividend_yield_estimado_pct": 8.0,
+            "volatilidad_anual_pct": 18.0,
+            "riesgo": "Alto (Mercado bursátil emergente local)",
+            "fuente": "Bolsa de Valores de Colombia (BVC) / MSCI Colcap Index (Alto dividendo recurrente en COP)",
+        },
+        {
+            "id": "acciones_libres_colombia_exterior",
+            "categoria": "Acciones Libres y Títulos Corporativos",
+            "nombre": "Acciones Individuales Seleccionadas (Locales e Internacionales)",
+            "tickers": "Bancolombia (PFBCOLOM), Ecopetrol, GEB, Nu Holdings (NU), Apple (AAPL), Microsoft (MSFT)",
+            "acceso_colombia": "BVC / Mercado Global Colombiano / Trii / Hapi / eToro regulado",
+            "tasa_ea_referencial_pct": 13.5,
+            "volatilidad_anual_pct": 22.0,
+            "riesgo": "Muy Alto (Riesgo específico no diversificado por empresa)",
+            "fuente": "Bolsa de Valores de Colombia (BVC) / FactSet - Tasas históricas de crecimiento y dividendos",
+        },
+    ],
+}
+
+
+def simular_portafolio_realista_segun_perfil(
+    perfil_riesgo: str = "Moderado",
+    capacidad_inversion_mensual_cop: float = 1_000_000.0,
+    capital_inicial_cop: float = 2_000_000.0,
+    horizonte_anios: int = 10,
+    gasto_recreativo_azar_cop: float = 50_000.0,
+) -> Dict[str, Any]:
+    """
+    Construye un portafolio de inversión realista ajustado al Perfil de Riesgo y Capacidad Financiera,
+    integrando Renta Fija (CDTs, FICs, TES) y Renta Variable (ETFs indexados y acciones libres),
+    junto con el dimensionamiento del ocio/azar y recomendaciones normativas y de ejecución para Colombia.
+    """
+    perfil_norm = perfil_riesgo.capitalize()
+    if perfil_norm not in ["Conservador", "Moderado", "Agresivo"]:
+        perfil_norm = "Moderado"
+
+    meses = max(12, int(horizonte_anios * 12))
+
+    # Definición de pesos de asignación estratégica de activos (Asset Allocation)
+    if perfil_norm == "Conservador":
+        pesos = {
+            "renta_fija_total_pct": 80.0,
+            "renta_variable_total_pct": 20.0,
+            "desglose": [
+                {"activo": "CDTs Digitales (Nu/Pibank/Davivienda)", "clase": "Renta Fija Plazo", "pct": 45.0, "tasa_ea": 0.110},
+                {"activo": "FICs Liquidez a la Vista (Fiducuenta)", "clase": "Renta Fija Líquida", "pct": 25.0, "tasa_ea": 0.098},
+                {"activo": "Bonos TES Colombia Tasa Fija / UVR", "clase": "Renta Fija Soberana", "pct": 10.0, "tasa_ea": 0.105},
+                {"activo": "ETFs S&P 500 (CSPX / VOO)", "clase": "ETFs Renta Variable Global", "pct": 15.0, "tasa_ea": 0.128},
+                {"activo": "ETF Local HCOLSEL (MSCI Colcap)", "clase": "ETFs Acciones Colombia", "pct": 5.0, "tasa_ea": 0.122},
+            ],
+        }
+    elif perfil_norm == "Moderado":
+        pesos = {
+            "renta_fija_total_pct": 55.0,
+            "renta_variable_total_pct": 45.0,
+            "desglose": [
+                {"activo": "CDTs Digitales (Nu/Pibank/Bancolombia)", "clase": "Renta Fija Plazo", "pct": 30.0, "tasa_ea": 0.110},
+                {"activo": "FICs Liquidez a la Vista (Fiducuenta)", "clase": "Renta Fija Líquida", "pct": 15.0, "tasa_ea": 0.098},
+                {"activo": "Bonos TES Colombia Tasa Fija / UVR", "clase": "Renta Fija Soberana", "pct": 10.0, "tasa_ea": 0.105},
+                {"activo": "ETFs S&P 500 (CSPX / VOO en MGC)", "clase": "ETFs Renta Variable Global", "pct": 25.0, "tasa_ea": 0.128},
+                {"activo": "ETF Global / Emergente (VT / EIMI)", "clase": "ETFs Globales", "pct": 10.0, "tasa_ea": 0.115},
+                {"activo": "ETF Local HCOLSEL + Acciones Libres", "clase": "Acciones Libres / Local", "pct": 10.0, "tasa_ea": 0.128},
+            ],
+        }
+    else:  # Agresivo
+        pesos = {
+            "renta_fija_total_pct": 25.0,
+            "renta_variable_total_pct": 75.0,
+            "desglose": [
+                {"activo": "CDTs Digitales / FICs Liquidez", "clase": "Renta Fija Base", "pct": 15.0, "tasa_ea": 0.105},
+                {"activo": "Bonos TES Colombia Tasa Fija / UVR", "clase": "Renta Fija Soberana", "pct": 10.0, "tasa_ea": 0.105},
+                {"activo": "ETFs S&P 500 (CSPX / VOO)", "clase": "ETFs Renta Variable Global", "pct": 40.0, "tasa_ea": 0.128},
+                {"activo": "ETFs Emergentes / Globales (VT / EIMI)", "clase": "ETFs Globales", "pct": 15.0, "tasa_ea": 0.115},
+                {"activo": "Acciones Libres Seleccionadas (BVC / Tech)", "clase": "Acciones Libres", "pct": 20.0, "tasa_ea": 0.135},
+            ],
+        }
+
+    # Tasa ponderada del portafolio
+    tasa_ponderada_ea = sum((item["pct"] / 100.0) * item["tasa_ea"] for item in pesos["desglose"])
+
+    # Proyección con aportes periódicos + capital inicial compuesto
+    def proyectar_con_tasa(tasa_ea: float) -> Dict[str, float]:
+        tasa_em = (1.0 + tasa_ea) ** (1.0 / 12.0) - 1.0
+        vf_capital_inicial = capital_inicial_cop * ((1.0 + tasa_em) ** meses)
+        if tasa_em > 0:
+            vf_aportes = capacidad_inversion_mensual_cop * (((1.0 + tasa_em) ** meses - 1.0) / tasa_em)
+        else:
+            vf_aportes = capacidad_inversion_mensual_cop * meses
+        total_aportado = capital_inicial_cop + (capacidad_inversion_mensual_cop * meses)
+        patrimonio_final = vf_capital_inicial + vf_aportes
+        intereses = patrimonio_final - total_aportado
+        return {
+            "patrimonio_final_cop": round(patrimonio_final, 2),
+            "total_aportado_cop": round(total_aportado, 2),
+            "intereses_ganados_cop": round(intereses, 2),
+            "tasa_ea_pct": round(tasa_ea * 100.0, 2),
+        }
+
+    proy_esperada = proyectar_con_tasa(tasa_ponderada_ea)
+    proy_pesimista = proyectar_con_tasa(max(0.06, tasa_ponderada_ea - 0.035))
+    proy_optimista = proyectar_con_tasa(tasa_ponderada_ea + 0.035)
+
+    # Detalle de distribución mensual en COP
+    distribucion_mensual_detalle = []
+    for item in pesos["desglose"]:
+        monto_item_cop = round(capacidad_inversion_mensual_cop * (item["pct"] / 100.0), 2)
+        distribucion_mensual_detalle.append({
+            "activo": item["activo"],
+            "clase": item["clase"],
+            "porcentaje_pct": item["pct"],
+            "monto_mensual_cop": monto_item_cop,
+            "tasa_ea_esperada_pct": round(item["tasa_ea"] * 100.0, 1),
+        })
+
+    # Análisis del gasto recreativo en azar (costo de oportunidad vs realidad)
+    total_disponible = capacidad_inversion_mensual_cop + gasto_recreativo_azar_cop
+    pct_azar_sobre_ahorro = (gasto_recreativo_azar_cop / total_disponible * 100.0) if total_disponible > 0 else 0.0
+    desembolso_azar_horizonte = gasto_recreativo_azar_cop * meses
+    perdida_esperada_azar = desembolso_azar_horizonte * 0.52  # E[X] negativo ~52% de pérdida promedio
+
+    # Recomendaciones finales de inversión profesional y estructurada
+    recomendaciones_finales = [
+        {
+            "titulo": "1. Estrategia DCA (Dollar-Cost Averaging) Automática",
+            "detalle": (
+                f"Invierta sus ${capacidad_inversion_mensual_cop:,.0f} COP mensuales de manera automática y constante "
+                "el mismo día de cada mes (ej. día de pago). Esto elimina el estrés de intentar adivinar los picos o valles "
+                "del mercado ('market timing') y promedia favorablemente los precios de compra de los ETFs y acciones."
+            ),
+        },
+        {
+            "titulo": "2. Regla de Oro: Fondo de Emergencia Blindado en Renta Fija",
+            "detalle": (
+                "Antes de expandir su inversión en Renta Variable, asegure que la porción de FICs de Liquidez y Cuentas "
+                "Remuneradas cubra entre 3 y 6 meses de sus gastos fijos indispensables. Esto evita que ante un imprevisto "
+                "deba vender sus ETFs o acciones con pérdidas temporales."
+            ),
+        },
+        {
+            "titulo": "3. Vehículos e Infraestructura Regulada en Colombia",
+            "detalle": (
+                "• Renta Fija: Aproveche CDTs digitales y cuentas de neobancos vigilados con seguro FOGAFÍN (hasta $50M COP).\n"
+                "• Renta Variable (ETFs y Acciones): Utilice comisionistas de bolsa vigiladas por la SFC como Trii o comisionistas "
+                "tradicionales para acceder al Mercado Global Colombiano (MGC de la BVC), invirtiendo en ETFs como CSPX o VOO en pesos sin comisiones abusivas."
+            ),
+        },
+        {
+            "titulo": "4. Optimización Tributaria Colombiana (Estatuto Tributario)",
+            "detalle": (
+                "• Marque su cuenta principal de ahorro exenta del Gravamen a los Movimientos Financieros (4x1000) hasta 350 UVT/mes.\n"
+                "• Si declara renta, evalúe aportes a Fondos de Pensiones Voluntarias (FPV) o Cuentas AFC para disminuir la base gravable "
+                "(hasta el 30% del ingreso laboral, tope de 3.800 UVT según Art. 126-1 E.T.)."
+            ),
+        },
+        {
+            "titulo": "5. Rebalanceo Periódico de Portafolio",
+            "detalle": (
+                f"Cada 12 meses revise la proporción de su portafolio. Si la Renta Variable tuvo un año excelente y superó el "
+                f"{pesos['renta_variable_total_pct']}% objetivo de su perfil {perfil_norm}, venda una fracción para consolidar ganancias "
+                "en Renta Fija y mantener su nivel de riesgo calibrado."
+            ),
+        },
+        {
+            "titulo": "6. Presupuesto Realista de Ocio y Azar (Sin Fuga de Riqueza)",
+            "detalle": (
+                f"Usted destina ${gasto_recreativo_azar_cop:,.0f} COP/mes a azar/apuestas ({pct_azar_sobre_ahorro:.1f}% del flujo total). "
+                "Nuestra recomendación realista no es prohibir el entretenimiento, sino catalogarlo estrictamente como 'Gasto de Ocio' "
+                "(máximo 2% a 5% del presupuesto), asegurando que el 95% restante construya su libertad financiera con interés compuesto."
+            ),
+        },
+    ]
+
+    return {
+        "perfil_riesgo": perfil_norm,
+        "horizonte_anios": horizonte_anios,
+        "capacidad_inversion_mensual_cop": capacidad_inversion_mensual_cop,
+        "capital_inicial_cop": capital_inicial_cop,
+        "gasto_recreativo_azar_cop": gasto_recreativo_azar_cop,
+        "asignacion_macro": {
+            "renta_fija_pct": pesos["renta_fija_total_pct"],
+            "renta_variable_pct": pesos["renta_variable_total_pct"],
+            "monto_mensual_renta_fija_cop": round(capacidad_inversion_mensual_cop * (pesos["renta_fija_total_pct"] / 100.0), 2),
+            "monto_mensual_renta_variable_cop": round(capacidad_inversion_mensual_cop * (pesos["renta_variable_total_pct"] / 100.0), 2),
+        },
+        "distribucion_mensual_detalle": distribucion_mensual_detalle,
+        "tasa_ponderada_esperada_ea_pct": round(tasa_ponderada_ea * 100.0, 2),
+        "proyeccion_escenarios": {
+            "esperado": proy_esperada,
+            "pesimista": proy_pesimista,
+            "optimista": proy_optimista,
+        },
+        "analisis_recreativo_azar": {
+            "gasto_mensual_azar_cop": gasto_recreativo_azar_cop,
+            "porcentaje_sobre_flujo_pct": round(pct_azar_sobre_ahorro, 1),
+            "desembolso_acumulado_azar_cop": round(desembolso_azar_horizonte, 2),
+            "perdida_matematica_esperada_cop": round(perdida_esperada_azar, 2),
+        },
+        "catalogo_fuentes_referencia": CATALOGO_ACTIVOS_COLOMBIA,
+        "recomendaciones_inversion": recomendaciones_finales,
+    }
+
+

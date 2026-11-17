@@ -15,12 +15,14 @@ from src.mod3_gestion_deudas import optimizar_portafolio_deudas
 from src.mod4_finca_raiz import evaluar_inversion_finca_raiz
 from src.mod5_decisiones_vida import evaluar_viabilidad_decision_vida
 from src.mod6_educacion_financiera import (
+    CATALOGO_ACTIVOS_COLOMBIA,
     comparar_azar_vs_inversion_compuesta,
     detectar_esquema_piramidal_ponzi,
     evaluar_cuestionario_suitability_completo,
     obtener_cuestionario_suitability,
     obtener_trivias_cultura_financiera,
     perfilar_inversionista_decreto_2555,
+    simular_portafolio_realista_segun_perfil,
     simular_trayectoria_mensual_azar_vs_inversion,
 )
 
@@ -134,4 +136,25 @@ def test_modulo_6_educacion_probabilidad_salin():
     # Test de trivias
     trivias = obtener_trivias_cultura_financiera()
     assert len(trivias) >= 4
+
+    # Test del portafolio realista segun perfil de riesgo (Renta Fija + Renta Variable)
+    assert "renta_fija" in CATALOGO_ACTIVOS_COLOMBIA
+    assert "renta_variable" in CATALOGO_ACTIVOS_COLOMBIA
+
+    for perfil in ("Conservador", "Moderado", "Agresivo"):
+        sim = simular_portafolio_realista_segun_perfil(
+            perfil_riesgo=perfil,
+            capacidad_inversion_mensual_cop=500_000.0,
+            capital_inicial_cop=2_000_000.0,
+            gasto_recreativo_azar_cop=50_000.0,
+            horizonte_anios=5,
+        )
+        assert sim["perfil_riesgo"] == perfil
+        assert len(sim["distribucion_mensual_detalle"]) >= 4
+        assert "proyeccion_escenarios" in sim
+        assert sim["proyeccion_escenarios"]["pesimista"]["patrimonio_final_cop"] > 0
+        assert sim["proyeccion_escenarios"]["esperado"]["patrimonio_final_cop"] > sim["proyeccion_escenarios"]["pesimista"]["patrimonio_final_cop"]
+        assert sim["proyeccion_escenarios"]["optimista"]["patrimonio_final_cop"] > sim["proyeccion_escenarios"]["esperado"]["patrimonio_final_cop"]
+        assert len(sim["recomendaciones_inversion"]) >= 5
+        assert "analisis_recreativo_azar" in sim
 
