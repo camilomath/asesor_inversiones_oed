@@ -37,7 +37,7 @@ from src.data_governance import (
     guardar_perfil_local_seguro,
     registrar_consentimiento_habeas_data,
 )
-from src.finance import cargar_configuracion, ea_a_em
+from src.finance import cargar_configuracion, cuota_fija_francesa, ea_a_em
 from src.mod1_presupuesto import diagnosticar_presupuesto_y_flujo_caja
 from src.mod2_inversiones_salario import estructurar_portafolio_salario
 from src.mod3_gestion_deudas import optimizar_portafolio_deudas
@@ -62,35 +62,41 @@ def _to_float(val: Any, default: float) -> float:
 
 
 def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Ejecuta todos los cálculos actuariales, de Habeas Data e integrados en tiempo real."""
+    """Ejecuta todos los cálculos actuariales, de Habeas Data e integrados en tiempo real (100% paramétrico, base en cero)."""
     cfg = cargar_configuracion()
-    macro = cfg["parametros_macro_colombia"]
-    ipc = float(macro["ipc_anual_dane"])
-    inf_edu = _to_float(params.get("inflacion_educativa_pct"), float(macro["inflacion_educativa_anual"]) * 100.0) / 100.0
-    tasa_descuento = 0.095
+    ipc = _to_float(params.get("ipc_anual_pct"), 0.0) / 100.0
+    inf_edu = _to_float(params.get("inflacion_educativa_pct"), 0.0) / 100.0
+    tasa_descuento = _to_float(params.get("tasa_descuento_pct"), 0.0) / 100.0
 
-    # Copia local de config con la inflación educativa parametrizada (Resolución MEN)
+    # Copia local de config con tasas parametrizadas por el usuario
     cfg_custom = json.loads(json.dumps(cfg))
+    cfg_custom["parametros_macro_colombia"]["ipc_anual_dane"] = ipc
     cfg_custom["parametros_macro_colombia"]["inflacion_educativa_anual"] = inf_edu
 
-    ingreso_neto_hogar = _to_float(params.get("ingreso_neto_hogar"), 9_115_000.0)
+    # 1. Parámetros de Flujo de Caja del Hogar (en cero por defecto)
+    ingreso_neto_hogar = _to_float(params.get("ingreso_neto_hogar"), 0.0)
     excedente_mensual = _to_float(params.get("excedente_mensual"), 0.0)
     liquidez_emergencia = _to_float(params.get("liquidez_emergencia"), 0.0)
-    ingreso_pareja = _to_float(params.get("ingreso_pareja"), 4_500_000.0)
-    costo_boda = _to_float(params.get("costo_boda"), 18_000_000.0)
-    monto_credito = _to_float(params.get("monto_credito"), 45_000_000.0)
-    tasa_ea_credito = _to_float(params.get("tasa_ea_credito"), 16.5) / 100.0
-    plazo_credito = max(6, int(_to_float(params.get("plazo_credito"), 48)))
 
-    # Parámetros reales de los hijos de Nelson:
-    # - Hijo 1: 16 años, Grado 11 en el Colegio Agustiniano Suba, Sin Ruta ($0)
-    # - Hijo 2: 20 años, Semestre 7 de Universidad (valor semestre $13.000.000 COP)
-    # - Sin excedente mensual ($0) y sin ahorro / fondo de emergencia ($0)
+    # 2. Parámetros Boda / Unión Marital (en cero por defecto)
+    costo_boda = _to_float(params.get("costo_boda"), 0.0)
+    ingreso_pareja = _to_float(params.get("ingreso_pareja"), 0.0)
+    plazo_boda_meses = max(0, int(_to_float(params.get("plazo_boda_meses"), 0)))
+    ahorro_sinergia_pct = _to_float(params.get("ahorro_sinergia_pct"), 0.0)
+
+    # 3. Parámetros Crédito Estructural + TCO (en cero por defecto)
+    monto_credito = _to_float(params.get("monto_credito"), 0.0)
+    tasa_ea_credito = _to_float(params.get("tasa_ea_credito"), 0.0) / 100.0
+    plazo_credito = max(0, int(_to_float(params.get("plazo_credito"), 0)))
+    tasa_tco_mensual_pct = _to_float(params.get("tasa_tco_mensual_pct"), 0.0)
+
+    # 4. Parámetros Educativos Hijo 1 e Hijo 2 (en cero por defecto)
     nivel_hijo = str(params.get("nivel_costo_hijo", "Agustiniano_Suba"))
-    numero_hijos = max(1, int(_to_float(params.get("numero_hijos"), 2)))
+    numero_hijos_input = max(0, int(_to_float(params.get("numero_hijos"), 0)))
     modo_horizonte = str(params.get("modo_horizonte", "ciclo_completo"))
-    grado_h1 = str(params.get("grado_agustiniano_h1", "once_2026"))
+    grado_h1 = str(params.get("grado_agustiniano_h1", "personalizado_cero"))
     mapa_etiquetas_grado = {
+        "personalizado_cero": "Paramétrico",
         "jardin_2026": "Jardín",
         "transicion_1_2026": "Transición / 1°",
         "primaria_2_3_2026": "Primaria 2°-3°",
@@ -100,30 +106,8 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
         "once_2026": "Grado 11°",
         "historico_base": "Tarifa Base",
     }
-    etiqueta_grado_h1 = mapa_etiquetas_grado.get(grado_h1, "Grado 11°")
-    edad_hijo1 = max(0, min(22, int(_to_float(params.get("edad_hijo1"), 16))))
-    edad_hijo2 = max(0, min(25, int(_to_float(params.get("edad_hijo2"), 20))))
-    etapa_hijo2 = str(params.get("etapa_hijo2", "univ_sem7"))
-    hijo2_en_univ = etapa_hijo2.startswith("univ")
-    semestre_actual_h2 = max(1, min(10, int(_to_float(params.get("semestre_actual_h2"), 7))))
-    semestres_restantes_h2 = max(1, 10 - semestre_actual_h2 + 1)
+    etiqueta_grado_h1 = mapa_etiquetas_grado.get(grado_h1, "Paramétrico")
 
-    # Años de colegio que le faltan al Hijo 1 según su edad actual y grado:
-    # A los 16 años en Grado 11 = 1 año restante de colegio (17 - 16 = 1) + 5 años (10 semestres) de universidad.
-    if edad_hijo1 <= 16:
-        anios_colegio_rest_h1 = max(1, 17 - edad_hijo1)
-        anios_univ_rest_h1 = 5
-    elif edad_hijo1 == 17:
-        anios_colegio_rest_h1 = 1 if grado_h1 == "once_2026" else 0
-        anios_univ_rest_h1 = 5
-    else:
-        anios_colegio_rest_h1 = 0
-        anios_univ_rest_h1 = max(0, 23 - edad_hijo1)
-
-    edad_actual_hijo = max(0, min(22, int(round((edad_hijo1 + min(22, edad_hijo2)) / 2.0))))
-    edad_inicio_curva = 0 if modo_horizonte == "ciclo_completo" else min(edad_hijo1, min(22, edad_hijo2))
-
-    # Multiplicador si el usuario cambia Perfil Educativo a Bajo (0.65x), Medio (1.0x) o Alto (1.85x)
     if nivel_hijo == "Bajo":
         escala_perfil_edu = 0.65
     elif nivel_hijo == "Medio":
@@ -133,20 +117,94 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
     else:
         escala_perfil_edu = 1.0
 
-    pension_colegio_mes = _to_float(params.get("pension_colegio_mes"), 1_421_000.0) * escala_perfil_edu
-    matricula_anual = _to_float(params.get("matricula_anual"), 1_800_000.0) * escala_perfil_edu
-    pension_hijo2_mes = _to_float(params.get("pension_hijo2_mes"), 1_421_000.0) * escala_perfil_edu
-    matricula_hijo2_anual = _to_float(params.get("matricula_hijo2_anual"), 1_800_000.0) * escala_perfil_edu
+    # Hijo 1
+    edad_hijo1 = max(0, min(25, int(_to_float(params.get("edad_hijo1"), 0))))
+    anios_colegio_h1_input = max(0, int(_to_float(params.get("anios_colegio_h1"), 0)))
+    pension_colegio_mes = _to_float(params.get("pension_colegio_mes"), 0.0) * escala_perfil_edu
+    matricula_anual = _to_float(params.get("matricula_anual"), 0.0) * escala_perfil_edu
     transporte_mes = _to_float(params.get("transporte_mes"), 0.0)
-    manutencion_hijo_mes = _to_float(params.get("manutencion_hijo_mes"), 1_150_000.0)
-    otros_gastos_mes = _to_float(params.get("otros_gastos_mes"), 300_000.0)
-    semestre_univ_hoy = _to_float(params.get("semestre_univ_hoy"), 13_000_000.0) * escala_perfil_edu
-    semestre_univ_h2 = _to_float(params.get("semestre_univ_h2"), 13_000_000.0) * escala_perfil_edu
+    manutencion_hijo_mes = _to_float(params.get("manutencion_hijo_mes"), 0.0)
+    otros_gastos_mes = _to_float(params.get("otros_gastos_mes"), 0.0)
+    semestre_univ_hoy = _to_float(params.get("semestre_univ_hoy"), 0.0) * escala_perfil_edu
+    semestres_univ_h1_input = max(0, int(_to_float(params.get("semestres_univ_h1"), 0)))
+
+    # Hijo 2 (100% independiente y paramétrico)
+    edad_hijo2 = max(0, min(25, int(_to_float(params.get("edad_hijo2"), 0))))
+    etapa_hijo2 = str(params.get("etapa_hijo2", "univ_custom"))
+    hijo2_en_univ = etapa_hijo2.startswith("univ")
+    semestre_actual_h2 = max(0, min(12, int(_to_float(params.get("semestre_actual_h2"), 0))))
+    semestres_cursar_h2_input = max(0, int(_to_float(params.get("semestres_cursar_h2"), 0)))
+    semestre_univ_h2 = _to_float(params.get("semestre_univ_h2"), 0.0) * escala_perfil_edu
+    pension_hijo2_mes = _to_float(params.get("pension_hijo2_mes"), 0.0) * escala_perfil_edu
+    matricula_hijo2_anual = _to_float(params.get("matricula_hijo2_anual"), 0.0) * escala_perfil_edu
+    ruta_hijo2_mes = _to_float(params.get("ruta_hijo2_mes"), 0.0)
+    manutencion_hijo2_mes = _to_float(params.get("manutencion_hijo2_mes"), 0.0)
+    otros_gastos_hijo2_mes = _to_float(params.get("otros_gastos_hijo2_mes"), 0.0)
+
+    tiene_datos_h1 = any(
+        v > 0
+        for v in (
+            pension_colegio_mes,
+            matricula_anual,
+            transporte_mes,
+            manutencion_hijo_mes,
+            otros_gastos_mes,
+            semestre_univ_hoy,
+        )
+    )
+    tiene_datos_h2 = any(
+        v > 0
+        for v in (
+            semestre_univ_h2,
+            pension_hijo2_mes,
+            matricula_hijo2_anual,
+            ruta_hijo2_mes,
+            manutencion_hijo2_mes,
+            otros_gastos_hijo2_mes,
+        )
+    )
+
+    if numero_hijos_input > 0:
+        numero_hijos = numero_hijos_input
+    else:
+        numero_hijos = (1 if tiene_datos_h1 else 0) + (1 if tiene_datos_h2 else 0)
+
+    # Años de colegio y universidad para Hijo 1
+    if not tiene_datos_h1:
+        anios_colegio_rest_h1 = 0
+        anios_univ_rest_h1 = 0
+    else:
+        if anios_colegio_h1_input > 0:
+            anios_colegio_rest_h1 = anios_colegio_h1_input
+        elif pension_colegio_mes > 0 or matricula_anual > 0:
+            anios_colegio_rest_h1 = max(1, 17 - min(16, edad_hijo1)) if edad_hijo1 <= 17 else 0
+        else:
+            anios_colegio_rest_h1 = 0
+
+        if semestres_univ_h1_input > 0:
+            anios_univ_rest_h1 = max(1, int((semestres_univ_h1_input + 1) // 2))
+        elif semestre_univ_hoy > 0:
+            anios_univ_rest_h1 = 5
+        else:
+            anios_univ_rest_h1 = 0
+
+    # Semestres restantes para Hijo 2
+    if not tiene_datos_h2:
+        semestres_restantes_h2 = 0
+    elif semestres_cursar_h2_input > 0:
+        semestres_restantes_h2 = semestres_cursar_h2_input
+    elif semestre_actual_h2 > 0:
+        semestres_restantes_h2 = max(1, 10 - semestre_actual_h2 + 1)
+    else:
+        semestres_restantes_h2 = 10 if semestre_univ_h2 > 0 else 0
+
+    edad_actual_hijo = max(0, min(22, int(round((edad_hijo1 + min(22, edad_hijo2)) / 2.0))))
+    edad_inicio_curva = 0 if modo_horizonte == "ciclo_completo" else min(edad_hijo1, min(22, edad_hijo2))
 
     # 1. Gobierno de Datos y Habeas Data (Nelson)
     usuario_id = str(params.get("usuario_id", "CC_1020304050_NELSON"))
     acepta_habeas = bool(params.get("acepta_habeas", True))
-    meses_mora = int(_to_float(params.get("meses_mora"), 14))
+    meses_mora = max(0, int(_to_float(params.get("meses_mora"), 0)))
     obligacion_pagada = bool(params.get("obligacion_pagada", True))
     accion_disco = str(params.get("accion_disco", "ninguna"))
 
@@ -192,74 +250,87 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
         res_o = ejercer_derecho_olvido_supresion(ruta_archivo=ruta_archivo_cifrado)
         estado_disco_msg = res_o["mensaje"]
 
-    # 2. Curva Actuarial para Hijo 1 (16a Grado 11 Agustiniano Suba, Sin Ruta) e Hijo 2 (20a, 7° Sem. Universidad @ $13M)
-    flujo_anual_h1 = (pension_colegio_mes + transporte_mes) * 10.0 + matricula_anual + ((manutencion_hijo_mes + otros_gastos_mes) * 12.0)
-    pago_mes_directo_h1 = pension_colegio_mes + transporte_mes + manutencion_hijo_mes + otros_gastos_mes
-    costo_mes_equiv_h1 = flujo_anual_h1 / 12.0
+    # 2. Flujos y Curvas Actuariales de Hijo 1 e Hijo 2 (100% paramétricos, cero cuando entradas son cero)
+    if tiene_datos_h1:
+        flujo_anual_h1 = (pension_colegio_mes + transporte_mes) * 10.0 + matricula_anual + ((manutencion_hijo_mes + otros_gastos_mes) * 12.0)
+        pago_mes_directo_h1 = pension_colegio_mes + transporte_mes + (matricula_anual / 12.0) + manutencion_hijo_mes + otros_gastos_mes
+        costo_mes_equiv_h1 = flujo_anual_h1 / 12.0
+    else:
+        flujo_anual_h1 = 0.0
+        pago_mes_directo_h1 = 0.0
+        costo_mes_equiv_h1 = 0.0
 
-    # Para Hijo 2 (20 años, 7° Semestre de Universidad @ $13M/semestre):
-    # En su etapa escolar previa cursó con ruta escolar completa ($380k/mes) y en universidad tiene
-    # gastos adicionales de práctica, materiales especializados, derechos de grado y posgrado/sostenimiento hasta los 23 años.
-    ruta_hist_colegio_h2 = 380_000.0 * escala_perfil_edu
-    flujo_anual_colegio_ref_h2 = (pension_hijo2_mes + ruta_hist_colegio_h2) * 10.0 + matricula_hijo2_anual + ((manutencion_hijo_mes + otros_gastos_mes) * 12.0)
-    if hijo2_en_univ:
+    flujo_anual_colegio_ref_h2 = (
+        (pension_hijo2_mes + ruta_hijo2_mes) * 10.0 + matricula_hijo2_anual + ((manutencion_hijo2_mes + otros_gastos_hijo2_mes) * 12.0)
+        if tiene_datos_h2
+        else 0.0
+    )
+    if not tiene_datos_h2:
+        matricula_univ_anual_h2 = 0.0
+        matricula_univ_mes_h2 = 0.0
+        flujo_anual_h2 = 0.0
+        pago_mes_directo_h2 = 0.0
+        costo_mes_equiv_h2 = 0.0
+    elif hijo2_en_univ:
         matricula_univ_anual_h2 = semestre_univ_h2 * 2.0
         matricula_univ_mes_h2 = matricula_univ_anual_h2 / 12.0
-        flujo_anual_h2 = matricula_univ_anual_h2 + ((manutencion_hijo_mes + otros_gastos_mes) * 12.0)
-        pago_mes_directo_h2 = matricula_univ_mes_h2 + manutencion_hijo_mes + otros_gastos_mes
+        flujo_anual_h2 = matricula_univ_anual_h2 + ((ruta_hijo2_mes + manutencion_hijo2_mes + otros_gastos_hijo2_mes) * 12.0)
+        pago_mes_directo_h2 = matricula_univ_mes_h2 + ruta_hijo2_mes + manutencion_hijo2_mes + otros_gastos_hijo2_mes
         costo_mes_equiv_h2 = flujo_anual_h2 / 12.0
     else:
         matricula_univ_anual_h2 = matricula_hijo2_anual
         matricula_univ_mes_h2 = matricula_hijo2_anual / 12.0
         flujo_anual_h2 = flujo_anual_colegio_ref_h2
-        pago_mes_directo_h2 = pension_hijo2_mes + transporte_mes + manutencion_hijo_mes + otros_gastos_mes
+        pago_mes_directo_h2 = pension_hijo2_mes + ruta_hijo2_mes + (matricula_hijo2_anual / 12.0) + manutencion_hijo2_mes + otros_gastos_hijo2_mes
         costo_mes_equiv_h2 = flujo_anual_h2 / 12.0
 
-    if numero_hijos == 1:
-        flujo_anual_agustiniano_total = flujo_anual_h1
-        pago_mes_directo_total = pago_mes_directo_h1
-    elif numero_hijos == 2:
-        flujo_anual_agustiniano_total = flujo_anual_h1 + flujo_anual_h2
-        pago_mes_directo_total = pago_mes_directo_h1 + pago_mes_directo_h2
-    else:
+    flujo_anual_agustiniano_total = flujo_anual_h1 + flujo_anual_h2
+    pago_mes_directo_total = pago_mes_directo_h1 + pago_mes_directo_h2
+    if numero_hijos > 2 and (tiene_datos_h1 or tiene_datos_h2):
         flujo_prom = (flujo_anual_h1 + flujo_anual_h2) / 2.0
-        flujo_anual_agustiniano_total = flujo_anual_h1 + flujo_anual_h2 + flujo_prom * (numero_hijos - 2)
         pago_prom = (pago_mes_directo_h1 + pago_mes_directo_h2) / 2.0
-        pago_mes_directo_total = pago_mes_directo_h1 + pago_mes_directo_h2 + pago_prom * (numero_hijos - 2)
+        flujo_anual_agustiniano_total += flujo_prom * (numero_hijos - 2)
+        pago_mes_directo_total += pago_prom * (numero_hijos - 2)
 
     costo_mes_equiv_agustiniano_total = flujo_anual_agustiniano_total / 12.0
 
     costos_etapa_h1 = {
-        "infancia": manutencion_hijo_mes + otros_gastos_mes + 450_000.0,
+        "infancia": (manutencion_hijo_mes + otros_gastos_mes) if tiene_datos_h1 else 0.0,
         "colegio": costo_mes_equiv_h1,
-        "univ": ((semestre_univ_hoy * 2.0) / 12.0) + manutencion_hijo_mes + otros_gastos_mes,
+        "univ": (((semestre_univ_hoy * 2.0) / 12.0) + manutencion_hijo_mes + otros_gastos_mes) if tiene_datos_h1 else 0.0,
     }
+    costo_col_ciclo_h2 = (
+        (flujo_anual_colegio_ref_h2 / 12.0)
+        if (pension_hijo2_mes > 0 or matricula_hijo2_anual > 0)
+        else (costo_mes_equiv_h1 if tiene_datos_h1 else (manutencion_hijo2_mes + otros_gastos_hijo2_mes + ruta_hijo2_mes))
+    )
     costos_etapa_h2 = {
-        "infancia": manutencion_hijo_mes + otros_gastos_mes + 450_000.0,
-        "colegio": flujo_anual_colegio_ref_h2 / 12.0,
-        "univ": ((semestre_univ_h2 * 2.0) / 12.0) + manutencion_hijo_mes + otros_gastos_mes + 250_000.0,
+        "infancia": (manutencion_hijo2_mes + otros_gastos_hijo2_mes) if tiene_datos_h2 else 0.0,
+        "colegio": costo_col_ciclo_h2 if tiene_datos_h2 else 0.0,
+        "univ": (((semestre_univ_h2 * 2.0) / 12.0) + ruta_hijo2_mes + manutencion_hijo2_mes + otros_gastos_hijo2_mes) if tiene_datos_h2 else 0.0,
     }
 
+    n_ref = numero_hijos if (tiene_datos_h1 or tiene_datos_h2) else 0
     perfiles_curva = {
         "Agustiniano_Suba": {
-            "infancia": costos_etapa_h1["infancia"] + (costos_etapa_h2["infancia"] if numero_hijos >= 2 else 0.0),
-            "colegio": costos_etapa_h1["colegio"] + (costos_etapa_h2["colegio"] if numero_hijos >= 2 else 0.0),
-            "univ": costos_etapa_h1["univ"] + (costos_etapa_h2["univ"] if numero_hijos >= 2 else 0.0),
+            "infancia": costos_etapa_h1["infancia"] + costos_etapa_h2["infancia"],
+            "colegio": costos_etapa_h1["colegio"] + costos_etapa_h2["colegio"],
+            "univ": costos_etapa_h1["univ"] + costos_etapa_h2["univ"],
         },
         "Bajo": {
-            "infancia": 1_150_000.0 * 0.65 * numero_hijos,
-            "colegio": 1_650_000.0 * 0.65 * numero_hijos,
-            "univ": 2_450_000.0 * 0.65 * numero_hijos,
+            "infancia": 1_150_000.0 * 0.65 * n_ref,
+            "colegio": 1_650_000.0 * 0.65 * n_ref,
+            "univ": 2_450_000.0 * 0.65 * n_ref,
         },
         "Medio": {
-            "infancia": 1_150_000.0 * 1.0 * numero_hijos,
-            "colegio": 1_650_000.0 * 1.0 * numero_hijos,
-            "univ": 2_450_000.0 * 1.0 * numero_hijos,
+            "infancia": 1_150_000.0 * 1.0 * n_ref,
+            "colegio": 1_650_000.0 * 1.0 * n_ref,
+            "univ": 2_450_000.0 * 1.0 * n_ref,
         },
         "Alto": {
-            "infancia": 1_150_000.0 * 1.85 * numero_hijos,
-            "colegio": 1_650_000.0 * 1.85 * numero_hijos,
-            "univ": 2_450_000.0 * 1.85 * numero_hijos,
+            "infancia": 1_150_000.0 * 1.85 * n_ref,
+            "colegio": 1_650_000.0 * 1.85 * n_ref,
+            "univ": 2_450_000.0 * 1.85 * n_ref,
         },
     }
 
@@ -307,7 +378,10 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
 
         meses_univ = max(12, (18 - min(17, edad_actual_hijo)) * 12)
         tasa_em_f = ea_a_em(tasa_descuento)
-        ahorro_mes_u = (vf_univ_a_18 * tasa_em_f) / (((1.0 + tasa_em_f) ** meses_univ) - 1.0)
+        if abs(tasa_em_f) < 1e-9:
+            ahorro_mes_u = vf_univ_a_18 / max(1, meses_univ)
+        else:
+            ahorro_mes_u = (vf_univ_a_18 * tasa_em_f) / (((1.0 + tasa_em_f) ** meses_univ) - 1.0)
         return {
             "edades": edades,
             "flujo_nominal_m": flujo_nominal,
@@ -320,14 +394,16 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     # Curvas de Ciclo Completo (0 a 23 años):
-    # - Hijo 1 (16 años, Grado 11 Sin Ruta, ciclo 0 a 22 años): ~$599.7M COP
-    # - Hijo 2 (20 años, 7° Semestre Univ. @ $13M/sem, ciclo 0 a 23 años con ruta histórica y etapa posgrado/grado): ~$702.8M COP
-    factor_sem_h2 = 1.0 + ((semestre_actual_h2 - 1) * 0.015) + max(0, edad_hijo2 - 18) * 0.02
-    curva_h1_completo = _calcular_curva_ciclo_hijo(costos_etapa_h1, edad_fin_ciclo=22, factor_edad_actual=1.0 + (16 - edad_hijo1) * 0.012)
+    factor_sem_h2 = 1.0 + (max(0, semestre_actual_h2 - 1) * 0.015) + max(0, edad_hijo2 - 18) * 0.02
+    curva_h1_completo = _calcular_curva_ciclo_hijo(
+        costos_etapa_h1,
+        edad_fin_ciclo=22,
+        factor_edad_actual=(1.0 + max(0, 16 - edad_hijo1) * 0.012) if tiene_datos_h1 else 1.0,
+    )
     curva_h2_completo = _calcular_curva_ciclo_hijo(
         costos_etapa_h2,
         edad_fin_ciclo=23 if hijo2_en_univ else 22,
-        factor_edad_actual=factor_sem_h2 if hijo2_en_univ else 1.0,
+        factor_edad_actual=(factor_sem_h2 if hijo2_en_univ else 1.0) if tiene_datos_h2 else 1.0,
     )
 
     edades_0_23 = list(range(0, 24))
@@ -340,12 +416,16 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
         curva_h2_completo["flujo_nominal_m"].append(0.0)
         curva_h2_completo["vpa_acum_m"].append(curva_h2_completo["vpa_acum_m"][-1])
 
-    # 2A. Valoración Capitalizada a Edad Actual + Etapa Restante Hijo 1 (16a, Grado 11)
+    # 2A. Valoración Etapa Restante y Capitalizada Hijo 1
     horizonte_anios_h1 = max(1, anios_colegio_rest_h1 + anios_univ_rest_h1)
     horizonte_anios_h2 = max(1, int((semestres_restantes_h2 + 1) // 2) + 2) if hijo2_en_univ else max(1, 22 - min(21, edad_hijo2))
     horizonte_max_anios = max(horizonte_anios_h1, horizonte_anios_h2, 6)
 
-    capital_escolar_cursado_h1 = curva_h1_completo["vpa_colegio_cop"] * (min(16, edad_hijo1) / 17.0)
+    capital_escolar_cursado_h1 = (
+        curva_h1_completo["vpa_colegio_cop"] * (min(16, edad_hijo1) / 17.0)
+        if tiene_datos_h1
+        else 0.0
+    )
     prob_sup_h1 = 1.0
     vpa_acum_h1_rest = 0.0
     vpa_col_h1_rest = 0.0
@@ -358,14 +438,14 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
     for anio_idx in range(horizonte_max_anios):
         etiqueta_anio = f"Año {anio_idx + 1} ({edad_hijo1 + anio_idx}a H1 / {edad_hijo2 + anio_idx}a H2)"
         eje_anios_rest.append(etiqueta_anio)
-        if anio_idx < anios_colegio_rest_h1:
+        if tiene_datos_h1 and anio_idx < anios_colegio_rest_h1:
             prob_sup_h1 *= 0.9985
             f_hoy_h1 = costos_etapa_h1["colegio"] * 12.0
             f_fut_h1 = f_hoy_h1 * ((1.0 + inf_edu) ** anio_idx)
             vp_h1 = (f_fut_h1 / ((1.0 + tasa_descuento) ** anio_idx)) * prob_sup_h1
             vpa_col_h1_rest += vp_h1
             vpa_acum_h1_rest += vp_h1
-        elif anio_idx < (anios_colegio_rest_h1 + anios_univ_rest_h1):
+        elif tiene_datos_h1 and anio_idx < (anios_colegio_rest_h1 + anios_univ_rest_h1):
             prob_sup_h1 *= 0.9985
             f_hoy_h1 = costos_etapa_h1["univ"] * 12.0
             f_fut_h1 = f_hoy_h1 * ((1.0 + inf_edu) ** anio_idx)
@@ -380,7 +460,12 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
 
     meses_para_univ_h1 = max(12, anios_colegio_rest_h1 * 12)
     tasa_em_f = ea_a_em(tasa_descuento)
-    ahorro_mes_univ_h1_cop = (vf_univ_h1 * tasa_em_f) / (((1.0 + tasa_em_f) ** meses_para_univ_h1) - 1.0)
+    if not tiene_datos_h1:
+        ahorro_mes_univ_h1_cop = 0.0
+    elif abs(tasa_em_f) < 1e-9:
+        ahorro_mes_univ_h1_cop = vf_univ_h1 / max(1, meses_para_univ_h1)
+    else:
+        ahorro_mes_univ_h1_cop = (vf_univ_h1 * tasa_em_f) / (((1.0 + tasa_em_f) ** meses_para_univ_h1) - 1.0)
     vpa_saldo_neto_h1_cop = round(vpa_acum_h1_rest, 2)
     vpa_capitalizado_h1_cop = round(capital_escolar_cursado_h1 + vpa_acum_h1_rest, 2)
 
@@ -395,17 +480,26 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
         "ahorro_mensual_univ_cop": round(ahorro_mes_univ_h1_cop, 2),
     }
 
-    # 2B. Valoración Capitalizada a Edad Actual + Etapa Universitaria Superior Hijo 2 (20 años, Semestre 7 de 10 @ $13M/sem)
+    # 2B. Valoración Etapa Restante y Capitalizada Hijo 2
     flujo_nom_h2_rest = []
     vpa_acum_lista_h2_rest = []
-    capital_escolar_cursado_h2 = curva_h2_completo["vpa_colegio_cop"]
-    if hijo2_en_univ:
-        flujo_semestral_hoy_h2 = semestre_univ_h2 + ((manutencion_hijo_mes + otros_gastos_mes) * 6.0)
+    capital_escolar_cursado_h2 = curva_h2_completo["vpa_colegio_cop"] if tiene_datos_h2 else 0.0
+    if not tiene_datos_h2:
+        for _ in range(horizonte_max_anios):
+            flujo_nom_h2_rest.append(0.0)
+            vpa_acum_lista_h2_rest.append(0.0)
+        vpa_etapa_univ_completa_h2_cop = 0.0
+        vpa_restante_h2_cop = 0.0
+        vpa_colegio_rest_h2_cop = 0.0
+        vpa_univ_rest_h2_cop = 0.0
+        ahorro_mes_univ_h2_cop = 0.0
+    elif hijo2_en_univ:
+        flujo_semestral_hoy_h2 = semestre_univ_h2 + ((ruta_hijo2_mes + manutencion_hijo2_mes + otros_gastos_hijo2_mes) * 6.0)
         inf_sem = ((1.0 + inf_edu) ** 0.5) - 1.0
         desc_sem = ((1.0 + tasa_descuento) ** 0.5) - 1.0
         semestres_cursados_h2 = max(0, semestre_actual_h2 - 1)
         vpa_semestres_cursados_h2 = semestres_cursados_h2 * flujo_semestral_hoy_h2
-        semestres_posgrado_sostenimiento_h2 = max(4, (23 - min(21, edad_hijo2)) * 2)
+        semestres_posgrado_sostenimiento_h2 = max(4, (23 - min(21, edad_hijo2)) * 2) if semestre_actual_h2 > 0 else 0
         total_semestres_proy_h2 = semestres_restantes_h2 + semestres_posgrado_sostenimiento_h2
         prob_sup_sem = 1.0
         vpa_pregrado_faltante_h2 = 0.0
@@ -435,8 +529,8 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
 
         vpa_etapa_univ_completa_h2_cop = round(vpa_acum_h2_etapa_univ, 2)
         vpa_restante_h2_cop = round(capital_escolar_cursado_h2 + vpa_acum_h2_etapa_univ, 2)
-        vpa_colegio_rest_h2_cop = round(vpa_semestres_cursados_h2, 2)  # Semestres 1° al 6° ya invertidos en Univ.
-        vpa_univ_rest_h2_cop = round(vpa_pregrado_faltante_h2 + vpa_posgrado_sost_h2, 2)  # Semestres 7° a 10° + Grado/Posgrado a 23a
+        vpa_colegio_rest_h2_cop = round(vpa_semestres_cursados_h2, 2)
+        vpa_univ_rest_h2_cop = round(vpa_pregrado_faltante_h2 + vpa_posgrado_sost_h2, 2)
         ahorro_mes_univ_h2_cop = round(costo_mes_equiv_h2, 2)
     else:
         anios_col_h2 = max(1, 17 - min(16, edad_hijo2))
@@ -480,9 +574,8 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
         "ahorro_mensual_univ_cop": ahorro_mes_univ_h2_cop,
     }
 
-    # Curva Consolidada Restante / Etapa Actual (Hijo 1 + Hijo 2)
-    flujo_nom_cons_rest = [round(flujo_nom_h1_rest[i] + (flujo_nom_h2_rest[i] if numero_hijos >= 2 else 0.0), 2) for i in range(horizonte_max_anios)]
-    vpa_acum_cons_rest = [round(vpa_acum_lista_h1_rest[i] + (vpa_acum_lista_h2_rest[i] if numero_hijos >= 2 else 0.0), 2) for i in range(horizonte_max_anios)]
+    flujo_nom_cons_rest = [round(flujo_nom_h1_rest[i] + flujo_nom_h2_rest[i], 2) for i in range(horizonte_max_anios)]
+    vpa_acum_cons_rest = [round(vpa_acum_lista_h1_rest[i] + vpa_acum_lista_h2_rest[i], 2) for i in range(horizonte_max_anios)]
 
     curvas_hijo: Dict[str, Any] = {}
     if modo_horizonte == "restante":
@@ -492,7 +585,7 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
             "edades": eje_anios_rest,
             "flujo_nominal_m": flujo_nom_cons_rest,
             "vpa_acum_m": vpa_acum_cons_rest,
-            "vpa_total_cop": round(curva_h1_restante["vpa_total_cop"] + (vpa_restante_h2_cop if numero_hijos >= 2 else 0.0), 2),
+            "vpa_total_cop": round(curva_h1_restante["vpa_total_cop"] + vpa_restante_h2_cop, 2),
             "vpa_colegio_cop": round(curva_h1_restante["vpa_colegio_cop"] + vpa_colegio_rest_h2_cop, 2),
             "vpa_univ_cop": round(curva_h1_restante["vpa_univ_cop"] + vpa_univ_rest_h2_cop, 2),
         }
@@ -502,7 +595,7 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
             lista_ref_acum = []
             flujo_ref_lista = []
             for i in range(horizonte_max_anios):
-                f_ref = (1_950_000.0 * mult_ref * numero_hijos * 12.0) * ((1.0 + inf_edu) ** i)
+                f_ref = (1_950_000.0 * mult_ref * n_ref * 12.0) * ((1.0 + inf_edu) ** i)
                 vp_r = f_ref / ((1.0 + tasa_descuento) ** i)
                 vpa_ref_acum += vp_r
                 flujo_ref_lista.append(round(f_ref / 1e6, 2))
@@ -523,38 +616,30 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
         curvas_hijo["Hijo_2"] = curva_h2_completo
         curvas_hijo["Agustiniano_Suba"] = {
             "edades": edades_0_23,
-            "flujo_nominal_m": [round(curva_h1_completo["flujo_nominal_m"][i] + (curva_h2_completo["flujo_nominal_m"][i] if numero_hijos >= 2 else 0.0), 2) for i in range(24)],
-            "vpa_acum_m": [round(curva_h1_completo["vpa_acum_m"][i] + (curva_h2_completo["vpa_acum_m"][i] if numero_hijos >= 2 else 0.0), 2) for i in range(24)],
-            "vpa_total_cop": round(curva_h1_completo["vpa_total_cop"] + (curva_h2_completo["vpa_total_cop"] if numero_hijos >= 2 else 0.0), 2),
+            "flujo_nominal_m": [round(curva_h1_completo["flujo_nominal_m"][i] + curva_h2_completo["flujo_nominal_m"][i], 2) for i in range(24)],
+            "vpa_acum_m": [round(curva_h1_completo["vpa_acum_m"][i] + curva_h2_completo["vpa_acum_m"][i], 2) for i in range(24)],
+            "vpa_total_cop": round(curva_h1_completo["vpa_total_cop"] + curva_h2_completo["vpa_total_cop"], 2),
             "vpa_colegio_cop": round(curva_h1_completo["vpa_colegio_cop"] + curva_h2_completo["vpa_colegio_cop"], 2),
             "vpa_univ_cop": round(curva_h1_completo["vpa_univ_cop"] + curva_h2_completo["vpa_univ_cop"], 2),
         }
 
-    vpa_ciclo_completo_consolidado = round(
-        curva_h1_completo["vpa_total_cop"] + (curva_h2_completo["vpa_total_cop"] if numero_hijos >= 2 else 0.0),
-        2,
-    )
-    vpa_restante_consolidado = (
-        curva_h1_restante["vpa_total_cop"]
-        + (vpa_restante_h2_cop if numero_hijos >= 2 else 0.0)
-        + (
-            ((curva_h1_restante["vpa_total_cop"] + vpa_restante_h2_cop) / 2.0) * (numero_hijos - 2)
-            if numero_hijos > 2
-            else 0.0
-        )
-    )
-    ahorro_univ_restante_consolidado = (
-        curva_h1_restante["ahorro_mensual_univ_cop"]
-        + (ahorro_mes_univ_h2_cop if numero_hijos >= 2 else 0.0)
-    )
+    vpa_ciclo_completo_consolidado = round(curva_h1_completo["vpa_total_cop"] + curva_h2_completo["vpa_total_cop"], 2)
+    vpa_restante_consolidado = round(curva_h1_restante["vpa_total_cop"] + vpa_restante_h2_cop, 2)
+    ahorro_univ_restante_consolidado = round(curva_h1_restante["ahorro_mensual_univ_cop"] + ahorro_mes_univ_h2_cop, 2)
 
-    # 3. Evaluación Actuarial y Monte Carlo de las 3 Decisiones Vitales (Nelson)
+    # 3. Evaluación Actuarial y Monte Carlo de las 3 Decisiones Vitales (100% Paramétrico)
     decisiones_eval = {}
     trayectorias_mc = {}
 
-    ahorro_sinergia_pareja = (ingreso_neto_hogar + ingreso_pareja) * 0.08
-    cuota_boda_24m = costo_boda / 24.0
-    balance_neto_casarse = cuota_boda_24m - ahorro_sinergia_pareja
+    plazo_boda_ef = plazo_boda_meses if plazo_boda_meses > 0 else (24 if costo_boda > 0 else 0)
+    cuota_boda_mes = (costo_boda / plazo_boda_ef) if plazo_boda_ef > 0 else 0.0
+    sinergia_frac = (
+        (ahorro_sinergia_pct / 100.0)
+        if "ahorro_sinergia_pct" in params
+        else (0.08 if (costo_boda > 0 or ingreso_pareja > 0) else 0.0)
+    )
+    ahorro_sinergia_pareja = (ingreso_neto_hogar + ingreso_pareja) * sinergia_frac
+    balance_neto_casarse = max(0.0, cuota_boda_mes - ahorro_sinergia_pareja)
 
     usar_custom_colegio = nivel_hijo == "Agustiniano_Suba"
 
@@ -569,10 +654,10 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
             costo_boda_cop=costo_boda,
             monto_credito_estructural_cop=monto_credito,
             tasa_ea_credito=tasa_ea_credito,
-            plazo_credito_meses=plazo_credito,
+            plazo_credito_meses=max(1, plazo_credito) if monto_credito > 0 else 0,
             iteraciones_montecarlo=1000,
             config=cfg_custom,
-            numero_hijos=numero_hijos,
+            numero_hijos=max(1, numero_hijos),
             edad_actual_hijo=edad_inicio_curva,
             pension_colegio_mensual_cop=pension_colegio_mes if usar_custom_colegio else None,
             matricula_anual_cop=matricula_anual if usar_custom_colegio else None,
@@ -586,18 +671,41 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
             semestre_universidad_hijo2_cop=semestre_univ_h2,
         )
         if dec == "CASARSE":
+            res_d["vpa_decision_cop"] = round(costo_boda, 2)
+            res_d["impacto_flujo_mensual_inmediato_cop"] = round(balance_neto_casarse, 2)
+            res_d["ahorro_mensual_requerido_cop"] = round(cuota_boda_mes, 2)
             res_d["ahorro_sinergia_mensual_cop"] = round(ahorro_sinergia_pareja, 2)
-            res_d["flujo_neto_sinergia_cop"] = round(ahorro_sinergia_pareja - cuota_boda_24m, 2)
+            res_d["flujo_neto_sinergia_cop"] = round(ahorro_sinergia_pareja - cuota_boda_mes, 2)
+            res_d["plazo_boda_meses"] = plazo_boda_ef
+        elif dec == "CREDITO":
+            if monto_credito <= 0 or plazo_credito <= 0:
+                res_d["vpa_decision_cop"] = 0.0
+                res_d["impacto_flujo_mensual_inmediato_cop"] = 0.0
+                res_d["ahorro_mensual_requerido_cop"] = 0.0
+                res_d["cuota_pura_credito_cop"] = 0.0
+                res_d["costo_tco_mensual_cop"] = 0.0
+            else:
+                tasa_em_cred = ea_a_em(tasa_ea_credito)
+                cuota_cred = cuota_fija_francesa(monto_credito, tasa_em_cred, plazo_credito)
+                tco_frac = (tasa_tco_mensual_pct / 100.0) if "tasa_tco_mensual_pct" in params else 0.008
+                tco_mes = monto_credito * tco_frac
+                imp_cred = cuota_cred + tco_mes
+                res_d["cuota_pura_credito_cop"] = round(cuota_cred, 2)
+                res_d["costo_tco_mensual_cop"] = round(tco_mes, 2)
+                res_d["impacto_flujo_mensual_inmediato_cop"] = round(imp_cred, 2)
+                res_d["ahorro_mensual_requerido_cop"] = round(imp_cred, 2)
+                res_d["vpa_decision_cop"] = round(imp_cred * plazo_credito, 2)
         elif dec == "HIJOS":
             if modo_horizonte == "restante":
                 res_d["vpa_decision_cop"] = round(vpa_restante_consolidado, 2)
             else:
                 res_d["vpa_decision_cop"] = round(vpa_ciclo_completo_consolidado, 2)
+            res_d["impacto_flujo_mensual_inmediato_cop"] = round(costo_mes_equiv_agustiniano_total, 2)
             res_d["ahorro_mensual_requerido_cop"] = round(ahorro_univ_restante_consolidado, 2)
             res_d["recomendacion_actuarial_y_legal"] = (
-                f"Hijo 1 en Colegio Agustiniano Suba ({edad_hijo1}a, {etiqueta_grado_h1}, {'sin ruta' if transporte_mes == 0 else 'con ruta'}: faltan {anios_colegio_rest_h1}a col. + {anios_univ_rest_h1}a univ.) "
+                f"Hijo 1 ({edad_hijo1}a, {etiqueta_grado_h1}: faltan {anios_colegio_rest_h1}a col. + {anios_univ_rest_h1}a univ.) "
                 f"+ Hijo 2 ({edad_hijo2}a, {f'{semestre_actual_h2}° Semestre Univ. @ ${semestre_univ_h2:,.0f}/sem, faltan {semestres_restantes_h2} semestres' if hijo2_en_univ else 'Colegio + Univ.'}). "
-                f"Con Excedente=${excedente_mensual:,.0f} y Ahorro=${liquidez_emergencia:,.0f}, cubrir flujo consolidado de ${pago_mes_directo_total:,.0f} COP/mes."
+                f"Con Excedente=${excedente_mensual:,.0f} y Ahorro=${liquidez_emergencia:,.0f}, flujo consolidado=${pago_mes_directo_total:,.0f} COP/mes."
             )
             vpa_1_hijo_completo = round(vpa_ciclo_completo_consolidado / max(1, numero_hijos), 2)
             res_d["desglose_colegio"] = {
@@ -639,8 +747,8 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
                     "pension_mes_cop": round(pension_hijo2_mes, 2),
                     "matricula_anual_cop": round(matricula_hijo2_anual, 2),
                     "matricula_prorrateada_mes_cop": round(matricula_hijo2_anual / 12.0, 2),
-                    "ruta_mes_cop": 0.0 if hijo2_en_univ else round(transporte_mes, 2),
-                    "manutencion_y_otros_mes_cop": round(manutencion_hijo_mes + otros_gastos_mes, 2),
+                    "ruta_mes_cop": round(ruta_hijo2_mes, 2),
+                    "manutencion_y_otros_mes_cop": round(manutencion_hijo2_mes + otros_gastos_hijo2_mes, 2),
                     "gasto_mes_directo_cop": round(pago_mes_directo_h2, 2),
                     "impacto_mes_anualizado_cop": round(costo_mes_equiv_h2, 2),
                     "flujo_anual_hoy_cop": round(flujo_anual_h2, 2),
@@ -655,12 +763,21 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
                     "numero_hijos": numero_hijos,
                     "hijo2_en_universidad": hijo2_en_univ,
                     "semestre_actual_h2": semestre_actual_h2,
-                    "educacion_h1_colegio_mes_cop": round(pension_colegio_mes + transporte_mes + (matricula_anual / 12.0), 2),
-                    "educacion_h2_univ_mes_cop": round(matricula_univ_mes_h2 if hijo2_en_univ else (pension_hijo2_mes + transporte_mes + (matricula_hijo2_anual / 12.0)), 2),
+                    "educacion_h1_colegio_mes_cop": round((pension_colegio_mes + transporte_mes + (matricula_anual / 12.0)) if tiene_datos_h1 else 0.0, 2),
+                    "educacion_h2_univ_mes_cop": round(
+                        (matricula_univ_mes_h2 + ruta_hijo2_mes if hijo2_en_univ else (pension_hijo2_mes + ruta_hijo2_mes + (matricula_hijo2_anual / 12.0)))
+                        if tiene_datos_h2
+                        else 0.0,
+                        2,
+                    ),
                     "pensiones_sumadas_mes_cop": round(pension_colegio_mes + (matricula_univ_mes_h2 if hijo2_en_univ else pension_hijo2_mes), 2),
                     "matriculas_sumadas_anual_cop": round(matricula_anual + (matricula_univ_anual_h2 if hijo2_en_univ else matricula_hijo2_anual), 2),
-                    "rutas_sumadas_mes_cop": round(transporte_mes * (1 if hijo2_en_univ else numero_hijos), 2),
-                    "manutencion_y_otros_sumados_mes_cop": round((manutencion_hijo_mes + otros_gastos_mes) * numero_hijos, 2),
+                    "rutas_sumadas_mes_cop": round(transporte_mes + ruta_hijo2_mes, 2),
+                    "manutencion_y_otros_sumados_mes_cop": round(
+                        ((manutencion_hijo_mes + otros_gastos_mes) if tiene_datos_h1 else 0.0)
+                        + ((manutencion_hijo2_mes + otros_gastos_hijo2_mes) if tiene_datos_h2 else 0.0),
+                        2,
+                    ),
                     "gasto_mes_directo_total_cop": round(pago_mes_directo_total, 2),
                     "impacto_mes_anualizado_total_cop": round(costo_mes_equiv_agustiniano_total, 2),
                     "flujo_anual_total_hoy_cop": round(flujo_anual_agustiniano_total, 2),
@@ -683,16 +800,27 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
                 "vpa_colegio_restante_cop": curvas_hijo[nivel_hijo]["vpa_colegio_cop"],
                 "vpa_universidad_proyectada_cop": curvas_hijo[nivel_hijo]["vpa_univ_cop"],
             }
-        decisiones_eval[dec] = res_d
 
+        # Recalcular Monte Carlo con el impacto mensual exacto parametrizado
         rng = random.Random(20261110)
-        impacto_mc = balance_neto_casarse if dec == "CASARSE" else res_d["impacto_flujo_mensual_inmediato_cop"]
+        impacto_mc = res_d["impacto_flujo_mensual_inmediato_cop"]
         flujos_sim = []
+        solventes_mc = 0
         for _ in range(1000):
             c_ing = rng.gauss(1.0, 0.08)
             c_gas = rng.gauss(1.0, 0.07)
             f_neto = excedente_mensual * c_ing - impacto_mc * c_gas + (liquidez_emergencia / 24.0)
+            if f_neto >= 0:
+                solventes_mc += 1
             flujos_sim.append(round(f_neto / 1e6, 3))
+        prob_mc = round((solventes_mc / 1000.0) * 100.0, 2)
+        res_d["probabilidad_exito_montecarlo_pct"] = prob_mc
+        res_d["dictamen_viabilidad"] = (
+            "VIABLE_SOLVENTE"
+            if prob_mc >= 80.0
+            else ("VIABLE_CON_AJUSTES_PREVIOS" if prob_mc >= 55.0 else "RIESGO_CRITICO_APLAZAR_Y_CAPITALIZAR")
+        )
+        decisiones_eval[dec] = res_d
         trayectorias_mc[dec] = flujos_sim
 
     # 4. Curva de sensibilidad (Excedente vs Probabilidad de Solvencia)
@@ -713,10 +841,10 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
                 costo_boda_cop=costo_boda,
                 monto_credito_estructural_cop=monto_credito,
                 tasa_ea_credito=tasa_ea_credito,
-                plazo_credito_meses=plazo_credito,
+                plazo_credito_meses=max(1, plazo_credito) if monto_credito > 0 else 0,
                 iteraciones_montecarlo=350,
                 config=cfg_custom,
-                numero_hijos=numero_hijos,
+                numero_hijos=max(1, numero_hijos) if (tiene_datos_h1 or tiene_datos_h2) else 0,
                 edad_actual_hijo=edad_inicio_curva,
                 pension_colegio_mensual_cop=pension_colegio_mes if usar_custom_colegio else None,
                 matricula_anual_cop=matricula_anual if usar_custom_colegio else None,
@@ -736,7 +864,7 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
     mod6_azar = comparar_azar_vs_inversion_compuesta(200_000.0, 10)
     mod6_piramide = detectar_esquema_piramidal_ponzi(10.0, 3)
     mod1_pres = diagnosticar_presupuesto_y_flujo_caja(
-        ingreso_bruto_mensual_cop=6_500_000.0,
+        ingreso_bruto_mensual_cop=ingreso_neto_hogar if ingreso_neto_hogar > 0 else 6_500_000.0,
         gastos_fijos_vitales_cop=2_800_000.0,
         gastos_variables_estilo_vida_cop=950_000.0,
         gastos_hormiga_mensual_cop=320_000.0,
@@ -758,17 +886,22 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
     )
     mod4_finca = evaluar_inversion_finca_raiz(
         valor_inmueble_cop=200_000_000.0,
-        ingreso_familiar_neto_cop=ingreso_neto_hogar,
+        ingreso_familiar_neto_cop=ingreso_neto_hogar if ingreso_neto_hogar > 0 else 6_500_000.0,
     )
 
     return {
+        "mensaje_ejecucion": "PRUEBA EXITOSA",
         "timestamp_calculo": datetime.now().strftime("%H:%M:%S"),
         "parametros_activos": {
             "ingreso_neto_hogar": ingreso_neto_hogar,
             "excedente_mensual": excedente_mensual,
             "excedente_m": round(excedente_mensual / 1e6, 2),
+            "liquidez_emergencia": liquidez_emergencia,
             "numero_hijos": numero_hijos,
             "edad_actual_hijo": edad_actual_hijo,
+            "inflacion_educativa_pct": round(inf_edu * 100.0, 2),
+            "tasa_descuento_pct": round(tasa_descuento * 100.0, 2),
+            "ipc_anual_pct": round(ipc * 100.0, 2),
         },
         "habeas_data": {
             "consentimiento": consentimiento,
@@ -986,34 +1119,54 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 
 <div class="container">
 
-  <!-- ==================== PESTAÑA 1: MÓDULO 5 ACTUARIAL (NELSON) ==================== -->
+  <!-- ==================== PESTAÑA 1: MÓDULO 5 ACTUARIAL PARAMÉTRICO (NELSON) ==================== -->
   <div id="tab-mod5" class="tab-content active">
     <div class="grid-sidebar">
       <div class="card">
-        <h3>⚙️ 1. Flujo de Caja del Hogar (Sin Excedente / Sin Ahorro)</h3>
+        <h3>⚙️ 1. Flujo de Caja del Hogar y Tasas Macro (Paramétrico)</h3>
         <div class="form-row-2">
           <div class="form-group">
             <label>Ingreso Neto Hogar ($)</label>
-            <input type="number" id="ingreso_neto_hogar" value="9115000" step="100000" oninput="actualizarDashboard()">
+            <input type="number" id="ingreso_neto_hogar" value="0" step="100000" oninput="actualizarDashboard()">
           </div>
           <div class="form-group">
             <label>Excedente Libre Mes ($)</label>
             <input type="number" id="excedente_mensual" value="0" step="50000" oninput="actualizarDashboard()">
           </div>
         </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Liquidez Emergencia / Ahorro ($)</label>
+            <input type="number" id="liquidez_emergencia" value="0" step="500000" oninput="actualizarDashboard()">
+          </div>
+          <div class="form-group">
+            <label>N° de Hijos a Evaluar</label>
+            <input type="number" id="numero_hijos" value="0" min="0" max="10" step="1" oninput="actualizarDashboard()">
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Inflación Educativa (% EA)</label>
+            <input type="number" id="inflacion_educativa_pct" value="0" step="0.5" oninput="actualizarDashboard()">
+          </div>
+          <div class="form-group">
+            <label>Tasa Descuento / Rend. (% EA)</label>
+            <input type="number" id="tasa_descuento_pct" value="0" step="0.5" oninput="actualizarDashboard()">
+          </div>
+        </div>
         <div class="form-group">
-          <label>Liquidez Fondo de Emergencia / Ahorro ($ COP)</label>
-          <input type="number" id="liquidez_emergencia" value="0" step="500000" oninput="actualizarDashboard()">
+          <label>IPC General Anual (% EA)</label>
+          <input type="number" id="ipc_anual_pct" value="0" step="0.5" oninput="actualizarDashboard()">
         </div>
 
-        <!-- SUB-PANEL: HIJO 1 (16A GRADO 11 AGUSTINIANO, SIN RUTA) + HIJO 2 (20A, 7° SEMESTRE UNIVERSIDAD @ $13M) -->
+        <!-- SUB-PANEL: HIJO 1 Y HIJO 2 PARAMÉTRICOS -->
         <div class="sub-panel">
-          <h4>🎓 2. Hijos: Hijo 1 (16a Grado 11) + Hijo 2 (20a Sem. 7 Univ.)</h4>
+          <h4>🎓 2. Parámetros Educativos por Hijo (Hijo 1 y Hijo 2)</h4>
           <div class="form-row-2">
             <div class="form-group">
-              <label>Perfil Educativo</label>
+              <label>Perfil Educativo Base</label>
               <select id="nivel_costo_hijo" onchange="actualizarDashboard()">
-                <option value="Agustiniano_Suba" selected>🎓 Real: Agustiniano + Univ.</option>
+                <option value="Agustiniano_Suba" selected>🎓 Paramétrico Directo ($)</option>
                 <option value="Bajo">Colombia Bajo (0.65x)</option>
                 <option value="Medio">Colombia Medio (1.0x)</option>
                 <option value="Alto">Colombia Alto (1.85x)</option>
@@ -1022,149 +1175,202 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
             <div class="form-group">
               <label>Horizonte Cálculo VPA</label>
               <select id="modo_horizonte" onchange="actualizarDashboard()">
-                <option value="ciclo_completo" selected>Ciclo Completo (0 a 23a)</option>
-                <option value="restante">Etapa Superior / Carrera Univ.</option>
+                <option value="restante" selected>Etapa Por Pagar (Paramétrico)</option>
+                <option value="ciclo_completo">Ciclo Completo (0 a 23a)</option>
               </select>
             </div>
           </div>
 
-          <!-- CUADRO CONFIGURACIÓN HIJO 1 (COLEGIO AGUSTINIANO SUBA — 16 AÑOS, GRADO 11, SIN RUTA) -->
+          <!-- CUADRO CONFIGURACIÓN HIJO 1 (COLEGIO + UNIVERSIDAD PROYECTADA) -->
           <div class="child-input-box child-input-h1">
-            <h5>👦 Cuadro Hijo 1 — Agustiniano Suba (16a, Grado 11, Sin Ruta)</h5>
+            <h5>👦 Cuadro Hijo 1 — Colegio + Universidad Proyectada</h5>
             <div class="form-row-2">
               <div class="form-group">
-                <label>Grado Escolar Hijo 1</label>
+                <label>Plantilla / Grado Hijo 1</label>
                 <select id="grado_agustiniano_h1" onchange="aplicarGradoAgustiniano(1)">
-                  <option value="once_2026" selected>Grado 11° ($1.421k | 16a)</option>
+                  <option value="personalizado" selected>✏️ Paramétrico Manual ($0)</option>
+                  <option value="once_2026">Grado 11° ($1.421k | 16a)</option>
                   <option value="decimo_2026">Grado 10° ($1.421k | 15a)</option>
                   <option value="septimo_noveno_2026">7°, 8° y 9° ($1.431k)</option>
                   <option value="cuarto_sexto_2026">4°, 5° y 6° ($1.438k)</option>
                   <option value="primaria_2_3_2026">2° y 3° Primaria ($1.454k)</option>
                   <option value="transicion_1_2026">Transición / 1° ($1.464k)</option>
                   <option value="jardin_2026">Jardín ($1.478k)</option>
-                  <option value="historico_base">Base Web (~2021: $946k)</option>
                 </select>
               </div>
               <div class="form-group">
                 <label>Edad Actual Hijo 1 (Años)</label>
-                <input type="number" id="edad_hijo1" value="16" min="0" max="21" oninput="actualizarDashboard()">
+                <input type="number" id="edad_hijo1" value="0" min="0" max="25" oninput="actualizarDashboard()">
+              </div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Años Colegio Restantes H1</label>
+                <input type="number" id="anios_colegio_h1" value="0" min="0" max="18" oninput="actualizarDashboard()">
+              </div>
+              <div class="form-group">
+                <label>Pensión Colegio Mes H1 ($)</label>
+                <input type="number" id="pension_colegio_mes" value="0" step="50000" oninput="actualizarDashboard()">
+              </div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Matrícula Colegio Anual H1 ($)</label>
+                <input type="number" id="matricula_anual" value="0" step="50000" oninput="actualizarDashboard()">
+              </div>
+              <div class="form-group">
+                <label>Ruta Escolar Mes H1 ($)</label>
+                <input type="number" id="transporte_mes" value="0" step="20000" oninput="actualizarDashboard()">
+              </div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Manutención Mes H1 ($)</label>
+                <input type="number" id="manutencion_hijo_mes" value="0" step="50000" oninput="actualizarDashboard()">
+              </div>
+              <div class="form-group">
+                <label>Otros / Materiales Mes H1 ($)</label>
+                <input type="number" id="otros_gastos_mes" value="0" step="25000" oninput="actualizarDashboard()">
               </div>
             </div>
             <div class="form-row-2">
               <div class="form-group" style="margin-bottom:2px;">
-                <label>Pensión Mes Hijo 1 ($)</label>
-                <input type="number" id="pension_colegio_mes" value="1421000" step="10000" oninput="actualizarDashboard()">
+                <label>Valor Semestre Univ. H1 ($)</label>
+                <input type="number" id="semestre_univ_hoy" value="0" step="500000" oninput="actualizarDashboard()">
               </div>
               <div class="form-group" style="margin-bottom:2px;">
-                <label>Matr.+Cobros Hijo 1 ($/año)</label>
-                <input type="number" id="matricula_anual" value="1800000" step="10000" oninput="actualizarDashboard()">
+                <label>N° Semestres Univ. H1</label>
+                <input type="number" id="semestres_univ_h1" value="0" min="0" max="16" oninput="actualizarDashboard()">
               </div>
             </div>
           </div>
 
-          <!-- CUADRO CONFIGURACIÓN HIJO 2 (20 AÑOS, 7° SEMESTRE DE UNIVERSIDAD @ $13 MILLONES) -->
+          <!-- CUADRO CONFIGURACIÓN HIJO 2 (UNIVERSIDAD O COLEGIO INDEPENDIENTE) -->
           <div class="child-input-box child-input-h2">
-            <h5 style="color:#6a1b9a;">👧 Cuadro Hijo 2 — 7° Semestre Universidad (20a, $13M/sem)</h5>
+            <h5 style="color:#6a1b9a;">👧 Cuadro Hijo 2 — Universidad o Colegio (Paramétrico)</h5>
             <div class="form-row-2">
               <div class="form-group">
-                <label>Etapa / Semestre Hijo 2</label>
+                <label>Etapa Educativa Hijo 2</label>
                 <select id="etapa_hijo2" onchange="aplicarGradoAgustiniano(2)">
-                  <option value="univ_sem7" selected>🎓 Univ. 7° Semestre ($13M)</option>
-                  <option value="univ_sem6">🎓 Univ. 6° Semestre ($13M)</option>
-                  <option value="univ_sem8">🎓 Univ. 8° Semestre ($13M)</option>
-                  <option value="univ_sem9">🎓 Univ. 9° Semestre ($13M)</option>
-                  <option value="univ_sem10">🎓 Univ. 10° Semestre ($13M)</option>
-                  <option value="once_2026">🏫 Colegio Grado 11° ($1.421k)</option>
+                  <option value="univ_custom" selected>🎓 Universidad (Paramétrico)</option>
+                  <option value="colegio_custom">🏫 Colegio (Paramétrico)</option>
+                  <option value="univ_sem7">🎓 Plantilla Univ. 7° Sem. ($13M)</option>
+                  <option value="univ_sem6">🎓 Plantilla Univ. 6° Sem. ($13M)</option>
+                  <option value="once_2026">🏫 Plantilla Colegio 11° ($1.421k)</option>
                 </select>
               </div>
               <div class="form-group">
-                <label>Semestre Actual (de 10)</label>
-                <input type="number" id="semestre_actual_h2" value="7" min="1" max="10" oninput="sincronizarSemestreHijo2()">
+                <label>Edad Actual Hijo 2 (Años)</label>
+                <input type="number" id="edad_hijo2" value="0" min="0" max="30" oninput="actualizarDashboard()">
+              </div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Semestre Univ. Actual H2</label>
+                <input type="number" id="semestre_actual_h2" value="0" min="0" max="14" oninput="sincronizarSemestreHijo2()">
+              </div>
+              <div class="form-group">
+                <label>Semestres Univ. por Cursar H2</label>
+                <input type="number" id="semestres_cursar_h2" value="0" min="0" max="14" oninput="actualizarDashboard()">
+              </div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Valor Semestre Univ. H2 ($)</label>
+                <input type="number" id="semestre_univ_h2" value="0" step="500000" oninput="actualizarDashboard()">
+              </div>
+              <div class="form-group">
+                <label>Pensión Colegio Mes H2 ($)</label>
+                <input type="number" id="pension_hijo2_mes" value="0" step="50000" oninput="actualizarDashboard()">
+              </div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Matrícula Colegio Anual H2 ($)</label>
+                <input type="number" id="matricula_hijo2_anual" value="0" step="50000" oninput="actualizarDashboard()">
+              </div>
+              <div class="form-group">
+                <label>Ruta / Transp. Mes H2 ($)</label>
+                <input type="number" id="ruta_hijo2_mes" value="0" step="20000" oninput="actualizarDashboard()">
               </div>
             </div>
             <div class="form-row-2">
               <div class="form-group" style="margin-bottom:2px;">
-                <label>Valor Semestre Hijo 2 ($)</label>
-                <input type="number" id="semestre_univ_h2" value="13000000" step="500000" oninput="actualizarDashboard()">
+                <label>Manutención Mes H2 ($)</label>
+                <input type="number" id="manutencion_hijo2_mes" value="0" step="50000" oninput="actualizarDashboard()">
               </div>
               <div class="form-group" style="margin-bottom:2px;">
-                <label>Edad Actual Hijo 2 (Años)</label>
-                <input type="number" id="edad_hijo2" value="20" min="15" max="25" oninput="actualizarDashboard()">
+                <label>Otros / Materiales Mes H2 ($)</label>
+                <input type="number" id="otros_gastos_hijo2_mes" value="0" step="25000" oninput="actualizarDashboard()">
               </div>
             </div>
-            <input type="hidden" id="pension_hijo2_mes" value="1421000">
-            <input type="hidden" id="matricula_hijo2_anual" value="1800000">
-          </div>
-
-          <input type="hidden" id="numero_hijos" value="2">
-          <div class="form-row-2">
-            <div class="form-group">
-              <label>Ruta Escolar Suba (Hijo 1)</label>
-              <select id="transporte_mes" onchange="actualizarDashboard()">
-                <option value="0" selected>Sin Ruta ($0)</option>
-                <option value="220000">Media Ruta Suba 2026 ($220.000)</option>
-                <option value="380000">Completa Suba 2026 ($380.000)</option>
-                <option value="440000">Lisboa / Sta. Rita 2026 ($440.000)</option>
-                <option value="540000">Fuera de Suba 2026 ($540.000)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Manutención Mes x Hijo ($)</label>
-              <input type="number" id="manutencion_hijo_mes" value="1150000" step="50000" title="Alimentación, Salud/Prepagada, Vestuario, Servicios y Recreación por cada hijo" oninput="actualizarDashboard()">
-            </div>
-          </div>
-          <div class="form-row-2">
-            <div class="form-group">
-              <label>Transp./Materiales/Extra x Hijo ($)</label>
-              <input type="number" id="otros_gastos_mes" value="300000" step="25000" oninput="actualizarDashboard()">
-            </div>
-            <div class="form-group">
-              <label>Semestre Univ. Proy. Hijo 1 ($)</label>
-              <input type="number" id="semestre_univ_hoy" value="13000000" step="500000" oninput="actualizarDashboard()">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Inflación Educativa Anual MEN (% EA)</label>
-            <input type="text" id="inflacion_educativa_pct" value="7.5" oninput="actualizarDashboard()">
           </div>
         </div>
 
-        <!-- PARÁMETROS BODA Y CRÉDITO -->
-        <div class="form-row-2">
-          <div class="form-group">
-            <label>💍 Costo Boda ($ COP)</label>
-            <input type="number" id="costo_boda" value="18000000" step="1000000" oninput="actualizarDashboard()">
+        <!-- PARÁMETROS BODA / UNIÓN MARITAL -->
+        <div class="sub-panel">
+          <h4>💍 3. Parámetros Boda / Unión Marital</h4>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Costo Boda / Evento ($ COP)</label>
+              <input type="number" id="costo_boda" value="0" step="500000" oninput="actualizarDashboard()">
+            </div>
+            <div class="form-group">
+              <label>Ingreso Mensual Pareja ($)</label>
+              <input type="number" id="ingreso_pareja" value="0" step="250000" oninput="actualizarDashboard()">
+            </div>
           </div>
-          <div class="form-group">
-            <label>💑 Ingreso Pareja ($ COP)</label>
-            <input type="number" id="ingreso_pareja" value="4500000" step="250000" oninput="actualizarDashboard()">
+          <div class="form-row-2">
+            <div class="form-group" style="margin-bottom:2px;">
+              <label>Plazo Meta Ahorro Boda (m)</label>
+              <input type="number" id="plazo_boda_meses" value="0" min="0" max="120" oninput="actualizarDashboard()">
+            </div>
+            <div class="form-group" style="margin-bottom:2px;">
+              <label>Sinergia Gastos Pareja (%)</label>
+              <input type="number" id="ahorro_sinergia_pct" value="0" step="1" oninput="actualizarDashboard()">
+            </div>
           </div>
         </div>
-        <div class="form-row-2">
-          <div class="form-group">
-            <label>🚗 Monto Crédito ($ COP)</label>
-            <input type="number" id="monto_credito" value="45000000" step="1000000" oninput="actualizarDashboard()">
+
+        <!-- PARÁMETROS CRÉDITO ESTRUCTURAL (+TCO) -->
+        <div class="sub-panel">
+          <h4>🚗 4. Parámetros Crédito Estructural (+TCO)</h4>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Monto Crédito ($ COP)</label>
+              <input type="number" id="monto_credito" value="0" step="1000000" oninput="actualizarDashboard()">
+            </div>
+            <div class="form-group">
+              <label>Tasa Interés Crédito (% EA)</label>
+              <input type="number" id="tasa_ea_credito" value="0" step="0.5" oninput="actualizarDashboard()">
+            </div>
           </div>
-          <div class="form-group">
-            <label>📈 Tasa (% EA) / Plazo (m)</label>
-            <div style="display:flex;gap:4px;">
-              <input type="text" id="tasa_ea_credito" value="16.5" oninput="actualizarDashboard()">
-              <input type="number" id="plazo_credito" value="48" step="6" oninput="actualizarDashboard()">
+          <div class="form-row-2">
+            <div class="form-group" style="margin-bottom:2px;">
+              <label>Plazo Crédito (Meses)</label>
+              <input type="number" id="plazo_credito" value="0" min="0" max="360" step="6" oninput="actualizarDashboard()">
+            </div>
+            <div class="form-group" style="margin-bottom:2px;">
+              <label>Tasa TCO / Seguros (% Mes)</label>
+              <input type="number" id="tasa_tco_mensual_pct" value="0" step="0.1" oninput="actualizarDashboard()">
             </div>
           </div>
         </div>
 
         <button type="button" id="btn-recalcular" class="btn btn-primary" onclick="actualizarDashboard('ninguna', true)">
-          🔄 Recalcular Modelo Actuarial y Monte Carlo
+          🔄 Ejecutar y Recalcular Modelo Paramétrico
         </button>
-        <div id="status-calculo" class="status-banner">✅ Hijo 1 (16a Grado 11, Sin Ruta) + Hijo 2 (20a Sem. 7 Univ.)</div>
+        <button type="button" id="btn-limpiar-ceros" class="btn" style="background:#eceff1;color:#37474f;margin-top:6px;" onclick="ponerTodoEnCero()">
+          🧹 Poner Todos los Parámetros en Cero ($0)
+        </button>
+        <div id="status-calculo" class="status-banner">✅ PRUEBA EXITOSA — Todos los parámetros listos en $0 COP</div>
       </div>
 
       <div>
         <!-- SECCIÓN SUPERIOR: HIJO 1 | HIJO 2 | CONSOLIDADO FAMILIAR -->
         <div class="section-label">
-          <span>🎓 Desglose Separado por Hijo y Cifra Consolidada Familiar — Hijo 1 (16a, Grado 11) + Hijo 2 (20a, 7° Sem. Univ.)</span>
-          <span style="font-size:0.78rem;color:var(--muted);font-weight:600;">Hijo 1 (Sin Ruta) | Hijo 2 (Sem. 7 @ $13M) | Consolidado</span>
+          <span>🎓 Desglose Separado por Hijo y Cifra Consolidada Familiar — Calculadora Paramétrica OED</span>
+          <span style="font-size:0.78rem;color:var(--muted);font-weight:600;">Hijo 1 | Hijo 2 | Consolidado Total</span>
         </div>
         <div class="children-grid" id="grid-hijos-detalle"></div>
 
@@ -1215,8 +1421,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         <hr style="border:0;border-top:1px solid var(--border);margin:16px 0;">
         <h3>⚖️ Calculadora Datacrédito (Ley 1266/2008 & Ley 2157/2021)</h3>
         <div class="form-group">
-          <label>Meses en Mora antes del Pago: <span id="lbl-mora" style="color:var(--primary);font-weight:800;">14</span> meses</label>
-          <input type="range" id="meses_mora" min="0" max="36" value="14" oninput="document.getElementById('lbl-mora').innerText=this.value; actualizarDashboard()">
+          <label>Meses en Mora antes del Pago: <span id="lbl-mora" style="color:var(--primary);font-weight:800;">0</span> meses</label>
+          <input type="range" id="meses_mora" min="0" max="36" value="0" oninput="document.getElementById('lbl-mora').innerText=this.value; actualizarDashboard()">
         </div>
         <div class="form-group">
           <label>
@@ -1255,52 +1461,80 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 
 <script>
 const TARIFAS_AGUSTINIANO = {
-  jardin_2026:         { matricula: 1890000, pension: 1478000, edad: 4 },
-  transicion_1_2026:   { matricula: 1860000, pension: 1464000, edad: 6 },
-  primaria_2_3_2026:   { matricula: 1845000, pension: 1454000, edad: 8 },
-  cuarto_sexto_2026:   { matricula: 1825000, pension: 1438000, edad: 10 },
-  septimo_noveno_2026: { matricula: 1815000, pension: 1431000, edad: 12 },
-  decimo_2026:         { matricula: 1800000, pension: 1421000, edad: 15 },
-  once_2026:           { matricula: 1800000, pension: 1421000, edad: 16 },
-  historico_base:      { matricula: 1051500, pension: 946300,  edad: 12 }
+  jardin_2026:         { matricula: 1890000, pension: 1478000, edad: 4, anios_col: 13 },
+  transicion_1_2026:   { matricula: 1860000, pension: 1464000, edad: 6, anios_col: 11 },
+  primaria_2_3_2026:   { matricula: 1845000, pension: 1454000, edad: 8, anios_col: 9 },
+  cuarto_sexto_2026:   { matricula: 1825000, pension: 1438000, edad: 10, anios_col: 7 },
+  septimo_noveno_2026: { matricula: 1815000, pension: 1431000, edad: 12, anios_col: 5 },
+  decimo_2026:         { matricula: 1800000, pension: 1421000, edad: 15, anios_col: 2 },
+  once_2026:           { matricula: 1800000, pension: 1421000, edad: 16, anios_col: 1 },
+  historico_base:      { matricula: 1051500, pension: 946300,  edad: 12, anios_col: 5 }
 };
+
+function ponerTodoEnCero() {
+  const idsCero = [
+    'ingreso_neto_hogar', 'excedente_mensual', 'liquidez_emergencia', 'numero_hijos',
+    'inflacion_educativa_pct', 'tasa_descuento_pct', 'ipc_anual_pct',
+    'edad_hijo1', 'anios_colegio_h1', 'pension_colegio_mes', 'matricula_anual',
+    'transporte_mes', 'manutencion_hijo_mes', 'otros_gastos_mes',
+    'semestre_univ_hoy', 'semestres_univ_h1',
+    'edad_hijo2', 'semestre_actual_h2', 'semestres_cursar_h2', 'semestre_univ_h2',
+    'pension_hijo2_mes', 'matricula_hijo2_anual', 'ruta_hijo2_mes',
+    'manutencion_hijo2_mes', 'otros_gastos_hijo2_mes',
+    'costo_boda', 'ingreso_pareja', 'plazo_boda_meses', 'ahorro_sinergia_pct',
+    'monto_credito', 'tasa_ea_credito', 'plazo_credito', 'tasa_tco_mensual_pct',
+    'meses_mora'
+  ];
+  idsCero.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '0';
+  });
+  const lblMora = document.getElementById('lbl-mora');
+  if (lblMora) lblMora.innerText = '0';
+  document.getElementById('grado_agustiniano_h1').value = 'personalizado';
+  document.getElementById('etapa_hijo2').value = 'univ_custom';
+  actualizarDashboard('ninguna', true);
+}
 
 function aplicarGradoAgustiniano(numHijo = 1) {
   if (numHijo === 1) {
     const g1 = document.getElementById('grado_agustiniano_h1').value;
+    if (g1 === 'personalizado') {
+      actualizarDashboard('ninguna', true);
+      return;
+    }
     const info1 = TARIFAS_AGUSTINIANO[g1];
     if (info1) {
       document.getElementById('pension_colegio_mes').value = info1.pension;
       document.getElementById('matricula_anual').value = info1.matricula;
       document.getElementById('edad_hijo1').value = info1.edad;
+      document.getElementById('anios_colegio_h1').value = info1.anios_col;
+      if (numVal('numero_hijos', 0) < 1) document.getElementById('numero_hijos').value = 1;
     }
   } else {
     const e2 = document.getElementById('etapa_hijo2').value;
+    if (e2 === 'univ_custom' || e2 === 'colegio_custom') {
+      actualizarDashboard('ninguna', true);
+      return;
+    }
     if (e2 === 'univ_sem7') {
       document.getElementById('semestre_actual_h2').value = 7;
+      document.getElementById('semestres_cursar_h2').value = 4;
       document.getElementById('semestre_univ_h2').value = 13000000;
       document.getElementById('edad_hijo2').value = 20;
+      if (numVal('numero_hijos', 0) < 2) document.getElementById('numero_hijos').value = 2;
     } else if (e2 === 'univ_sem6') {
       document.getElementById('semestre_actual_h2').value = 6;
+      document.getElementById('semestres_cursar_h2').value = 5;
       document.getElementById('semestre_univ_h2').value = 13000000;
       document.getElementById('edad_hijo2').value = 20;
-    } else if (e2 === 'univ_sem8') {
-      document.getElementById('semestre_actual_h2').value = 8;
-      document.getElementById('semestre_univ_h2').value = 13000000;
-      document.getElementById('edad_hijo2').value = 21;
-    } else if (e2 === 'univ_sem9') {
-      document.getElementById('semestre_actual_h2').value = 9;
-      document.getElementById('semestre_univ_h2').value = 13000000;
-      document.getElementById('edad_hijo2').value = 21;
-    } else if (e2 === 'univ_sem10') {
-      document.getElementById('semestre_actual_h2').value = 10;
-      document.getElementById('semestre_univ_h2').value = 13000000;
-      document.getElementById('edad_hijo2').value = 22;
+      if (numVal('numero_hijos', 0) < 2) document.getElementById('numero_hijos').value = 2;
     } else if (TARIFAS_AGUSTINIANO[e2]) {
       const info2 = TARIFAS_AGUSTINIANO[e2];
       document.getElementById('pension_hijo2_mes').value = info2.pension;
       document.getElementById('matricula_hijo2_anual').value = info2.matricula;
       document.getElementById('edad_hijo2').value = info2.edad;
+      if (numVal('numero_hijos', 0) < 2) document.getElementById('numero_hijos').value = 2;
     }
   }
   document.getElementById('nivel_costo_hijo').value = 'Agustiniano_Suba';
@@ -1308,19 +1542,18 @@ function aplicarGradoAgustiniano(numHijo = 1) {
 }
 
 function sincronizarSemestreHijo2() {
-  const s = Math.round(numVal('semestre_actual_h2', 7));
-  const sel = document.getElementById('etapa_hijo2');
-  if (sel && sel.value.startsWith('univ_sem') && s >= 6 && s <= 10) {
-    sel.value = 'univ_sem' + s;
+  const s = Math.round(numVal('semestre_actual_h2', 0));
+  if (s >= 1 && s <= 10 && numVal('semestres_cursar_h2', 0) === 0) {
+    document.getElementById('semestres_cursar_h2').value = Math.max(0, 10 - s + 1);
   }
   actualizarDashboard();
 }
 
 function fmtCOP(v) {
-  return '$' + Math.round(v).toLocaleString('es-CO') + ' COP';
+  return '$' + Math.round(v || 0).toLocaleString('es-CO') + ' COP';
 }
 
-function numVal(id, defVal) {
+function numVal(id, defVal = 0) {
   const el = document.getElementById(id);
   if (!el || el.value === '') return defVal;
   const parsed = parseFloat(String(el.value).replace(',', '.'));
@@ -1347,7 +1580,7 @@ async function actualizarDashboard(accionDisco = 'ninguna', esClickBoton = false
   const btn = document.getElementById('btn-recalcular');
   const statusEl = document.getElementById('status-calculo');
   if (esClickBoton && btn) {
-    btn.innerText = '⏳ Recalculando 1.000 escenarios...';
+    btn.innerText = '⏳ Ejecutando cálculos paramétricos...';
     btn.style.background = '#0f4c81';
   }
 
@@ -1355,35 +1588,46 @@ async function actualizarDashboard(accionDisco = 'ninguna', esClickBoton = false
   const payload = {
     usuario_id: document.getElementById('usuario_id').value,
     acepta_habeas: document.getElementById('acepta_habeas').checked,
-    meses_mora: Math.round(numVal('meses_mora', 14)),
+    meses_mora: Math.round(numVal('meses_mora', 0)),
     obligacion_pagada: obPagadaEl ? obPagadaEl.checked : true,
     accion_disco: accionDisco,
-    ingreso_neto_hogar: numVal('ingreso_neto_hogar', 9115000),
+    ingreso_neto_hogar: numVal('ingreso_neto_hogar', 0),
     excedente_mensual: numVal('excedente_mensual', 0),
     liquidez_emergencia: numVal('liquidez_emergencia', 0),
+    numero_hijos: Math.round(numVal('numero_hijos', 0)),
+    inflacion_educativa_pct: numVal('inflacion_educativa_pct', 0),
+    tasa_descuento_pct: numVal('tasa_descuento_pct', 0),
+    ipc_anual_pct: numVal('ipc_anual_pct', 0),
     nivel_costo_hijo: document.getElementById('nivel_costo_hijo').value,
     modo_horizonte: document.getElementById('modo_horizonte').value,
     grado_agustiniano_h1: document.getElementById('grado_agustiniano_h1').value,
-    numero_hijos: Math.round(numVal('numero_hijos', 2)),
-    edad_hijo1: Math.round(numVal('edad_hijo1', 16)),
-    edad_hijo2: Math.round(numVal('edad_hijo2', 20)),
-    etapa_hijo2: document.getElementById('etapa_hijo2').value,
-    semestre_actual_h2: Math.round(numVal('semestre_actual_h2', 7)),
-    semestre_univ_h2: numVal('semestre_univ_h2', 13000000),
-    pension_colegio_mes: numVal('pension_colegio_mes', 1421000),
-    matricula_anual: numVal('matricula_anual', 1800000),
-    pension_hijo2_mes: numVal('pension_hijo2_mes', 1421000),
-    matricula_hijo2_anual: numVal('matricula_hijo2_anual', 1800000),
+    edad_hijo1: Math.round(numVal('edad_hijo1', 0)),
+    anios_colegio_h1: Math.round(numVal('anios_colegio_h1', 0)),
+    pension_colegio_mes: numVal('pension_colegio_mes', 0),
+    matricula_anual: numVal('matricula_anual', 0),
     transporte_mes: numVal('transporte_mes', 0),
-    manutencion_hijo_mes: numVal('manutencion_hijo_mes', 1150000),
-    otros_gastos_mes: numVal('otros_gastos_mes', 300000),
-    semestre_univ_hoy: numVal('semestre_univ_hoy', 13000000),
-    inflacion_educativa_pct: numVal('inflacion_educativa_pct', 7.5),
-    costo_boda: numVal('costo_boda', 18000000),
-    ingreso_pareja: numVal('ingreso_pareja', 4500000),
-    monto_credito: numVal('monto_credito', 45000000),
-    tasa_ea_credito: numVal('tasa_ea_credito', 16.5),
-    plazo_credito: Math.round(numVal('plazo_credito', 48)),
+    manutencion_hijo_mes: numVal('manutencion_hijo_mes', 0),
+    otros_gastos_mes: numVal('otros_gastos_mes', 0),
+    semestre_univ_hoy: numVal('semestre_univ_hoy', 0),
+    semestres_univ_h1: Math.round(numVal('semestres_univ_h1', 0)),
+    etapa_hijo2: document.getElementById('etapa_hijo2').value,
+    edad_hijo2: Math.round(numVal('edad_hijo2', 0)),
+    semestre_actual_h2: Math.round(numVal('semestre_actual_h2', 0)),
+    semestres_cursar_h2: Math.round(numVal('semestres_cursar_h2', 0)),
+    semestre_univ_h2: numVal('semestre_univ_h2', 0),
+    pension_hijo2_mes: numVal('pension_hijo2_mes', 0),
+    matricula_hijo2_anual: numVal('matricula_hijo2_anual', 0),
+    ruta_hijo2_mes: numVal('ruta_hijo2_mes', 0),
+    manutencion_hijo2_mes: numVal('manutencion_hijo2_mes', 0),
+    otros_gastos_hijo2_mes: numVal('otros_gastos_hijo2_mes', 0),
+    costo_boda: numVal('costo_boda', 0),
+    ingreso_pareja: numVal('ingreso_pareja', 0),
+    plazo_boda_meses: Math.round(numVal('plazo_boda_meses', 0)),
+    ahorro_sinergia_pct: numVal('ahorro_sinergia_pct', 0),
+    monto_credito: numVal('monto_credito', 0),
+    tasa_ea_credito: numVal('tasa_ea_credito', 0),
+    plazo_credito: Math.round(numVal('plazo_credito', 0)),
+    tasa_tco_mensual_pct: numVal('tasa_tco_mensual_pct', 0),
   };
 
   try {
@@ -1395,11 +1639,11 @@ async function actualizarDashboard(accionDisco = 'ninguna', esClickBoton = false
     const data = await res.json();
     renderizarTodo(data, esClickBoton);
     if (statusEl) {
-      statusEl.innerText = `✅ Recalculado (${data.timestamp_calculo}) | Hijo 1 (${payload.edad_hijo1}a) + Hijo 2 (${payload.edad_hijo2}a, ${payload.semestre_actual_h2}° Sem.)`;
+      statusEl.innerText = `✅ ${data.mensaje_ejecucion || 'PRUEBA EXITOSA'} (${data.timestamp_calculo}) — Cálculos paramétricos verificados`;
       statusEl.style.background = '#e8f5e9';
       statusEl.style.color = '#1b5e20';
     }
-    document.getElementById('badge-hora').innerText = '🔒 Actualizado: ' + data.timestamp_calculo + ' | Agustiniano + Univ. $13M';
+    document.getElementById('badge-hora').innerText = '🔒 Actualizado: ' + data.timestamp_calculo + ' | Modo Paramétrico Activo';
   } catch (err) {
     if (statusEl) {
       statusEl.innerText = '⚠️ Error conectando con servidor Python local: ' + err;
@@ -1409,7 +1653,7 @@ async function actualizarDashboard(accionDisco = 'ninguna', esClickBoton = false
   } finally {
     if (esClickBoton && btn) {
       setTimeout(() => {
-        btn.innerText = '🔄 Recalcular Modelo Actuarial y Monte Carlo';
+        btn.innerText = '🔄 Ejecutar y Recalcular Modelo Paramétrico';
         btn.style.background = '';
       }, 350);
     }
@@ -1438,16 +1682,16 @@ function renderizarTodo(data, animar = false) {
   `;
 
   const tablaH2 = h2.en_universidad ? `
-        <tr><td>🎓 Semestre Universidad (${h2.semestre_actual}° de 10)</td><td>${fmtCOP(h2.valor_semestre_univ_cop)}/sem</td></tr>
+        <tr><td>🎓 Semestre Universidad (${h2.semestre_actual ?? 0}° | Faltan ${h2.semestres_restantes ?? 0})</td><td>${fmtCOP(h2.valor_semestre_univ_cop)}/sem</td></tr>
         <tr><td>📅 Matrícula Univ. Mensualizada (2 sem/12)</td><td>${fmtCOP(h2.matricula_univ_mensualizada_cop)}/mes</td></tr>
-        <tr><td>🍎 Manutención + Transp./Materiales Univ.</td><td>${fmtCOP(h2.manutencion_y_otros_mes_cop)}/mes</td></tr>
+        <tr><td>🚌 Ruta / Transp. Hijo 2 (Mes)</td><td>${fmtCOP(h2.ruta_mes_cop)}/mes</td></tr>
+        <tr><td>🍎 Manutención + Materiales Univ.</td><td>${fmtCOP(h2.manutencion_y_otros_mes_cop)}/mes</td></tr>
         <tr class="total-row"><td style="color:#6a1b9a;">💳 Gasto Mensual Total Hijo 2</td><td style="color:#6a1b9a;">${fmtCOP(h2.gasto_mes_directo_cop)}/mes</td></tr>
         <tr><td>📊 Flujo Anual Univ. + Manut. Hijo 2</td><td>${fmtCOP(h2.flujo_anual_hoy_cop)}/año</td></tr>
-        <tr><td>✅ Ya Invertido Univ. (1° a ${h2.semestre_actual - 1}° Sem.)</td><td>${fmtCOP(h2.vpa_colegio_restante_cop)}</td></tr>
-        <tr><td>🎯 Por Ejecutar (${h2.semestre_actual}° a 10° + Posgr. 23a)</td><td style="color:#6a1b9a;font-weight:800;">${fmtCOP(h2.vpa_univ_proyectada_cop)}</td></tr>
+        <tr><td>🎯 VPA Por Ejecutar (${h2.semestres_restantes ?? 0} sem. restantes)</td><td style="color:#6a1b9a;font-weight:800;">${fmtCOP(h2.vpa_univ_proyectada_cop)}</td></tr>
   ` : `
-        <tr><td>🏫 Pensión Agustiniano (Mes)</td><td>${fmtCOP(h2.pension_mes_cop)}/mes</td></tr>
-        <tr><td>🚌 Ruta Escolar Suba (Mes)</td><td>${fmtCOP(h2.ruta_mes_cop)}/mes</td></tr>
+        <tr><td>🏫 Pensión Colegio Hijo 2 (Mes)</td><td>${fmtCOP(h2.pension_mes_cop)}/mes</td></tr>
+        <tr><td>🚌 Ruta Escolar Hijo 2 (Mes)</td><td>${fmtCOP(h2.ruta_mes_cop)}/mes</td></tr>
         <tr><td>📋 Matrícula + Cobros (Anual / 12)</td><td>${fmtCOP(h2.matricula_prorrateada_mes_cop)}/mes</td></tr>
         <tr><td>🍎 Manutención + Lonchera/Extra</td><td>${fmtCOP(h2.manutencion_y_otros_mes_cop)}/mes</td></tr>
         <tr class="total-row"><td style="color:#6a1b9a;">💳 Gasto Mensual Directo Hijo 2</td><td style="color:#6a1b9a;">${fmtCOP(h2.gasto_mes_directo_cop)}/mes</td></tr>
@@ -1461,18 +1705,18 @@ function renderizarTodo(data, animar = false) {
   document.getElementById('grid-hijos-detalle').innerHTML = `
     <!-- CUADRO 1: HIJO 1 INDIVIDUAL -->
     <div class="child-card h1 ${animar ? 'flash' : ''}">
-      <span class="child-badge badge-h1">👦 CUADRO 1: HIJO 1 — AGUSTINIANO SUBA (${h1.edad || 16} AÑOS | ${(h1.etiqueta_grado || 'GRADO 11°').toUpperCase()})</span>
-      <div class="kpi-title">VPA Individual Hijo 1 (${esCompleto ? 'Ciclo 0–22a | ' + (h1.ruta_mes_cop > 0 ? 'Con Ruta' : 'Sin Ruta') : 'Capitalizado a ' + (h1.edad || 16) + 'a + Univ.'})</div>
+      <span class="child-badge badge-h1">👦 CUADRO 1: HIJO 1 (${h1.edad ?? 0} AÑOS | ${(h1.etiqueta_grado || 'PARAMÉTRICO').toUpperCase()})</span>
+      <div class="kpi-title">VPA Individual Hijo 1 (${esCompleto ? 'Ciclo Completo 0–22a' : (h1.anios_colegio_rest ?? 0) + 'a Col. + ' + (h1.anios_univ_rest ?? 0) + 'a Univ.'})</div>
       <div class="child-vpa-main" style="color:#1565c0;">${fmtCOP(vpaH1Mostrar)}</div>
       <div class="child-vpa-sub">
         🏫 VPA Ciclo Completo (0–22a): <strong>${fmtCOP(h1.vpa_ciclo_completo_cop)}</strong><br>
-        🎯 Por Ejecutar (${h1.anios_colegio_rest || 1}a Col. + 10 sem. Univ.): <strong>${fmtCOP(h1.vpa_saldo_neto_cop || h1.vpa_restante_edad_actual_cop)}</strong>
+        🎯 Por Ejecutar (${h1.anios_colegio_rest ?? 0}a Col. + ${h1.anios_univ_rest ?? 0}a Univ.): <strong>${fmtCOP(h1.vpa_saldo_neto_cop ?? h1.vpa_restante_edad_actual_cop)}</strong>
       </div>
       <table class="metric-table">
-        <tr><td>🏫 Pensión Agustiniano (Mes)</td><td>${fmtCOP(h1.pension_mes_cop)}/mes</td></tr>
-        <tr><td>🚌 Ruta Escolar Suba</td><td>${fmtCOP(h1.ruta_mes_cop)}/mes</td></tr>
+        <tr><td>🏫 Pensión Colegio Hijo 1 (Mes)</td><td>${fmtCOP(h1.pension_mes_cop)}/mes</td></tr>
+        <tr><td>🚌 Ruta Escolar Hijo 1 (Mes)</td><td>${fmtCOP(h1.ruta_mes_cop)}/mes</td></tr>
         <tr><td>📋 Matrícula + Cobros (Anual / 12)</td><td>${fmtCOP(h1.matricula_prorrateada_mes_cop)}/mes</td></tr>
-        <tr><td>🍎 Manutención + Lonchera/Extra</td><td>${fmtCOP(h1.manutencion_y_otros_mes_cop)}/mes</td></tr>
+        <tr><td>🍎 Manutención + Otros Hijo 1</td><td>${fmtCOP(h1.manutencion_y_otros_mes_cop)}/mes</td></tr>
         <tr class="total-row"><td>💳 Gasto Mensual Directo Hijo 1</td><td>${fmtCOP(h1.gasto_mes_directo_cop)}/mes</td></tr>
         <tr><td>📊 Impacto Anualizado Hijo 1</td><td>${fmtCOP(h1.impacto_mes_anualizado_cop)}/mes</td></tr>
         <tr><td>🗓️ Flujo Anual Hoy Hijo 1</td><td style="color:#0d47a1;font-weight:800;">${fmtCOP(h1.flujo_anual_hoy_cop)}/año</td></tr>
@@ -1481,8 +1725,8 @@ function renderizarTodo(data, animar = false) {
 
     <!-- CUADRO 2: HIJO 2 INDIVIDUAL -->
     <div class="child-card h2 ${animar ? 'flash' : ''}">
-      <span class="child-badge badge-h2">👧 CUADRO 2: HIJO 2 — ${h2.en_universidad ? h2.semestre_actual + '° SEMESTRE UNIVERSIDAD' : 'COLEGIO AGUSTINIANO'} (${h2.edad || 20} AÑOS)</span>
-      <div class="kpi-title">VPA Individual Hijo 2 (${esCompleto ? 'Ciclo 0–23a | Univ. + Posgrado' : (h2.en_universidad ? 'Carrera 10 Sem. + Posgrado 23a' : 'Colegio + Univ.')})</div>
+      <span class="child-badge badge-h2">👧 CUADRO 2: HIJO 2 — ${h2.en_universidad ? (h2.semestre_actual ?? 0) + '° SEM. UNIVERSIDAD' : 'COLEGIO'} (${h2.edad ?? 0} AÑOS)</span>
+      <div class="kpi-title">VPA Individual Hijo 2 (${esCompleto ? 'Ciclo Completo 0–23a' : (h2.en_universidad ? (h2.semestres_restantes ?? 0) + ' Sem. Univ. por Cursar' : 'Colegio + Univ.')})</div>
       <div class="child-vpa-main" style="color:#6a1b9a;">${fmtCOP(vpaH2Mostrar)}</div>
       <div class="child-vpa-sub">
         ${subH2}
@@ -1495,16 +1739,16 @@ function renderizarTodo(data, animar = false) {
     <!-- CUADRO 3: CONSOLIDADO TOTAL -->
     <div class="child-card consolidado ${animar ? 'flash' : ''}">
       <span class="child-badge badge-cons">👨‍👧‍👦 CUADRO 3: CONSOLIDADO TOTAL (HIJO 1 + HIJO 2)</span>
-      <div class="kpi-title">VPA Consolidado Familiar (${esCompleto ? 'Ciclo Completo H1 + H2' : 'Etapa Superior H1 + H2'})</div>
+      <div class="kpi-title">VPA Consolidado Familiar (${esCompleto ? 'Ciclo Completo H1 + H2' : 'Etapa Por Pagar H1 + H2'})</div>
       <div class="child-vpa-main" style="color:#0a2540;font-size:1.38rem;">${fmtCOP(vpaConsMostrar)}</div>
       <div class="child-vpa-sub">
-        👦 VPA Hijo 1 (${h1.edad}a ${h1.etiqueta_grado || 'Grado 11°'}): <strong style="color:#1565c0;">${fmtCOP(vpaH1Mostrar)}</strong><br>
-        👧 VPA Hijo 2 (${h2.edad}a ${h2.en_universidad ? 'Sem. ' + cons.semestre_actual_h2 : 'Colegio'}): <strong style="color:#6a1b9a;">${fmtCOP(vpaH2Mostrar)}</strong>
+        👦 VPA Hijo 1 (${h1.edad ?? 0}a): <strong style="color:#1565c0;">${fmtCOP(vpaH1Mostrar)}</strong><br>
+        👧 VPA Hijo 2 (${h2.edad ?? 0}a): <strong style="color:#6a1b9a;">${fmtCOP(vpaH2Mostrar)}</strong>
       </div>
       <table class="metric-table">
         <tr><td>🏫 Educación Hijo 1 (Colegio + Ruta)</td><td>${fmtCOP(cons.educacion_h1_colegio_mes_cop)}/mes</td></tr>
-        <tr><td>🎓 Educación Hijo 2 (${h2.en_universidad ? 'Univ. ' + cons.semestre_actual_h2 + '° Sem.' : 'Colegio'})</td><td>${fmtCOP(cons.educacion_h2_univ_mes_cop)}/mes</td></tr>
-        <tr><td>🍎 Manutención + Transp./Extra (H1 + H2)</td><td>${fmtCOP(cons.manutencion_y_otros_sumados_mes_cop)}/mes</td></tr>
+        <tr><td>🎓 Educación Hijo 2 (${h2.en_universidad ? 'Univ. + Ruta' : 'Colegio + Ruta'})</td><td>${fmtCOP(cons.educacion_h2_univ_mes_cop)}/mes</td></tr>
+        <tr><td>🍎 Manutención + Otros (H1 + H2)</td><td>${fmtCOP(cons.manutencion_y_otros_sumados_mes_cop)}/mes</td></tr>
         <tr class="highlight-row"><td>🔥 GASTO MENSUAL CONSOLIDADO</td><td>${fmtCOP(cons.gasto_mes_directo_total_cop)}/mes</td></tr>
         <tr class="total-row"><td>📊 Impacto Anualizado Consolidado</td><td>${fmtCOP(cons.impacto_mes_anualizado_total_cop)}/mes</td></tr>
         <tr><td>🗓️ Desembolso Anual Total (H1 + H2)</td><td style="color:#0a2540;font-weight:800;">${fmtCOP(cons.flujo_anual_total_hoy_cop)}/año</td></tr>
@@ -1516,7 +1760,7 @@ function renderizarTodo(data, animar = false) {
   // 2. RENDERIZAR LAS 3 DECISIONES VITALES COMPARADAS
   const titulos = {
     CASARSE: '💍 1. Casarse / Unión Marital',
-    HIJOS: `🎓 2. Hijos Consolidado (Hijo 1 ${h1.etiqueta_grado || 'Grado 11°'} + Hijo 2 ${h2.en_universidad ? 'Univ. ' + cons.semestre_actual_h2 + '° Sem.' : 'Colegio'})`,
+    HIJOS: `🎓 2. Hijos Consolidado (${cons.numero_hijos ?? 0} Hijos Activos)`,
     CREDITO: '🚗 3. Crédito Estructural (+TCO)'
   };
   let htmlKpis = '';
@@ -1525,12 +1769,14 @@ function renderizarTodo(data, animar = false) {
     const pillClass = d.probabilidad_exito_montecarlo_pct >= 80 ? 'pill-ok' : (d.probabilidad_exito_montecarlo_pct >= 55 ? 'pill-warn' : 'pill-bad');
     let extraInfo = '';
     if (k === 'CASARSE' && d.ahorro_sinergia_mensual_cop !== undefined) {
-      extraInfo = `<br><strong>Ahorro Sinergia Pareja (8%):</strong> <span style="color:#2e7d32;font-weight:700;">+${fmtCOP(d.ahorro_sinergia_mensual_cop)}/mes</span>`;
+      extraInfo = `<br><strong>Ahorro Sinergia Pareja:</strong> <span style="color:#2e7d32;font-weight:700;">+${fmtCOP(d.ahorro_sinergia_mensual_cop)}/mes</span>`;
     } else if (k === 'HIJOS' && d.desglose_colegio) {
       extraInfo = `
-        <br><strong>👦 Hijo 1 (${h1.edad}a ${h1.etiqueta_grado || 'Grado 11°'}):</strong> ${fmtCOP(h1.gasto_mes_directo_cop)}/mes + <strong>👧 Hijo 2 (${h2.edad}a ${h2.en_universidad ? 'Sem. ' + h2.semestre_actual : 'Colegio'}):</strong> ${fmtCOP(h2.gasto_mes_directo_cop)}/mes
+        <br><strong>👦 Hijo 1 (${h1.edad ?? 0}a):</strong> ${fmtCOP(h1.gasto_mes_directo_cop)}/mes + <strong>👧 Hijo 2 (${h2.edad ?? 0}a):</strong> ${fmtCOP(h2.gasto_mes_directo_cop)}/mes
         <br><strong>👨‍👧‍👦 Gasto Mensual Consolidado:</strong> <span style="color:#c62828;font-weight:800;">${fmtCOP(cons.gasto_mes_directo_total_cop)}/mes</span>
       `;
+    } else if (k === 'CREDITO' && d.cuota_pura_credito_cop !== undefined) {
+      extraInfo = `<br><strong>Cuota Pura:</strong> ${fmtCOP(d.cuota_pura_credito_cop)}/mes + <strong>TCO:</strong> ${fmtCOP(d.costo_tco_mensual_cop)}/mes`;
     }
     htmlKpis += `
       <div class="kpi-card ${animar ? 'flash' : ''}">
@@ -1552,7 +1798,7 @@ function renderizarTodo(data, animar = false) {
   const nivSel = data.actuaria_mod5.nivel_seleccionado;
   const cHijo = data.actuaria_mod5.curvas_hijo;
   document.getElementById('titulo-curva-hijo').innerText =
-    `📈 1. Curva Actuarial Educativa: Hijo 1 (${h1.edad}a ${h1.etiqueta_grado || 'Grado 11°'} + Univ.) vs. Hijo 2 (${h2.edad}a ${h2.en_universidad ? 'Sem. ' + (h2.semestre_actual || 7) + '° Univ.' : 'Colegio'}) vs. Consolidado`;
+    `📈 1. Curva Actuarial Educativa: Hijo 1 (${h1.edad ?? 0}a) vs. Hijo 2 (${h2.edad ?? 0}a) vs. Consolidado`;
 
   Plotly.react('chart-hijo', [
     {

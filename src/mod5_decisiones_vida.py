@@ -157,9 +157,12 @@ def evaluar_viabilidad_decision_vida(
         # Cuota mensual de ahorro (Sinking Fund) durante los meses que faltan hasta cumplir 18 años
         meses_para_universidad = max(12, (18 - edad_ini) * 12)
         tasa_em_fondo = ea_a_em(tasa_descuento_anual)
-        ahorro_mensual_universidad = (vf_universidad_a_edad_18 * tasa_em_fondo) / (
-            ((1.0 + tasa_em_fondo) ** meses_para_universidad) - 1.0
-        )
+        if abs(tasa_em_fondo) < 1e-9:
+            ahorro_mensual_universidad = vf_universidad_a_edad_18 / max(1, meses_para_universidad)
+        else:
+            ahorro_mensual_universidad = (vf_universidad_a_edad_18 * tasa_em_fondo) / (
+                ((1.0 + tasa_em_fondo) ** meses_para_universidad) - 1.0
+            )
         capital_seguro_vida_recomendado = vpa_total
         recomendacion_legal_actuarial = (
             f"Para {n_hijos} hijo(s) desde edad {edad_ini} hasta 22 años: constituir póliza de seguro de vida temporal "
