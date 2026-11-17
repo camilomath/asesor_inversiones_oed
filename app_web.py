@@ -240,7 +240,7 @@ HTML_CONTENT = """<!DOCTYPE html>
           </h2>
           <p class="text-xs text-slate-400 mt-1">Modela el costo de oportunidad de loterías, Baloto y apuestas frente a inversión legal SFC.</p>
           
-          <form onsubmit="calcularAzar(event)" class="mt-5 space-y-4">
+          <form id="formAzar" onsubmit="event.preventDefault(); calcularAzar(); return false;" class="mt-5 space-y-4">
             <div>
               <label class="block text-xs font-semibold text-slate-300">Gasto Mensual en Azar/Apuestas (COP)</label>
               <input type="number" id="inpMontoAzar" value="200000" step="10000" min="10000" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
@@ -263,9 +263,10 @@ HTML_CONTENT = """<!DOCTYPE html>
               <span class="text-[11px] text-slate-500">Tasa Efectiva Anual (EA) de portafolio balanceado</span>
             </div>
 
-            <button type="submit" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold py-2.5 rounded-lg text-sm shadow-lg shadow-emerald-500/20 transition">
-              Calcular Comparativa
+            <button type="button" onclick="calcularAzar()" id="btnCalcularAzar" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold py-2.5 rounded-lg text-sm shadow-lg shadow-emerald-500/20 transition">
+              🎲 Calcular Comparativa
             </button>
+            <div id="statusCalculoAzar" class="hidden text-xs text-center font-medium text-emerald-400 mt-2 bg-emerald-500/10 border border-emerald-500/20 py-1.5 px-3 rounded-lg"></div>
           </form>
         </div>
 
@@ -313,6 +314,30 @@ HTML_CONTENT = """<!DOCTYPE html>
                 <span class="text-slate-400 block">Chance de 4 cifras:</span>
                 <span id="lblChance" class="font-mono text-amber-400 font-semibold">1 en 10,000 (0.0100%)</span>
               </div>
+            </div>
+          </div>
+
+          <!-- Trayectoria Anualizada Dinámica -->
+          <div class="bg-slate-900/80 rounded-xl p-4 border border-slate-700/50">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Evolución Anual: Desembolso vs. Inversión Regulada</h4>
+              <span id="lblBadgeTrayectoria" class="text-[11px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Dinámico</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left">
+                <thead class="text-slate-400 border-b border-slate-800">
+                  <tr>
+                    <th class="py-2 px-2">Año</th>
+                    <th class="py-2 px-2">Total Aportado</th>
+                    <th class="py-2 px-2 text-rose-400">Pérdida Azar E[X]</th>
+                    <th class="py-2 px-2 text-emerald-400">Inversión SFC</th>
+                    <th class="py-2 px-2 text-right text-emerald-300 font-bold">Brecha Ganada</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyTrayectoria" class="divide-y divide-slate-800/80 text-slate-300 font-mono">
+                  <!-- Inyectado dinámicamente por JS -->
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -436,6 +461,9 @@ HTML_CONTENT = """<!DOCTYPE html>
       const rTrivias = await fetch('/api/trivias');
       const trivias = await rTrivias.json();
       renderTrivias(trivias);
+
+      // Calcular comparativa inicial para poblar datos dinámicos y tabla
+      await calcularAzar();
     }
 
     function cambiarTab(tab) {
@@ -462,29 +490,87 @@ HTML_CONTENT = """<!DOCTYPE html>
     }
 
     async function calcularAzar(e) {
-      if (e) e.preventDefault();
-      const monto = parseFloat(document.getElementById('inpMontoAzar').value);
-      const anios = parseInt(document.getElementById('inpAniosAzar').value);
-      const tasa = parseFloat(document.getElementById('inpTasaAzar').value) / 100.0;
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      const btn = document.getElementById('btnCalcularAzar');
+      const statusBox = document.getElementById('statusCalculoAzar');
+      const monto = parseFloat(document.getElementById('inpMontoAzar').value) || 200000;
+      const anios = parseInt(document.getElementById('inpAniosAzar').value) || 10;
+      const tasa = (parseFloat(document.getElementById('inpTasaAzar').value) || 11.0) / 100.0;
 
-      const res = await fetch('/api/azar-vs-inversion', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({gasto_mensual_cop: monto, horizonte_anios: anios, tasa_ea: tasa})
-      });
-      const data = await res.json();
-      const r = data.resumen;
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Calculando proyección...';
+      }
 
-      document.getElementById('lblAnios').innerText = r.horizonte_anios;
-      document.getElementById('lblTotalDesembolsado').innerText = '$' + r.total_desembolsado_cop.toLocaleString('es-CO') + ' COP';
-      document.getElementById('lblBrecha').innerText = '+$' + r.brecha_riqueza_inversion_vs_azar_cop.toLocaleString('es-CO') + ' COP';
-      document.getElementById('lblAzar').innerText = '$' + r.valor_esperado_azar_cop.toLocaleString('es-CO') + ' COP';
-      document.getElementById('lblPerdidaAzar').innerText = '-$' + r.perdida_matematica_esperada_azar_cop.toLocaleString('es-CO') + ' COP';
-      document.getElementById('lblCapital').innerText = '$' + r.total_desembolsado_cop.toLocaleString('es-CO') + ' COP';
-      document.getElementById('lblInversion').innerText = '$' + r.patrimonio_inversion_compuesta_cop.toLocaleString('es-CO') + ' COP';
-      document.getElementById('lblIntereses').innerText = '+$' + r.ganancia_intereses_compuestos_cop.toLocaleString('es-CO') + ' COP';
-      document.getElementById('lblBaloto').innerText = r.probabilidad_combinatoria_baloto;
-      document.getElementById('lblChance').innerText = r.probabilidad_chance_4_cifras;
+      try {
+        const res = await fetch('/api/azar-vs-inversion', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({gasto_mensual_cop: monto, horizonte_anios: anios, tasa_ea: tasa})
+        });
+
+        if (!res.ok) throw new Error('Error en el servidor: ' + res.status);
+        const data = await res.json();
+        const r = data.resumen;
+        const tray = data.trayectoria || [];
+
+        document.getElementById('lblAnios').innerText = r.horizonte_anios;
+        document.getElementById('lblTotalDesembolsado').innerText = '$' + Math.round(r.total_desembolsado_cop).toLocaleString('es-CO') + ' COP';
+        document.getElementById('lblBrecha').innerText = '+$' + Math.round(r.brecha_riqueza_inversion_vs_azar_cop).toLocaleString('es-CO') + ' COP';
+        document.getElementById('lblAzar').innerText = '$' + Math.round(r.valor_esperado_azar_cop).toLocaleString('es-CO') + ' COP';
+        document.getElementById('lblPerdidaAzar').innerText = '-$' + Math.round(r.perdida_matematica_esperada_azar_cop).toLocaleString('es-CO') + ' COP';
+        document.getElementById('lblCapital').innerText = '$' + Math.round(r.total_desembolsado_cop).toLocaleString('es-CO') + ' COP';
+        document.getElementById('lblInversion').innerText = '$' + Math.round(r.patrimonio_inversion_compuesta_cop).toLocaleString('es-CO') + ' COP';
+        document.getElementById('lblIntereses').innerText = '+$' + Math.round(r.ganancia_intereses_compuestos_cop).toLocaleString('es-CO') + ' COP';
+        document.getElementById('lblBaloto').innerText = r.probabilidad_combinatoria_baloto;
+        document.getElementById('lblChance').innerText = r.probabilidad_chance_4_cifras;
+
+        // Render trayectoria anualizada
+        const tbody = document.getElementById('tbodyTrayectoria');
+        if (tbody && tray.length > 0) {
+          const hitos = tray.filter(t => t.mes % 12 === 0);
+          tbody.innerHTML = hitos.map(h => `
+            <tr class="hover:bg-slate-800/50 transition">
+              <td class="py-2.5 px-2 font-bold text-white">Año ${h.anio}</td>
+              <td class="py-2.5 px-2 text-slate-300">$${Math.round(h.total_aportado_cop).toLocaleString('es-CO')}</td>
+              <td class="py-2.5 px-2 text-rose-400">-$${Math.round(h.perdida_esperada_azar_cop).toLocaleString('es-CO')}</td>
+              <td class="py-2.5 px-2 text-emerald-400 font-semibold">$${Math.round(h.saldo_inversion_cop).toLocaleString('es-CO')}</td>
+              <td class="py-2.5 px-2 text-right text-emerald-300 font-bold">+$${Math.round(h.brecha_patrimonial_cop).toLocaleString('es-CO')}</td>
+            </tr>
+          `).join('');
+        }
+
+        if (statusBox) {
+          statusBox.innerText = `✓ Proyección actualizada: $${Math.round(monto).toLocaleString('es-CO')} COP/mes a ${anios} años (${(tasa*100).toFixed(1)}% EA)`;
+          statusBox.className = 'text-xs text-center font-medium text-emerald-400 mt-2 bg-emerald-500/10 border border-emerald-500/20 py-1.5 px-3 rounded-lg block';
+          setTimeout(() => {
+            statusBox.className = 'hidden text-xs text-center font-medium text-emerald-400 mt-2 bg-emerald-500/10 border border-emerald-500/20 py-1.5 px-3 rounded-lg';
+          }, 3500);
+        }
+
+        if (btn) {
+          btn.innerHTML = '✓ ¡Comparativa Actualizada!';
+          btn.className = 'w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-2.5 rounded-lg text-sm shadow-lg shadow-emerald-500/30 transition';
+          setTimeout(() => {
+            btn.innerHTML = '🎲 Calcular Comparativa';
+            btn.className = 'w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold py-2.5 rounded-lg text-sm shadow-lg shadow-emerald-500/20 transition';
+            btn.disabled = false;
+          }, 1500);
+        }
+      } catch (err) {
+        console.error("Error al calcular azar:", err);
+        if (statusBox) {
+          statusBox.innerText = '❌ Error al calcular: ' + err.message;
+          statusBox.className = 'text-xs text-center font-medium text-rose-400 mt-2 bg-rose-500/10 border border-rose-500/20 py-1.5 px-3 rounded-lg block';
+        }
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '🎲 Calcular Comparativa';
+        }
+      }
     }
 
     async function evaluarTestSFC() {
