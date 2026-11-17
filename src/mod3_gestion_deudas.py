@@ -53,6 +53,15 @@ def _simular_estrategia_desendeudamiento(
     total_intereses_pagados = 0.0
     total_seguros_pagados = 0.0
     presupuesto_mensual_total = sum(d["cuota_fija"] for d in deudas) + max(0.0, abono_extra_mensual_cop)
+    historial_saldos: List[Dict[str, Any]] = [
+        {
+            "mes": 0,
+            "saldo_total_cop": round(sum(d["saldo"] for d in deudas), 2),
+            "intereses_acumulados_cop": 0.0,
+            "seguros_acumulados_cop": 0.0,
+            "saldos_por_obligacion": {d["nombre"]: round(d["saldo"], 2) for d in deudas},
+        }
+    ]
 
     while any(d["saldo"] > 0.01 for d in deudas) and mes < 600:
         mes += 1
@@ -88,6 +97,16 @@ def _simular_estrategia_desendeudamiento(
                 if flujo_disponible <= 0.01:
                     break
 
+        historial_saldos.append(
+            {
+                "mes": mes,
+                "saldo_total_cop": round(sum(d["saldo"] for d in deudas), 2),
+                "intereses_acumulados_cop": round(total_intereses_pagados, 2),
+                "seguros_acumulados_cop": round(total_seguros_pagados, 2),
+                "saldos_por_obligacion": {d["nombre"]: round(d["saldo"], 2) for d in deudas},
+            }
+        )
+
     return {
         "estrategia": criterio_orden,
         "meses_totales_para_cero_deuda": mes,
@@ -95,9 +114,15 @@ def _simular_estrategia_desendeudamiento(
         "total_seguros_y_manejo_pagados_cop": round(total_seguros_pagados, 2),
         "costo_financiero_total_cop": round(total_intereses_pagados + total_seguros_pagados, 2),
         "cronograma_extincion": [
-            {"obligacion": d["nombre"], "mes_extincion": d["mes_extincion"], "tasa_ea_pct": round(d["tasa_ea"] * 100, 2)}
+            {
+                "obligacion": d["nombre"],
+                "mes_inicio": 0,
+                "mes_extincion": d["mes_extincion"],
+                "tasa_ea_pct": round(d["tasa_ea"] * 100, 2),
+            }
             for d in deudas
         ],
+        "historial_mensual": historial_saldos,
     }
 
 
@@ -149,6 +174,49 @@ def simular_abono_extraordinario_ley_1328(
             "flujo_mensual_liberado_cop": round(max(0.0, cuota_actual - nueva_cuota), 2),
             "ahorro_intereses_cop": round(max(0.0, intereses_originales - intereses_opcion_cuota), 2),
         },
+    }
+
+
+def simular_compra_cartera(
+    lista_deudas: List[Dict[str, Any]],
+    tasa_ea_compra_cartera: float,
+    plazo_meses_nuevo: int,
+    seguro_mensual_nuevo_cop: float = 15_000.0,
+) -> Dict[str, Any]:
+    """
+    Evalúa la viabilidad financiera de unificar pasivos costosos mediante una Compra de Cartera
+    en una entidad vigilada por la SFC con menor tasa Efectiva Anual (EA).
+    """
+    saldo_total = sum(float(d["saldo_cop"]) for d in lista_deudas if float(d["saldo_cop"]) > 0)
+    cuota_total_actual = sum(
+        float(d["cuota_mensual_cop"]) + float(d.get("seguro_cuota_manejo_cop", 0.0))
+        for d in lista_deudas
+        if float(d["saldo_cop"]) > 0
+    )
+    sim_actual = _simular_estrategia_desendeudamiento(lista_deudas, 0.0, criterio_orden="sin_abono")
+
+    tasa_em_nueva = ea_a_em(tasa_ea_compra_cartera)
+    nueva_cuota_capital_interes = cuota_fija_francesa(saldo_total, tasa_em_nueva, plazo_meses_nuevo)
+    nueva_cuota_total = nueva_cuota_capital_interes + seguro_mensual_nuevo_cop
+
+    intereses_nuevos = max(0.0, nueva_cuota_capital_interes * plazo_meses_nuevo - saldo_total)
+    seguros_nuevos = seguro_mensual_nuevo_cop * plazo_meses_nuevo
+    costo_total_nuevo = intereses_nuevos + seguros_nuevos
+
+    ahorro_costo_total = sim_actual["costo_financiero_total_cop"] - costo_total_nuevo
+    flujo_mensual_liberado = cuota_total_actual - nueva_cuota_total
+
+    return {
+        "saldo_unificado_cop": round(saldo_total, 2),
+        "tasa_ea_nueva_pct": round(tasa_ea_compra_cartera * 100.0, 2),
+        "plazo_nuevo_meses": plazo_meses_nuevo,
+        "cuota_mensual_anterior_cop": round(cuota_total_actual, 2),
+        "nueva_cuota_mensual_total_cop": round(nueva_cuota_total, 2),
+        "flujo_caja_mensual_liberado_cop": round(flujo_mensual_liberado, 2),
+        "costo_financiero_anterior_cop": round(sim_actual["costo_financiero_total_cop"], 2),
+        "costo_financiero_nuevo_cop": round(costo_total_nuevo, 2),
+        "ahorro_neto_costo_financiero_cop": round(ahorro_costo_total, 2),
+        "es_viable_financieramente": ahorro_costo_total > 0,
     }
 
 
