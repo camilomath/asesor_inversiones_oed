@@ -114,3 +114,19 @@ Para correr exclusivamente las pruebas del Módulo 3 de Catalina con detalle de 
 ```powershell
 pytest tests/test_modulo_3.py -v
 ```
+
+---
+
+## 4. Test de Usabilidad de la Interfaz Gráfica (3 Iteraciones en Tonos Lilas)
+
+* **Archivo de Interfaz Evaluado:** [outputs/ui_modulo_3_catalina.html](file:///c:/github/asesor_inversiones_oed/outputs/ui_modulo_3_catalina.html)
+* **Metodología:** Evaluación Heurística de Nielsen + Prueba de Recorrido Cognitivo (*Cognitive Walkthrough*) ejecutada en **3 iteraciones sucesivas**.
+
+### Matriz de Evolución por Iteración de Usabilidad
+
+| Iteración | Foco de la Prueba | Hallazgo / Fricción Detectada (Antes) | Mejora de Diseño e Ingeniería Implementada (Después) | Resultado / Criterio de Éxito UX |
+| :---: | :--- | :--- | :--- | :--- |
+| **Iteración 1** | **Libertad de Entrada vs. Caso Semilla** (*Heurística 3: Control y libertad del usuario*) | El usuario iniciaba atado a las 4 deudas del Caso Semilla y debía borrar fila por fila si quería ingresar sus propias obligaciones desde cero. | 1. Se creó el botón destacado **`✍️ Diligenciar Mis Propios Datos (En Blanco)`** que limpia el portafolio para empezar desde cero.<br>2. Se dejó al lado el botón **`🌱 Cargar Caso Semilla OED`** para poblar instantáneamente el caso base.<br>3. Se añadió un **Formulario Guiado de Creación Rápida** con placeholders claros. | El usuario alterna en **1 clic** (`< 1 segundo`) entre diligenciar sus propios datos o restaurar el Caso Semilla OED, con indicador visual del modo activo. |
+| **Iteración 2** | **Prevención de Errores Financieros y Legibilidad Monetaria** (*Heurísticas 5 y 6: Prevención de errores y reconocimiento*) | 1. Al digitar cifras en millones (ej. `9500000`) sin puntos era fácil equivocarse en un cero.<br>2. Si el usuario ingresaba una cuota menor al interés mensual del crédito, no entendía por qué la deuda no se extinguía. | 1. Formateo en vivo en Pesos Colombianos (`$5.915.000`) junto a los campos numéricos y debajo de cada celda de saldo/cuota.<br>2. Botón **`✨ Auto-calcular cuota sugerida (36 meses)`** con fórmula francesa.<br>3. Alerta preventiva (`⚠️ Interés: $X`) cuando la cuota ingresada es menor al interés mensual. | Reducción del $100\%$ en errores de digitación de ceros y prevención automática de cuotas insuficientes para amortizar capital. |
+| **Iteración 3** | **Identidad Visual en Tonos Lilas y Flujo Integrado 1-Clic** (*Heurísticas 4 y 8: Estética minimalista y eficiencia de uso*) | 1. El tema oscuro genérico carecía de identidad visual propia.<br>2. Para probar el Simulador Ley 1328 con una deuda de la tabla superior, el usuario tenía que copiar y pegar manualmente saldo y tasa. | 1. Rediseño integral en **paleta de tonos lilas, violetas y lavanda** (`#2e1065`, `#581c87`, `#a855f7`, `#c084fc`, `#f3e8ff`) con contraste accesible WCAG AA.<br>2. Se agregó el botón **`📥 Ley 1328`** en cada fila de la tabla para transferir saldo, tasa y plazo estimado al simulador de abonos a capital en un clic. | Cero re-digitación entre secciones y consistencia visual en tonos lilas en tarjetas, bordes, curvas del gráfico Canvas y barras Gantt. |
+

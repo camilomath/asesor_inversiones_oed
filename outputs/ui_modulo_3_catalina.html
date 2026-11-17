@@ -2,97 +2,272 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Módulo 3 OED — Gestión y Optimización de Deudas (Catalina Moreno)</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --lilac-50: #faf5ff;
+      --lilac-100: #f3e8ff;
+      --lilac-200: #e9d5ff;
+      --lilac-300: #d8b4fe;
+      --lilac-400: #c084fc;
+      --lilac-500: #a855f7;
+      --lilac-600: #9333ea;
+      --lilac-700: #7e22ce;
+      --lilac-800: #6b21a8;
+      --lilac-900: #581c87;
+      --lilac-950: #2e1065;
+    }
+    body {
+      background: linear-gradient(135deg, #1e0b36 0%, #2e1065 50%, #1a0933 100%);
+      color: #f3e8ff;
+      min-height: 100vh;
+    }
+    .lilac-card {
+      background: rgba(59, 7, 100, 0.55);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(216, 180, 254, 0.25);
+      box-shadow: 0 8px 28px rgba(18, 4, 36, 0.45);
+    }
+    .lilac-input {
+      background: rgba(30, 11, 54, 0.85);
+      border: 1px solid rgba(192, 132, 252, 0.4);
+      color: #faf5ff;
+      transition: all 0.2s ease;
+    }
+    .lilac-input:focus {
+      outline: none;
+      border-color: #d8b4fe;
+      box-shadow: 0 0 0 2px rgba(192, 132, 252, 0.35);
+    }
+    .btn-mode-active {
+      background: linear-gradient(90deg, #9333ea, #c084fc);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(168, 85, 247, 0.45);
+      border: 1px solid #e9d5ff;
+    }
+    .btn-mode-inactive {
+      background: rgba(88, 28, 135, 0.5);
+      color: #e9d5ff;
+      border: 1px solid rgba(192, 132, 252, 0.3);
+    }
+    .btn-mode-inactive:hover {
+      background: rgba(126, 34, 206, 0.65);
+    }
+  </style>
 </head>
-<body class="bg-slate-950 text-slate-100 antialiased p-4 m-0">
-  <div class="max-w-6xl mx-auto space-y-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-      <div>
-        <div class="text-xs uppercase tracking-wider text-slate-400 font-semibold">
-          Sistema Local Asesor Financiero OED • Módulo 3
+<body class="antialiased p-4 md:p-6 m-0">
+  <div class="max-w-6xl mx-auto space-y-5">
+
+    <!-- ENCABEZADO Y SELECTOR DE MODO (PERSONALIZADO vs CASO SEMILLA vs ESCENARIOS TEST) -->
+    <div class="lilac-card rounded-2xl p-5 space-y-4">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/25 text-purple-200 border border-purple-300/30 mb-1.5">
+            <span>🌸 Sistema Local Asesor Financiero OED • Módulo 3</span>
+            <span>•</span>
+            <span id="indicadorModoActivo" class="text-fuchsia-200 font-bold">Modo: Caso Semilla OED</span>
+          </div>
+          <h1 class="text-xl md:text-2xl font-bold text-white tracking-tight">
+            Gestión, Administración y Optimización Analítica de Deudas — Catalina Moreno
+          </h1>
+          <p class="text-xs text-purple-200/80 mt-0.5">
+            Normativa SFC Colombia: Tasas compuestas (EA ↔ EM), Límite de Usura SFC (26.50% EA), Avalancha vs. Bola de Nieve con Roll-Over y Ley 1328 de 2009.
+          </p>
         </div>
-        <h1 class="text-lg font-bold text-white">
-          Gestión, Administración y Optimización Analítica de Deudas — Catalina Moreno
-        </h1>
-        <p class="text-xs text-slate-400">
-          Normativa SFC Colombia: Tasas compuestas (EA ↔ EM), Límite de Usura SFC (26.50% EA), Avalancha vs. Bola de Nieve con Roll-Over y Ley 1328 de 2009.
-        </p>
+
+        <!-- Botones Principales: Modo Personalizado vs Caso Semilla -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btnModoPersonalizado" onclick="activarModoPersonalizado()"
+            class="btn-mode-inactive px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+            ✍️ Diligenciar Mis Propios Datos (En Blanco)
+          </button>
+          <button id="btnModoSemilla" onclick="cargarEscenario('base')"
+            class="btn-mode-active px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+            🌱 Cargar Caso Semilla OED
+          </button>
+        </div>
       </div>
-      <div class="flex flex-wrap gap-1.5">
-        <button onclick="cargarEscenario('base')" class="px-2.5 py-1.5 rounded text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-500">
-          Caso Semilla OED
-        </button>
-        <button onclick="cargarEscenario('tc01_rojo')" class="px-2.5 py-1.5 rounded text-xs font-medium bg-slate-800 text-slate-200 hover:bg-slate-700">
-          TC-01: Sobreendeudamiento (45%)
-        </button>
-        <button onclick="cargarEscenario('tc02_usura')" class="px-2.5 py-1.5 rounded text-xs font-medium bg-slate-800 text-slate-200 hover:bg-slate-700">
-          TC-02: Alerta Usura SFC (42% EA)
-        </button>
-        <button onclick="cargarEscenario('tc03_io')" class="px-2.5 py-1.5 rounded text-xs font-medium bg-slate-800 text-slate-200 hover:bg-slate-700">
-          TC-03: Avalancha vs. Nieve
+
+      <!-- Barra de Escenarios de Test (Test Módulo 3 + Test de Usabilidad) -->
+      <div class="pt-3 border-t border-purple-300/20 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="text-xs text-purple-200/90 font-semibold mr-1">🧪 Escenarios Test Módulo 3:</span>
+          <button onclick="cargarEscenario('tc01_rojo')" id="btn_tc01_rojo" class="btn-mode-inactive px-2.5 py-1 rounded-lg text-xs font-medium transition">
+            TC-01: Sobreendeudamiento (45%)
+          </button>
+          <button onclick="cargarEscenario('tc02_usura')" id="btn_tc02_usura" class="btn-mode-inactive px-2.5 py-1 rounded-lg text-xs font-medium transition">
+            TC-02: Alerta Usura SFC (42% EA)
+          </button>
+          <button onclick="cargarEscenario('tc03_io')" id="btn_tc03_io" class="btn-mode-inactive px-2.5 py-1 rounded-lg text-xs font-medium transition">
+            TC-03: Avalancha vs. Nieve
+          </button>
+        </div>
+        <button onclick="toggleModalUsabilidad()" class="px-3 py-1 rounded-lg text-xs font-semibold bg-fuchsia-500/25 text-fuchsia-200 border border-fuchsia-300/40 hover:bg-fuchsia-500/40 transition">
+          📋 Ver Reporte Test de Usabilidad (3 Iteraciones)
         </button>
       </div>
     </div>
 
+    <!-- PANEL COLAPSABLE: REPORTE DEL TEST DE USABILIDAD (3 ITERACIONES) -->
+    <div id="panelUsabilidad" class="hidden lilac-card rounded-2xl p-5 space-y-3 border-2 border-fuchsia-400/50">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-bold text-fuchsia-200">
+          ✨ Auditoría y Test de Usabilidad (3 Iteraciones Aplicadas en esta Interfaz Lila)
+        </h2>
+        <button onclick="toggleModalUsabilidad()" class="text-xs text-purple-200 hover:text-white">✕ Cerrar</button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+        <div class="p-3 rounded-xl bg-purple-950/60 border border-purple-400/30 space-y-1">
+          <div class="font-bold text-purple-200">Iteración 1: Libertad de Entrada y Control del Usuario</div>
+          <p class="text-purple-100/80"><b>Hallazgo:</b> El usuario quedaba atado a los datos precargados del Caso Semilla y era tedioso borrar fila por fila.</p>
+          <p class="text-fuchsia-300"><b>Mejora Aplicada:</b> Se creó el modo <b>"✍️ Diligenciar Mis Propios Datos"</b> + un formulario guiado para agregar cualquier obligación personalizada y el botón <b>"🌱 Cargar Caso Semilla OED"</b> para restaurar el ejemplo con un clic.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-purple-950/60 border border-purple-400/30 space-y-1">
+          <div class="font-bold text-purple-200">Iteración 2: Claridad Financiera, Cuota Mínima y Formato COP</div>
+          <p class="text-purple-100/80"><b>Hallazgo:</b> Al digitar saldos grandes sin separadores o cuotas menores a los intereses mensuales, el usuario no sabía por qué una deuda no bajaba.</p>
+          <p class="text-fuchsia-300"><b>Mejora Aplicada:</b> Se añadieron etiquetas en vivo en pesos colombianos (<code>$ COP</code>), el botón <b>"Auto-calcular Cuota (36m)"</b> y alerta automática si la cuota digitada no cubre los intereses del mes.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-purple-950/60 border border-purple-400/30 space-y-1">
+          <div class="font-bold text-purple-200">Iteración 3: Jerarquía Visual Lila y Sincronización 1-Clic</div>
+          <p class="text-purple-100/80"><b>Hallazgo:</b> Para probar el Simulador Ley 1328 con una deuda de la tabla superior había que copiar los datos a mano.</p>
+          <p class="text-fuchsia-300"><b>Mejora Aplicada:</b> Paleta armónica en tonos lilas/violetas de alto contraste WCAG AA y botón <b>"📥 Enviar a Ley 1328"</b> en cada fila de la tabla para simular prepagos con un solo clic.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARÁMETROS FINANCIEROS DEL HOGAR Y SEMÁFORO -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
-        <label class="block text-xs text-slate-400 mb-1">Ingreso Neto Mensual (COP)</label>
-        <input id="ingresoNeto" type="number" step="100000" value="5915000" oninput="recalcularTodo()"
-          class="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700 text-sm font-mono text-white" />
+      <div class="lilac-card rounded-xl p-3.5">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-xs text-purple-200 font-medium">Ingreso Neto Mensual</label>
+          <span id="lblIngresoFmt" class="text-xs font-mono text-fuchsia-300 font-semibold">$5.915.000</span>
+        </div>
+        <input id="ingresoNeto" type="number" min="0" step="100000" value="5915000" oninput="recalcularTodo()"
+          placeholder="Ej: 4500000"
+          class="lilac-input w-full px-3 py-1.5 rounded-lg text-sm font-mono" />
       </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
-        <label class="block text-xs text-slate-400 mb-1">Abono Extra Mensual a Deuda (COP)</label>
-        <input id="abonoExtra" type="number" step="50000" value="350000" oninput="recalcularTodo()"
-          class="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700 text-sm font-mono text-white" />
+
+      <div class="lilac-card rounded-xl p-3.5">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-xs text-purple-200 font-medium">Abono Extra Mensual</label>
+          <span id="lblAbonoFmt" class="text-xs font-mono text-fuchsia-300 font-semibold">$350.000</span>
+        </div>
+        <input id="abonoExtra" type="number" min="0" step="50000" value="350000" oninput="recalcularTodo()"
+          placeholder="Ej: 200000"
+          class="lilac-input w-full px-3 py-1.5 rounded-lg text-sm font-mono" />
       </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
-        <label class="block text-xs text-slate-400 mb-1">Tope Legal Usura SFC (% EA)</label>
-        <input id="usuraSfc" type="number" step="0.1" value="26.50" oninput="recalcularTodo()"
-          class="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700 text-sm font-mono text-white" />
+
+      <div class="lilac-card rounded-xl p-3.5">
+        <div class="flex justify-between items-center mb-1">
+          <label class="text-xs text-purple-200 font-medium">Tope Usura SFC (% EA)</label>
+          <span class="text-xs font-mono text-purple-300">Art. 884 C.Co.</span>
+        </div>
+        <input id="usuraSfc" type="number" min="1" max="100" step="0.1" value="26.50" oninput="recalcularTodo()"
+          class="lilac-input w-full px-3 py-1.5 rounded-lg text-sm font-mono" />
       </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-3 flex flex-col justify-between">
-        <span class="text-xs text-slate-400">Semáforo Índice Endeudamiento</span>
-        <div id="badgeSemaforo" class="text-sm font-bold font-mono py-1 px-2 rounded text-center mt-1">
+
+      <div class="lilac-card rounded-xl p-3.5 flex flex-col justify-between">
+        <span class="text-xs text-purple-200 font-medium">Semáforo Índice Endeudamiento</span>
+        <div id="badgeSemaforo" class="text-xs font-bold font-mono py-1.5 px-2.5 rounded-lg text-center mt-1">
           Calculando...
         </div>
       </div>
     </div>
 
+    <!-- KPIS PRINCIPALES -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
-        <div class="text-xs text-slate-400">Saldo Total Pasivos</div>
-        <div id="kpiSaldoTotal" class="text-base font-bold font-mono mt-1">$0</div>
-        <div id="kpiCuotaTotal" class="text-xs text-slate-400 mt-0.5">Cuota mensual: $0</div>
+      <div class="lilac-card rounded-xl p-3.5">
+        <div class="text-xs text-purple-200/80">Saldo Total Pasivos</div>
+        <div id="kpiSaldoTotal" class="text-lg font-bold font-mono text-white mt-1">$0</div>
+        <div id="kpiCuotaTotal" class="text-xs text-purple-200/80 mt-0.5">Cuota mensual: $0</div>
       </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
-        <div class="text-xs text-slate-400">Estrategia Óptima Recomendada</div>
-        <div id="kpiEstrategia" class="text-base font-bold text-emerald-400 mt-1">AVALANCHA</div>
-        <div id="kpiMesesAvalancha" class="text-xs text-slate-400 mt-0.5">0 meses hasta Cero Deuda</div>
+      <div class="lilac-card rounded-xl p-3.5">
+        <div class="text-xs text-purple-200/80">Estrategia Óptima Recomendada</div>
+        <div id="kpiEstrategia" class="text-lg font-bold text-fuchsia-300 mt-1">AVALANCHA</div>
+        <div id="kpiMesesAvalancha" class="text-xs text-purple-200/80 mt-0.5">0 meses hasta Cero Deuda</div>
       </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
-        <div class="text-xs text-slate-400">Ahorro Total con Avalancha</div>
-        <div id="kpiAhorro" class="text-base font-bold font-mono text-emerald-400 mt-1">$0</div>
-        <div id="kpiMesesAhorrados" class="text-xs text-slate-400 mt-0.5">0 meses ahorrados vs. mínimo</div>
+      <div class="lilac-card rounded-xl p-3.5">
+        <div class="text-xs text-purple-200/80">Ahorro Total con Avalancha</div>
+        <div id="kpiAhorro" class="text-lg font-bold font-mono text-emerald-300 mt-1">$0</div>
+        <div id="kpiMesesAhorrados" class="text-xs text-purple-200/80 mt-0.5">0 meses ahorrados vs. mínimo</div>
       </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-3">
-        <div class="text-xs text-slate-400">Estado Legal Usura SFC</div>
+      <div class="lilac-card rounded-xl p-3.5">
+        <div class="text-xs text-purple-200/80">Estado Legal Usura SFC</div>
         <div id="kpiUsuraEstado" class="text-sm font-bold mt-1">En regla</div>
-        <div id="kpiUsuraDetalle" class="text-xs text-slate-400 mt-0.5">Todas las tasas bajo el límite</div>
+        <div id="kpiUsuraDetalle" class="text-xs text-purple-200/80 mt-0.5">Todas las tasas bajo el límite</div>
       </div>
     </div>
 
-    <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-3">
-      <div class="flex items-center justify-between">
-        <h2 class="text-sm font-bold">1. Inventario de Pasivos y Validador de Usura SFC</h2>
-        <button onclick="agregarDeuda()" class="px-2.5 py-1 rounded text-xs font-medium bg-emerald-600 text-white">
-          + Agregar Obligación
-        </button>
+    <!-- SECCIÓN 1: FORMULARIO RÁPIDO PARA DILIGENCIAR NUEVA DEUDA + TABLA EDITABLE -->
+    <div class="lilac-card rounded-2xl p-4 md:p-5 space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+        <div>
+          <h2 class="text-sm font-bold text-white">1. Inventario de Pasivos y Diligenciamiento Libre de Obligaciones</h2>
+          <p class="text-xs text-purple-200/80">
+            Edita directamente cualquier celda de la tabla o usa el formulario rápido inferior para agregar tus propias deudas.
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="activarModoPersonalizado()" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-purple-800/70 text-purple-100 border border-purple-400/30 hover:bg-purple-700/70">
+            🗑️ Vaciar y Empezar de Cero
+          </button>
+          <button onclick="cargarEscenario('base')" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-fuchsia-600/80 text-white hover:bg-fuchsia-500">
+            🌱 Restaurar Caso Semilla
+          </button>
+        </div>
       </div>
+
+      <!-- Formulario Guiado (Iteración 1 y 2 de Usabilidad) -->
+      <div class="p-3.5 rounded-xl bg-purple-950/65 border border-purple-400/30 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-fuchsia-200">➕ Diligenciar Nueva Obligación Personalizada:</span>
+          <button onclick="sugerirCuotaFormulario()" class="text-xs text-fuchsia-300 underline hover:text-white">
+            ✨ Auto-calcular cuota sugerida (36 meses)
+          </button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-2 text-xs">
+          <div class="md:col-span-2">
+            <label class="block text-purple-200/90 mb-0.5">Nombre de la Deuda / Entidad</label>
+            <input id="nuevoNombre" type="text" placeholder="Ej: Tarjeta Bancolombia / ICETEX"
+              class="lilac-input w-full px-2.5 py-1.5 rounded-lg text-xs" />
+          </div>
+          <div>
+            <label class="block text-purple-200/90 mb-0.5">Saldo Actual (COP)</label>
+            <input id="nuevoSaldo" type="number" step="100000" placeholder="Ej: 5000000"
+              class="lilac-input w-full px-2.5 py-1.5 rounded-lg text-xs font-mono" />
+          </div>
+          <div>
+            <label class="block text-purple-200/90 mb-0.5">Tasa Efectiva (% EA)</label>
+            <input id="nuevaTasa" type="number" step="0.1" placeholder="Ej: 24.5"
+              class="lilac-input w-full px-2.5 py-1.5 rounded-lg text-xs font-mono" />
+          </div>
+          <div>
+            <label class="block text-purple-200/90 mb-0.5">Cuota Fija Mes (COP)</label>
+            <input id="nuevaCuota" type="number" step="10000" placeholder="Ej: 250000"
+              class="lilac-input w-full px-2.5 py-1.5 rounded-lg text-xs font-mono" />
+          </div>
+          <div>
+            <label class="block text-purple-200/90 mb-0.5">Seguro/Manejo (COP)</label>
+            <div class="flex gap-1">
+              <input id="nuevoSeguro" type="number" step="5000" placeholder="Ej: 18000"
+                class="lilac-input w-full px-2 py-1.5 rounded-lg text-xs font-mono" />
+              <button onclick="agregarDesdeFormulario()"
+                class="px-3 py-1.5 rounded-lg font-bold bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:opacity-95 whitespace-nowrap">
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="msgFormulario" class="text-xs text-fuchsia-300 hidden"></div>
+      </div>
+
+      <!-- Tabla Editable -->
       <div class="overflow-x-auto">
         <table class="w-full text-xs border-collapse">
           <thead>
-            <tr class="border-b border-slate-800 text-left text-slate-400">
+            <tr class="border-b border-purple-300/25 text-left text-purple-200">
               <th class="py-2 pr-2">Obligación Financiera</th>
               <th class="py-2 px-2">Saldo Actual (COP)</th>
               <th class="py-2 px-2">Tasa (% EA)</th>
@@ -100,7 +275,7 @@
               <th class="py-2 px-2">Cuota Fija (COP)</th>
               <th class="py-2 px-2">Seguro/Manejo (COP)</th>
               <th class="py-2 px-2">Control Usura SFC</th>
-              <th class="py-2 pl-2"></th>
+              <th class="py-2 pl-2 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody id="tablaDeudasBody"></tbody>
@@ -108,12 +283,13 @@
       </div>
     </div>
 
+    <!-- SECCIÓN 2: COMPARATIVA DE ESTRATEGIAS, GANTT Y CURVAS -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-3">
-        <h2 class="text-sm font-bold">2. Comparativa: Pago Mínimo vs. Bola de Nieve vs. Avalancha</h2>
+      <div class="lilac-card rounded-2xl p-4 md:p-5 space-y-3">
+        <h2 class="text-sm font-bold text-white">2. Comparativa: Pago Mínimo vs. Bola de Nieve vs. Avalancha</h2>
         <table class="w-full text-xs border-collapse">
           <thead>
-            <tr class="border-b border-slate-800 text-left text-slate-400">
+            <tr class="border-b border-purple-300/25 text-left text-purple-200">
               <th class="py-2">Estrategia</th>
               <th class="py-2 text-right">Meses</th>
               <th class="py-2 text-right">Intereses</th>
@@ -123,104 +299,251 @@
           </thead>
           <tbody id="tablaComparativaBody"></tbody>
         </table>
-        <div class="pt-2 border-t border-slate-800">
-          <div class="text-xs font-semibold mb-2">Diagrama de Gantt — Proyecto Cero Deudas (Mes de Extinción)</div>
+        <div class="pt-2 border-t border-purple-300/20">
+          <div class="text-xs font-semibold text-purple-100 mb-2">
+            Diagrama de Gantt — Proyecto Cero Deudas (Mes de Extinción con Avalancha)
+          </div>
           <div id="ganttContainer" class="space-y-2"></div>
         </div>
       </div>
 
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 flex flex-col justify-between">
+      <div class="lilac-card rounded-2xl p-4 md:p-5 flex flex-col justify-between">
         <div>
-          <h2 class="text-sm font-bold mb-1">Curva de Extinción del Saldo Total (COP)</h2>
-          <p class="text-xs text-slate-400 mb-2">
+          <h2 class="text-sm font-bold text-white mb-1">Curva de Extinción del Saldo Total (COP)</h2>
+          <p class="text-xs text-purple-200/80 mb-2">
             Evolución mensual aplicando efecto Roll-Over de cuotas liberadas.
           </p>
         </div>
-        <canvas id="canvasCurvas" width="520" height="250" class="w-full rounded border border-slate-800"></canvas>
-        <div class="flex items-center justify-center gap-4 text-xs mt-2">
-          <span class="flex items-center gap-1"><span class="w-3 h-1 inline-block" style="background:#ef4444"></span> Pago Mínimo</span>
-          <span class="flex items-center gap-1"><span class="w-3 h-1 inline-block" style="background:#f59e0b"></span> Bola de Nieve</span>
-          <span class="flex items-center gap-1"><span class="w-3 h-1 inline-block" style="background:#10b981"></span> Avalancha (Óptimo)</span>
+        <canvas id="canvasCurvas" width="520" height="250" class="w-full rounded-xl border border-purple-300/25 bg-purple-950/60"></canvas>
+        <div class="flex items-center justify-center gap-4 text-xs mt-2 text-purple-100">
+          <span class="flex items-center gap-1.5"><span class="w-3.5 h-1.5 rounded inline-block" style="background:#f43f5e"></span> Pago Mínimo</span>
+          <span class="flex items-center gap-1.5"><span class="w-3.5 h-1.5 rounded inline-block" style="background:#f59e0b"></span> Bola de Nieve</span>
+          <span class="flex items-center gap-1.5"><span class="w-3.5 h-1.5 rounded inline-block" style="background:#c084fc"></span> Avalancha (Óptimo Lila)</span>
         </div>
       </div>
     </div>
 
+    <!-- NUEVA SECCIÓN: DICTAMEN ANALÍTICO Y RECOMENDACIÓN PRESCRIPTIVA DE CATALINA -->
+    <div class="lilac-card rounded-2xl p-5 space-y-4 border-2 border-purple-400/40">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border-b border-purple-300/20 pb-3">
+        <div>
+          <span class="text-xs uppercase tracking-wider font-bold text-fuchsia-300">
+            🧠 Analítica Prescriptiva e Investigación de Operaciones • Dictamen de Catalina
+          </span>
+          <h2 class="text-base md:text-lg font-bold text-white">
+            Análisis de Resultados, Estrategia Óptima y Ruta Crítica de Pago Prioritario
+          </h2>
+        </div>
+        <span id="badgeAhorroDictamen" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/25 text-emerald-200 border border-emerald-400/40">
+          Ahorro Estimado: $0 COP
+        </span>
+      </div>
+
+      <div id="analisisEjecutivoContainer" class="grid grid-cols-1 lg:grid-cols-3 gap-4 text-xs">
+        <!-- Se llena dinámicamente en recalcularTodo() -->
+      </div>
+
+      <div class="pt-3 border-t border-purple-300/20">
+        <div class="text-xs font-bold text-purple-200 mb-2">
+          📌 Orden Exacto de Ataque Recomendado (Efecto Roll-Over Paso a Paso):
+        </div>
+        <div id="pasoAPasoAtaqueContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+          <!-- Se llena dinámicamente con el orden 1°, 2°, 3°... -->
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 3 Y 4: LEY 1328 Y COMPRA DE CARTERA -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-3">
+      <!-- Ley 1328 -->
+      <div class="lilac-card rounded-2xl p-4 md:p-5 space-y-3">
         <div class="flex items-center justify-between">
-          <h2 class="text-sm font-bold">3. Simulador Ley 1328 de 2009 (Abono Extraordinario a Capital)</h2>
-          <button onclick="cargarTestLey1328()" class="px-2 py-1 rounded text-xs bg-slate-800 text-slate-200">
+          <div>
+            <h2 class="text-sm font-bold text-white">3. Simulador Ley 1328 de 2009 (Abono Extra a Capital)</h2>
+            <p class="text-xs text-purple-200/75">Puedes digitar cualquier crédito o pulsar "📥 Ley 1328" en la tabla superior.</p>
+          </div>
+          <button onclick="cargarTestLey1328()" class="px-2.5 py-1 rounded-lg text-xs font-medium btn-mode-inactive">
             Cargar TC-04 ($2.5M Prima)
           </button>
         </div>
-        <div class="grid grid-cols-2 gap-2 text-xs">
+        <div class="grid grid-cols-2 gap-2.5 text-xs">
           <div>
-            <label class="text-slate-400">Saldo Crédito (COP)</label>
-            <input id="l1328Saldo" type="number" value="9500000" oninput="recalcularLey1328()" class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 font-mono" />
+            <label class="text-purple-200">Saldo Crédito (COP)</label>
+            <input id="l1328Saldo" type="number" value="9500000" oninput="recalcularLey1328()" class="lilac-input w-full px-2.5 py-1.5 rounded-lg font-mono mt-0.5" />
           </div>
           <div>
-            <label class="text-slate-400">Tasa Efectiva Anual (% EA)</label>
-            <input id="l1328Tasa" type="number" step="0.1" value="16.80" oninput="recalcularLey1328()" class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 font-mono" />
+            <label class="text-purple-200">Tasa Efectiva Anual (% EA)</label>
+            <input id="l1328Tasa" type="number" step="0.1" value="16.80" oninput="recalcularLey1328()" class="lilac-input w-full px-2.5 py-1.5 rounded-lg font-mono mt-0.5" />
           </div>
           <div>
-            <label class="text-slate-400">Plazo Restante (Meses)</label>
-            <input id="l1328Plazo" type="number" value="36" oninput="recalcularLey1328()" class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 font-mono" />
+            <label class="text-purple-200">Plazo Restante (Meses)</label>
+            <input id="l1328Plazo" type="number" value="36" oninput="recalcularLey1328()" class="lilac-input w-full px-2.5 py-1.5 rounded-lg font-mono mt-0.5" />
           </div>
           <div>
-            <label class="text-slate-400">Abono Extra a Capital (COP)</label>
-            <input id="l1328Abono" type="number" value="2500000" oninput="recalcularLey1328()" class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 font-mono" />
+            <label class="text-purple-200">Abono Extra a Capital (COP)</label>
+            <input id="l1328Abono" type="number" value="2500000" oninput="recalcularLey1328()" class="lilac-input w-full px-2.5 py-1.5 rounded-lg font-mono mt-0.5" />
           </div>
         </div>
-        <div id="resultadoLey1328" class="text-xs space-y-1.5 pt-2 border-t border-slate-800"></div>
+        <div id="resultadoLey1328" class="text-xs space-y-2 pt-2 border-t border-purple-300/20"></div>
       </div>
 
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-3">
+      <!-- Compra de Cartera -->
+      <div class="lilac-card rounded-2xl p-4 md:p-5 space-y-3">
         <div class="flex items-center justify-between">
-          <h2 class="text-sm font-bold">4. Evaluador de Compra de Cartera Consolidada</h2>
+          <div>
+            <h2 class="text-sm font-bold text-white">4. Evaluador de Compra de Cartera Consolidada</h2>
+            <p class="text-xs text-purple-200/75">Evalúa unificar todas las deudas de la tabla en un solo crédito.</p>
+          </div>
           <div class="flex gap-1">
-            <button onclick="cargarTestCartera(true)" class="px-2 py-1 rounded text-xs bg-slate-800 text-slate-200">
+            <button onclick="cargarTestCartera(true)" class="px-2 py-1 rounded-lg text-xs btn-mode-inactive">
               TC-05A: Viable (12.5%)
             </button>
-            <button onclick="cargarTestCartera(false)" class="px-2 py-1 rounded text-xs bg-slate-800 text-slate-200">
+            <button onclick="cargarTestCartera(false)" class="px-2 py-1 rounded-lg text-xs btn-mode-inactive">
               TC-05B: Engañosa (60m)
             </button>
           </div>
         </div>
-        <div class="grid grid-cols-3 gap-2 text-xs">
+        <div class="grid grid-cols-3 gap-2.5 text-xs">
           <div>
-            <label class="text-slate-400">Nueva Tasa (% EA)</label>
-            <input id="ccTasa" type="number" step="0.1" value="12.50" oninput="recalcularTodo()" class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 font-mono" />
+            <label class="text-purple-200">Nueva Tasa (% EA)</label>
+            <input id="ccTasa" type="number" step="0.1" value="12.50" oninput="recalcularTodo()" class="lilac-input w-full px-2.5 py-1.5 rounded-lg font-mono mt-0.5" />
           </div>
           <div>
-            <label class="text-slate-400">Nuevo Plazo (Meses)</label>
-            <input id="ccPlazo" type="number" value="24" oninput="recalcularTodo()" class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 font-mono" />
+            <label class="text-purple-200">Nuevo Plazo (Meses)</label>
+            <input id="ccPlazo" type="number" value="24" oninput="recalcularTodo()" class="lilac-input w-full px-2.5 py-1.5 rounded-lg font-mono mt-0.5" />
           </div>
           <div>
-            <label class="text-slate-400">Seguro Nuevo (COP)</label>
-            <input id="ccSeguro" type="number" value="15000" oninput="recalcularTodo()" class="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 font-mono" />
+            <label class="text-purple-200">Seguro Nuevo (COP)</label>
+            <input id="ccSeguro" type="number" value="15000" oninput="recalcularTodo()" class="lilac-input w-full px-2.5 py-1.5 rounded-lg font-mono mt-0.5" />
           </div>
         </div>
-        <div id="resultadoCompraCartera" class="text-xs space-y-1.5 pt-2 border-t border-slate-800"></div>
+        <div id="resultadoCompraCartera" class="text-xs space-y-2 pt-2 border-t border-purple-300/20"></div>
       </div>
     </div>
   </div>
 
   <script>
-    let deudas = [
+    const DEUDAS_SEMILLA = [
       { nombre: "1. Tarjeta de Crédito Gold", saldo_cop: 4800000, tasa_ea: 0.2580, cuota_mensual_cop: 320000, seguro_cuota_manejo_cop: 28000 },
       { nombre: "2. Crédito Rotativo Tienda", saldo_cop: 1900000, tasa_ea: 0.2250, cuota_mensual_cop: 160000, seguro_cuota_manejo_cop: 14500 },
       { nombre: "3. Libre Inversión Bancario", saldo_cop: 9500000, tasa_ea: 0.1680, cuota_mensual_cop: 380000, seguro_cuota_manejo_cop: 18000 },
       { nombre: "4. Crédito Educativo Libranza", saldo_cop: 6200000, tasa_ea: 0.1240, cuota_mensual_cop: 240000, seguro_cuota_manejo_cop: 9500 }
     ];
 
-    const fmtCOP = (v) => "$" + Math.round(v).toLocaleString("es-CO");
-    const eaAEm = (ea) => Math.pow(1.0 + ea, 1.0 / 12.0) - 1.0;
+    let deudas = JSON.parse(JSON.stringify(DEUDAS_SEMILLA));
+
+    const fmtCOP = (v) => "$" + Math.round(Number(v) || 0).toLocaleString("es-CO");
+    const eaAEm = (ea) => Math.pow(1.0 + Math.max(0, Number(ea) || 0), 1.0 / 12.0) - 1.0;
 
     function cuotaFrancesa(saldo, tasaEm, n) {
       if (n <= 0 || saldo <= 0) return 0;
       if (Math.abs(tasaEm) < 1e-9) return saldo / n;
       const f = Math.pow(1 + tasaEm, n);
       return saldo * (tasaEm * f) / (f - 1);
+    }
+
+    function toggleModalUsabilidad() {
+      const p = document.getElementById("panelUsabilidad");
+      p.classList.toggle("hidden");
+    }
+
+    function actualizarBotonesModo(modoActivo) {
+      const btnPers = document.getElementById("btnModoPersonalizado");
+      const btnSem = document.getElementById("btnModoSemilla");
+      const ind = document.getElementById("indicadorModoActivo");
+
+      btnPers.className = (modoActivo === "personalizado" ? "btn-mode-active" : "btn-mode-inactive") + " px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5";
+      btnSem.className = (modoActivo === "base" ? "btn-mode-active" : "btn-mode-inactive") + " px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5";
+
+      const nombresModo = {
+        personalizado: "Modo: Personalizado (Tus Datos)",
+        base: "Modo: Caso Semilla OED",
+        tc01_rojo: "Modo: Test TC-01 (Sobreendeudamiento)",
+        tc02_usura: "Modo: Test TC-02 (Alerta Usura SFC)",
+        tc03_io: "Modo: Test TC-03 (Avalancha vs. Nieve)"
+      };
+      ind.textContent = nombresModo[modoActivo] || "Modo: Personalizado";
+    }
+
+    function activarModoPersonalizado() {
+      actualizarBotonesModo("personalizado");
+      document.getElementById("ingresoNeto").value = 4500000;
+      document.getElementById("abonoExtra").value = 200000;
+      deudas = [
+        { nombre: "Mi Obligación 1 (Editable)", saldo_cop: 3000000, tasa_ea: 0.2100, cuota_mensual_cop: 180000, seguro_cuota_manejo_cop: 12000 }
+      ];
+      document.getElementById("nuevoNombre").focus();
+      recalcularTodo();
+    }
+
+    function sugerirCuotaFormulario() {
+      const saldo = Number(document.getElementById("nuevoSaldo").value) || 3000000;
+      const tasa = (Number(document.getElementById("nuevaTasa").value) || 20.0) / 100.0;
+      document.getElementById("nuevoSaldo").value = saldo;
+      document.getElementById("nuevaTasa").value = (tasa * 100).toFixed(1);
+      const cuotaSug = Math.ceil(cuotaFrancesa(saldo, eaAEm(tasa), 36) / 1000) * 1000;
+      document.getElementById("nuevaCuota").value = cuotaSug;
+      const msg = document.getElementById("msgFormulario");
+      msg.textContent = `💡 Cuota fija francesa calculada para ${fmtCOP(saldo)} a 36 meses (${(tasa*100).toFixed(1)}% EA): ${fmtCOP(cuotaSug)}/mes.`;
+      msg.classList.remove("hidden");
+    }
+
+    function agregarDesdeFormulario() {
+      const nombre = document.getElementById("nuevoNombre").value.trim() || `Obligación Personalizada ${deudas.length + 1}`;
+      const saldo = Number(document.getElementById("nuevoSaldo").value);
+      const tasaPct = Number(document.getElementById("nuevaTasa").value);
+      let cuota = Number(document.getElementById("nuevaCuota").value);
+      const seguro = Number(document.getElementById("nuevoSeguro").value) || 0;
+      const msg = document.getElementById("msgFormulario");
+
+      if (!saldo || saldo <= 0 || !tasaPct || tasaPct <= 0) {
+        msg.textContent = "⚠️ Por favor ingresa un Saldo Actual y una Tasa (% EA) mayores a cero.";
+        msg.classList.remove("hidden");
+        return;
+      }
+
+      const tasaEa = tasaPct / 100.0;
+      const interesMinimoMes = saldo * eaAEm(tasaEa);
+      if (!cuota || cuota <= interesMinimoMes) {
+        cuota = Math.ceil(cuotaFrancesa(saldo, eaAEm(tasaEa), 36) / 1000) * 1000;
+        msg.textContent = `ℹ️ Se asignó cuota sugerida a 36 meses (${fmtCOP(cuota)}) para cubrir intereses mensuales (${fmtCOP(interesMinimoMes)}).`;
+        msg.classList.remove("hidden");
+      } else {
+        msg.classList.add("hidden");
+      }
+
+      deudas.push({
+        nombre,
+        saldo_cop: saldo,
+        tasa_ea: tasaEa,
+        cuota_mensual_cop: cuota,
+        seguro_cuota_manejo_cop: seguro
+      });
+
+      document.getElementById("nuevoNombre").value = "";
+      document.getElementById("nuevoSaldo").value = "";
+      document.getElementById("nuevaTasa").value = "";
+      document.getElementById("nuevaCuota").value = "";
+      document.getElementById("nuevoSeguro").value = "";
+
+      actualizarBotonesModo("personalizado");
+      recalcularTodo();
+    }
+
+    function enviarALey1328(idx) {
+      const d = deudas[idx];
+      if (!d) return;
+      document.getElementById("l1328Saldo").value = d.saldo_cop;
+      document.getElementById("l1328Tasa").value = (d.tasa_ea * 100).toFixed(2);
+      const tasaEm = eaAEm(d.tasa_ea);
+      let plazoEst = 36;
+      if (d.cuota_mensual_cop > d.saldo_cop * tasaEm) {
+        const n = -Math.log(1 - (d.saldo_cop * tasaEm) / d.cuota_mensual_cop) / Math.log(1 + tasaEm);
+        plazoEst = Math.max(2, Math.min(240, Math.ceil(n)));
+      }
+      document.getElementById("l1328Plazo").value = plazoEst;
+      document.getElementById("l1328Abono").value = Math.round(d.saldo_cop * 0.25);
+      recalcularLey1328();
     }
 
     function simularDesendeudamiento(lista, abonoExtra, criterio) {
@@ -255,7 +578,7 @@
           totalIntereses += intMes;
           totalSeguros += d.seguro;
           d.saldo += intMes;
-          const pago = Math.min(d.saldo, d.cuota_fija);
+          const pago = Math.min(d.saldo, Math.max(d.cuota_fija, intMes + 1000));
           d.saldo -= pago;
           disponible -= pago;
           if (d.saldo <= 0.01 && d.mes_extincion === 0) {
@@ -294,40 +617,55 @@
       const tbody = document.getElementById("tablaDeudasBody");
       tbody.innerHTML = "";
       deudas.forEach((d, idx) => {
-        const emPct = (eaAEm(d.tasa_ea) * 100).toFixed(2);
+        const tasaEm = eaAEm(d.tasa_ea);
+        const emPct = (tasaEm * 100).toFixed(2);
         const excede = d.tasa_ea > usura + 1e-6;
         const pb = Math.max(0, (d.tasa_ea - usura) * 10000).toFixed(0);
+        const intMes = d.saldo_cop * tasaEm;
+        const cuotaInsuficiente = d.cuota_mensual_cop <= intMes;
+
         const tr = document.createElement("tr");
-        tr.className = "border-b border-slate-800";
+        tr.className = "border-b border-purple-300/15 hover:bg-purple-900/25 transition";
         tr.innerHTML = `
-          <td class="py-1.5 pr-2">
+          <td class="py-2 pr-2">
             <input value="${d.nombre}" onchange="actualizarCampo(${idx}, 'nombre', this.value)"
-              class="w-full px-1.5 py-1 rounded bg-slate-950 border border-slate-700 text-xs" />
+              class="lilac-input w-full px-2 py-1 rounded-lg text-xs" />
           </td>
-          <td class="py-1.5 px-2">
+          <td class="py-2 px-2">
             <input type="number" step="100000" value="${d.saldo_cop}" onchange="actualizarCampo(${idx}, 'saldo_cop', Number(this.value))"
-              class="w-28 px-1.5 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono" />
+              class="lilac-input w-28 px-2 py-1 rounded-lg text-xs font-mono" />
+            <div class="text-[10px] text-purple-300/80 font-mono mt-0.5">${fmtCOP(d.saldo_cop)}</div>
           </td>
-          <td class="py-1.5 px-2">
+          <td class="py-2 px-2">
             <input type="number" step="0.1" value="${(d.tasa_ea * 100).toFixed(2)}" onchange="actualizarCampo(${idx}, 'tasa_ea', Number(this.value)/100)"
-              class="w-20 px-1.5 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono" />
+              class="lilac-input w-20 px-2 py-1 rounded-lg text-xs font-mono" />
           </td>
-          <td class="py-1.5 px-2 font-mono text-slate-400">${emPct}%</td>
-          <td class="py-1.5 px-2">
+          <td class="py-2 px-2 font-mono text-purple-200">${emPct}%</td>
+          <td class="py-2 px-2">
             <input type="number" step="10000" value="${d.cuota_mensual_cop}" onchange="actualizarCampo(${idx}, 'cuota_mensual_cop', Number(this.value))"
-              class="w-24 px-1.5 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono" />
+              class="lilac-input w-24 px-2 py-1 rounded-lg text-xs font-mono" />
+            <div class="text-[10px] ${cuotaInsuficiente ? 'text-amber-300' : 'text-purple-300/80'} font-mono mt-0.5">
+              ${cuotaInsuficiente ? '⚠️ Interés: ' + fmtCOP(intMes) : fmtCOP(d.cuota_mensual_cop)}
+            </div>
           </td>
-          <td class="py-1.5 px-2">
+          <td class="py-2 px-2">
             <input type="number" step="5000" value="${d.seguro_cuota_manejo_cop}" onchange="actualizarCampo(${idx}, 'seguro_cuota_manejo_cop', Number(this.value))"
-              class="w-20 px-1.5 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono" />
+              class="lilac-input w-20 px-2 py-1 rounded-lg text-xs font-mono" />
           </td>
-          <td class="py-1.5 px-2">
+          <td class="py-2 px-2">
             ${excede
-              ? `<span class="px-2 py-0.5 rounded font-semibold bg-red-500/20 text-red-400">ALERTA USURA (+${pb} pb)</span>`
-              : `<span class="px-2 py-0.5 rounded font-semibold bg-emerald-500/20 text-emerald-400">Legal SFC</span>`}
+              ? `<span class="px-2 py-0.5 rounded-full font-semibold bg-rose-500/25 text-rose-200 border border-rose-400/40">ALERTA USURA (+${pb} pb)</span>`
+              : `<span class="px-2 py-0.5 rounded-full font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">Legal SFC</span>`}
           </td>
-          <td class="py-1.5 pl-2 text-right">
-            <button onclick="eliminarDeuda(${idx})" class="text-red-400 hover:underline">✕</button>
+          <td class="py-2 pl-2 text-right whitespace-nowrap space-x-1">
+            <button onclick="enviarALey1328(${idx})" title="Simular Abono Extra en Ley 1328"
+              class="px-2 py-1 rounded bg-purple-700/60 text-purple-100 hover:bg-purple-600 text-[11px]">
+              📥 Ley 1328
+            </button>
+            <button onclick="eliminarDeuda(${idx})" title="Eliminar obligación"
+              class="px-2 py-1 rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500/40 text-xs">
+              ✕
+            </button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -336,23 +674,14 @@
 
     function actualizarCampo(idx, campo, valor) {
       deudas[idx][campo] = valor;
-      recalcularTodo();
-    }
-
-    function agregarDeuda() {
-      deudas.push({
-        nombre: `Nueva Obligación ${deudas.length + 1}`,
-        saldo_cop: 3000000,
-        tasa_ea: 0.195,
-        cuota_mensual_cop: 180000,
-        seguro_cuota_manejo_cop: 12000
-      });
+      actualizarBotonesModo("personalizado");
       recalcularTodo();
     }
 
     function eliminarDeuda(idx) {
       if (deudas.length <= 1) return;
       deudas.splice(idx, 1);
+      actualizarBotonesModo("personalizado");
       recalcularTodo();
     }
 
@@ -366,7 +695,7 @@
       const maxMes = Math.max(1, simBase.meses, simNieve.meses, simAval.meses);
       const maxSaldo = Math.max(1, simBase.historial[0]?.saldo_total || 1);
 
-      ctx.strokeStyle = "#1e293b";
+      ctx.strokeStyle = "rgba(216, 180, 254, 0.18)";
       ctx.lineWidth = 1;
       for (let i = 0; i <= 4; i++) {
         const y = padT + ((H - padT - padB) * i) / 4;
@@ -376,15 +705,15 @@
         ctx.stroke();
 
         const val = maxSaldo * (1 - i / 4);
-        ctx.fillStyle = "#94a3b8";
+        ctx.fillStyle = "#d8b4fe";
         ctx.font = "10px monospace";
         ctx.textAlign = "right";
         ctx.fillText("$" + (val / 1e6).toFixed(1) + "M", padL - 6, y + 3);
       }
 
-      const trazar = (hist, color) => {
+      const trazar = (hist, color, grosor) => {
         ctx.strokeStyle = color;
-        ctx.lineWidth = 2.4;
+        ctx.lineWidth = grosor;
         ctx.beginPath();
         hist.forEach((pt, idx) => {
           const x = padL + (pt.mes / maxMes) * (W - padL - padR);
@@ -395,9 +724,9 @@
         ctx.stroke();
       };
 
-      trazar(simBase.historial, "#ef4444");
-      trazar(simNieve.historial, "#f59e0b");
-      trazar(simAval.historial, "#10b981");
+      trazar(simBase.historial, "#f43f5e", 2.2);
+      trazar(simNieve.historial, "#f59e0b", 2.2);
+      trazar(simAval.historial, "#c084fc", 3.0);
     }
 
     function recalcularLey1328() {
@@ -413,8 +742,8 @@
       const cont = document.getElementById("resultadoLey1328");
 
       if (nuevoSaldo <= 0) {
-        cont.innerHTML = `<div class="p-2 rounded bg-emerald-500/20 text-emerald-400 font-semibold">
-          ¡Deuda Cancelada Totalmente! Ahorras ${plazo} meses y ${fmtCOP(intOrig)} en intereses.
+        cont.innerHTML = `<div class="p-3 rounded-xl bg-fuchsia-500/25 border border-fuchsia-300/40 text-fuchsia-100 font-semibold">
+          🎉 ¡Deuda Cancelada Totalmente! Ahorras ${plazo} meses y ${fmtCOP(intOrig)} en intereses.
         </div>`;
         return;
       }
@@ -429,15 +758,15 @@
       const ahorroCuota = Math.max(0, intOrig - intCuota);
 
       cont.innerHTML = `
-        <div class="flex justify-between"><span>Cuota original (${plazo} meses):</span><span class="font-mono font-bold">${fmtCOP(cuotaOrig)}/mes</span></div>
-        <div class="p-2 rounded bg-emerald-500/15 border border-emerald-500/30">
-          <div class="font-bold text-emerald-400">Opción A — Reducción de Plazo (Óptimo Matemático)</div>
+        <div class="flex justify-between text-purple-100"><span>Cuota original (${plazo} meses):</span><span class="font-mono font-bold text-white">${fmtCOP(cuotaOrig)}/mes</span></div>
+        <div class="p-2.5 rounded-xl bg-fuchsia-500/20 border border-fuchsia-300/40">
+          <div class="font-bold text-fuchsia-200">Opción A — Reducción de Plazo (Óptimo Matemático)</div>
           <div>Nuevo plazo: <b>${nuevoPlazo} meses</b> (Ahorras <b>${Math.max(0, plazo - nuevoPlazo)} meses</b>)</div>
-          <div>Ahorro en intereses: <b class="font-mono">${fmtCOP(ahorroPlazo)}</b></div>
+          <div>Ahorro en intereses: <b class="font-mono text-emerald-300">${fmtCOP(ahorroPlazo)}</b></div>
         </div>
-        <div class="p-2 rounded bg-blue-500/15 border border-blue-500/30">
-          <div class="font-bold text-blue-400">Opción B — Reducción de Cuota (Alivio de Flujo Mensual)</div>
-          <div>Nueva cuota: <b class="font-mono">${fmtCOP(nuevaCuota)}/mes</b> (Libera <b class="font-mono">${fmtCOP(cuotaOrig - nuevaCuota)}/mes</b>)</div>
+        <div class="p-2.5 rounded-xl bg-purple-800/45 border border-purple-400/35">
+          <div class="font-bold text-purple-200">Opción B — Reducción de Cuota (Alivio de Flujo Mensual)</div>
+          <div>Nueva cuota: <b class="font-mono">${fmtCOP(nuevaCuota)}/mes</b> (Libera <b class="font-mono text-fuchsia-200">${fmtCOP(cuotaOrig - nuevaCuota)}/mes</b>)</div>
           <div>Ahorro en intereses: <b class="font-mono">${fmtCOP(ahorroCuota)}</b></div>
         </div>
       `;
@@ -449,19 +778,22 @@
       const abonoExtra = Number(document.getElementById("abonoExtra").value);
       const usura = Number(document.getElementById("usuraSfc").value) / 100.0;
 
+      document.getElementById("lblIngresoFmt").textContent = fmtCOP(ingreso);
+      document.getElementById("lblAbonoFmt").textContent = fmtCOP(abonoExtra);
+
       const saldoTotal = deudas.reduce((a, d) => a + Number(d.saldo_cop), 0);
       const cuotaTotal = deudas.reduce((a, d) => a + Number(d.cuota_mensual_cop) + Number(d.seguro_cuota_manejo_cop || 0), 0);
       const iePct = ingreso > 0 ? (cuotaTotal / ingreso) * 100 : 0;
 
       const badge = document.getElementById("badgeSemaforo");
       if (iePct <= 30) {
-        badge.className = "text-xs font-bold font-mono py-1 px-2 rounded text-center mt-1 bg-emerald-500/20 text-emerald-400";
+        badge.className = "text-xs font-bold font-mono py-1.5 px-2.5 rounded-lg text-center mt-1 bg-emerald-500/25 text-emerald-200 border border-emerald-400/40";
         badge.textContent = `${iePct.toFixed(1)}% • VERDE SALUDABLE`;
       } else if (iePct <= 40) {
-        badge.className = "text-xs font-bold font-mono py-1 px-2 rounded text-center mt-1 bg-amber-500/20 text-amber-400";
+        badge.className = "text-xs font-bold font-mono py-1.5 px-2.5 rounded-lg text-center mt-1 bg-amber-500/25 text-amber-200 border border-amber-400/40";
         badge.textContent = `${iePct.toFixed(1)}% • AMARILLO ALERTA`;
       } else {
-        badge.className = "text-xs font-bold font-mono py-1 px-2 rounded text-center mt-1 bg-red-500/20 text-red-400";
+        badge.className = "text-xs font-bold font-mono py-1.5 px-2.5 rounded-lg text-center mt-1 bg-rose-500/30 text-rose-200 border border-rose-400/50";
         badge.textContent = `${iePct.toFixed(1)}% • ROJO CRÍTICO`;
       }
 
@@ -482,11 +814,11 @@
       const elUsuraEst = document.getElementById("kpiUsuraEstado");
       const elUsuraDet = document.getElementById("kpiUsuraDetalle");
       if (deudasUsura.length > 0) {
-        elUsuraEst.className = "text-sm font-bold mt-1 text-red-400";
+        elUsuraEst.className = "text-sm font-bold mt-1 text-rose-300";
         elUsuraEst.textContent = `ALERTA LEGAL (${deudasUsura.length} en Usura)`;
         elUsuraDet.textContent = `${deudasUsura[0].nombre} supera ${(usura*100).toFixed(2)}% EA`;
       } else {
-        elUsuraEst.className = "text-sm font-bold mt-1 text-emerald-400";
+        elUsuraEst.className = "text-sm font-bold mt-1 text-emerald-300";
         elUsuraEst.textContent = "100% Cumple Límite SFC";
         elUsuraDet.textContent = `Ninguna supera ${(usura*100).toFixed(2)}% EA`;
       }
@@ -498,12 +830,12 @@
         { nombre: "Avalancha (Óptimo Matemático)", sim: simAval, badge: "★ ÓPTIMO" }
       ];
       tbodyComp.innerHTML = filas.map(f => `
-        <tr class="border-b border-slate-800">
-          <td class="py-1.5 font-medium">${f.nombre} <span class="text-emerald-400 font-bold">${f.badge}</span></td>
-          <td class="py-1.5 text-right font-mono">${f.sim.meses}m</td>
-          <td class="py-1.5 text-right font-mono">${fmtCOP(f.sim.intereses)}</td>
-          <td class="py-1.5 text-right font-mono font-semibold">${fmtCOP(f.sim.costoTotal)}</td>
-          <td class="py-1.5 text-right font-mono text-emerald-400">${fmtCOP(Math.max(0, simBase.costoTotal - f.sim.costoTotal))}</td>
+        <tr class="border-b border-purple-300/15">
+          <td class="py-2 font-medium text-white">${f.nombre} <span class="text-fuchsia-300 font-bold">${f.badge}</span></td>
+          <td class="py-2 text-right font-mono">${f.sim.meses}m</td>
+          <td class="py-2 text-right font-mono">${fmtCOP(f.sim.intereses)}</td>
+          <td class="py-2 text-right font-mono font-semibold text-white">${fmtCOP(f.sim.costoTotal)}</td>
+          <td class="py-2 text-right font-mono text-emerald-300 font-bold">${fmtCOP(Math.max(0, simBase.costoTotal - f.sim.costoTotal))}</td>
         </tr>
       `).join("");
 
@@ -513,12 +845,12 @@
         const pct = Math.min(100, Math.round((d.mes_extincion / maxM) * 100));
         return `
           <div class="space-y-0.5">
-            <div class="flex justify-between text-xs">
+            <div class="flex justify-between text-xs text-purple-100">
               <span>${d.nombre} (${(d.tasa_ea*100).toFixed(1)}% EA)</span>
-              <span class="font-mono font-semibold">Mes ${d.mes_extincion}</span>
+              <span class="font-mono font-semibold text-fuchsia-200">Mes ${d.mes_extincion}</span>
             </div>
-            <div class="w-full h-2 rounded bg-slate-950 overflow-hidden">
-              <div class="h-full bg-emerald-500 rounded" style="width:${pct}%"></div>
+            <div class="w-full h-2.5 rounded-full bg-purple-950 overflow-hidden border border-purple-400/25">
+              <div class="h-full bg-gradient-to-r from-purple-500 to-fuchsia-400 rounded-full" style="width:${pct}%"></div>
             </div>
           </div>
         `;
@@ -526,6 +858,112 @@
 
       dibujarCurvas(simBase, simNieve, simAval);
       recalcularLey1328();
+
+      // DICTAMEN ANALÍTICO Y EXPLICACIÓN DE LA ESTRATEGIA ÓPTIMA
+      const ahorroInteresesPuro = Math.max(0, simBase.intereses - simAval.intereses);
+      const ahorroSegurosPuro = Math.max(0, simBase.seguros - simAval.seguros);
+      const difAvalVsNieve = Math.max(0, simNieve.costoTotal - simAval.costoTotal);
+      const primeraAval = simAval.cronograma[0];
+      const primeraNieve = simNieve.cronograma[0];
+
+      document.getElementById("badgeAhorroDictamen").textContent =
+        `Ahorro Total con Estrategia Óptima: ${fmtCOP(ahorroAval)} (${mesesAhorrados} meses menos)`;
+
+      if (primeraAval) {
+        const tasaEmPrimera = (eaAEm(primeraAval.tasa_ea) * 100).toFixed(2);
+        const interesMensualPrimera = deudas.find(x => x.nombre === primeraAval.nombre)?.saldo_cop * eaAEm(primeraAval.tasa_ea) || 0;
+        const abonoTotalInicial = primeraAval.cuota_fija + abonoExtra;
+
+        document.getElementById("analisisEjecutivoContainer").innerHTML = `
+          <!-- Tarjeta 1: Descripción de la Estrategia Óptima -->
+          <div class="p-3.5 rounded-xl bg-purple-950/70 border border-purple-400/35 space-y-2">
+            <div class="font-bold text-fuchsia-300 text-sm flex items-center gap-1.5">
+              <span>🏆 1. ¿Cuál es la Estrategia Óptima y cómo funciona?</span>
+            </div>
+            <p class="text-purple-100/90 leading-relaxed">
+              La estrategia matemáticamente óptima es el <b>Método Avalancha con Efecto Roll-Over</b>. Consiste en pagar puntualmente la cuota mínima de todas las obligaciones y concentrar el <b>100% de tu abono extra mensual (${fmtCOP(abonoExtra)})</b> en la deuda con mayor tasa Efectiva Anual (EA).
+            </p>
+            <p class="text-purple-200/85 leading-relaxed">
+              <b>Efecto Bola de Nieve / Roll-Over:</b> En cuanto liquidas la primera deuda (Mes ${primeraAval.mes_extincion}), no reduces tu presupuesto: sumas la cuota que pagabas en ella al abono extra para atacar la segunda deuda con más fuerza.
+            </p>
+          </div>
+
+          <!-- Tarjeta 2: ¿Cuál deuda pagar primero y por qué? -->
+          <div class="p-3.5 rounded-xl bg-fuchsia-950/55 border border-fuchsia-400/45 space-y-2">
+            <div class="font-bold text-fuchsia-200 text-sm flex items-center gap-1.5">
+              <span>🎯 2. ¿Cuál deuda debes pagar PRIMERO?</span>
+            </div>
+            <div class="p-2 rounded-lg bg-purple-900/60 border border-fuchsia-300/30">
+              <div class="text-xs text-fuchsia-200 font-semibold">PRIORIDAD #1 DE ATAQUE:</div>
+              <div class="text-sm font-bold text-white">${primeraAval.nombre}</div>
+              <div class="text-xs text-purple-200 mt-0.5">
+                Tasa: <b>${(primeraAval.tasa_ea * 100).toFixed(2)}% EA</b> (${tasaEmPrimera}% EM) • Se liquida en el <b>Mes ${primeraAval.mes_extincion}</b>
+              </div>
+            </div>
+            <p class="text-purple-100/90 leading-relaxed">
+              <b>Razón Financiera:</b> Es el pasivo más costoso por cada peso adeudado (hoy te genera <b>${fmtCOP(interesMensualPrimera)}/mes</b> solo en intereses). Debes pagarle <b>${fmtCOP(abonoTotalInicial)}/mes</b> (${fmtCOP(primeraAval.cuota_fija)} de cuota fija + ${fmtCOP(abonoExtra)} de abono extra).
+              ${primeraNieve && primeraNieve.nombre !== primeraAval.nombre
+                ? `<br><span class="text-purple-300"><i>Nota conductual:</i> Si prefieres una victoria psicológica rápida (Bola de Nieve), empezarías por <b>${primeraNieve.nombre}</b>, pero pagarías <b>${fmtCOP(difAvalVsNieve)}</b> adicionales en intereses y seguros.</span>`
+                : ``}
+            </p>
+          </div>
+
+          <!-- Tarjeta 3: Análisis del Ahorro en Intereses y Tiempo -->
+          <div class="p-3.5 rounded-xl bg-purple-950/70 border border-emerald-400/35 space-y-2">
+            <div class="font-bold text-emerald-300 text-sm flex items-center gap-1.5">
+              <span>💰 3. Impacto y Ahorro en Intereses al Aplicar Avalancha</span>
+            </div>
+            <div class="space-y-1 text-purple-100">
+              <div class="flex justify-between">
+                <span>Intereses sin optimizar (Pago Mínimo):</span>
+                <span class="font-mono text-rose-300">${fmtCOP(simBase.intereses)}</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Intereses con Estrategia Avalancha:</span>
+                <span class="font-mono text-emerald-300 font-bold">${fmtCOP(simAval.intereses)}</span>
+              </div>
+              <div class="flex justify-between border-t border-purple-400/20 pt-1">
+                <span><b>Ahorro directo en intereses:</b></span>
+                <span class="font-mono text-emerald-300 font-bold">${fmtCOP(ahorroInteresesPuro)}</span>
+              </div>
+              <div class="flex justify-between">
+                <span><b>Ahorro en seguros y cuotas de manejo:</b></span>
+                <span class="font-mono text-emerald-300 font-bold">${fmtCOP(ahorroSegurosPuro)}</span>
+              </div>
+              <div class="flex justify-between border-t border-purple-400/20 pt-1 text-white font-bold">
+                <span>Ahorro Financiero Total:</span>
+                <span class="font-mono text-emerald-300">${fmtCOP(ahorroAval)}</span>
+              </div>
+            </div>
+            <p class="text-purple-200/85 pt-1">
+              Sales de todas tus deudas en <b>${simAval.meses} meses</b> en lugar de ${simBase.meses} meses (<b>ganas ${mesesAhorrados} meses de libertad financiera</b> y liberas <b>${fmtCOP(cuotaTotal)}/mes</b> para invertir en el Módulo 2).
+            </p>
+          </div>
+        `;
+
+        let cuotaRollOverAcumulada = abonoExtra;
+        document.getElementById("pasoAPasoAtaqueContainer").innerHTML = simAval.cronograma.map((d, index) => {
+          const cuotaFijaDeuda = d.cuota_fija;
+          const totalAtacado = cuotaFijaDeuda + cuotaRollOverAcumulada;
+          const htmlPaso = `
+            <div class="p-3 rounded-xl bg-purple-950/60 border ${index === 0 ? 'border-fuchsia-400 ring-1 ring-fuchsia-400/40' : 'border-purple-400/25'} space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${index === 0 ? 'bg-fuchsia-500 text-white' : 'bg-purple-800 text-purple-200'}">
+                  PASO ${index + 1} ${index === 0 ? '• PAGAR PRIMERO' : ''}
+                </span>
+                <span class="font-mono text-xs text-fuchsia-200 font-bold">Mes ${d.mes_extincion}</span>
+              </div>
+              <div class="font-bold text-white truncate" title="${d.nombre}">${d.nombre}</div>
+              <div class="text-[11px] text-purple-200">Tasa: <b>${(d.tasa_ea * 100).toFixed(2)}% EA</b></div>
+              <div class="text-[11px] text-purple-300/90 pt-1 border-t border-purple-400/15">
+                Cuota + Roll-Over aplicado: <b class="font-mono text-fuchsia-200">${fmtCOP(totalAtacado)}/mes</b>
+              </div>
+            </div>
+          `;
+          cuotaRollOverAcumulada += cuotaFijaDeuda;
+          return htmlPaso;
+        }).join("");
+      }
 
       const ccTasa = Number(document.getElementById("ccTasa").value) / 100.0;
       const ccPlazo = Number(document.getElementById("ccPlazo").value);
@@ -538,10 +976,10 @@
       const flujoLib = cuotaTotal - nuevaCuotaTot;
 
       document.getElementById("resultadoCompraCartera").innerHTML = `
-        <div class="flex justify-between"><span>Saldo Unificado a Comprar:</span><span class="font-mono font-bold">${fmtCOP(saldoTotal)}</span></div>
-        <div class="flex justify-between"><span>Cuota Actual vs. Nueva Cuota:</span><span class="font-mono">${fmtCOP(cuotaTotal)} → <b>${fmtCOP(nuevaCuotaTot)}</b></span></div>
-        <div class="flex justify-between"><span>Flujo Mensual Liberado:</span><span class="font-mono ${flujoLib >= 0 ? 'text-emerald-400' : 'text-amber-400'}">${fmtCOP(flujoLib)}/mes</span></div>
-        <div class="p-2 rounded mt-1 ${ahorroCartera > 0 ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400' : 'bg-red-500/15 border border-red-500/30 text-red-400'}">
+        <div class="flex justify-between text-purple-100"><span>Saldo Unificado a Comprar:</span><span class="font-mono font-bold text-white">${fmtCOP(saldoTotal)}</span></div>
+        <div class="flex justify-between text-purple-100"><span>Cuota Actual vs. Nueva Cuota:</span><span class="font-mono">${fmtCOP(cuotaTotal)} → <b class="text-white">${fmtCOP(nuevaCuotaTot)}</b></span></div>
+        <div class="flex justify-between text-purple-100"><span>Flujo Mensual Liberado:</span><span class="font-mono ${flujoLib >= 0 ? 'text-emerald-300' : 'text-amber-300'}">${fmtCOP(flujoLib)}/mes</span></div>
+        <div class="p-2.5 rounded-xl mt-1 ${ahorroCartera > 0 ? 'bg-emerald-500/20 border border-emerald-400/40 text-emerald-200' : 'bg-rose-500/25 border border-rose-400/40 text-rose-200'}">
           <div class="font-bold">${ahorroCartera > 0 ? '✅ COMPRA DE CARTERA VIABLE FINANCIERAMENTE' : '❌ RECHAZADA: ENCARECE EL COSTO TOTAL DE LA DEUDA'}</div>
           <div>Ahorro Neto en Costo Financiero Total: <b class="font-mono">${fmtCOP(ahorroCartera)}</b></div>
         </div>
@@ -549,15 +987,11 @@
     }
 
     function cargarEscenario(id) {
+      actualizarBotonesModo(id);
       if (id === "base") {
         document.getElementById("ingresoNeto").value = 5915000;
         document.getElementById("abonoExtra").value = 350000;
-        deudas = [
-          { nombre: "1. Tarjeta de Crédito Gold", saldo_cop: 4800000, tasa_ea: 0.2580, cuota_mensual_cop: 320000, seguro_cuota_manejo_cop: 28000 },
-          { nombre: "2. Crédito Rotativo Tienda", saldo_cop: 1900000, tasa_ea: 0.2250, cuota_mensual_cop: 160000, seguro_cuota_manejo_cop: 14500 },
-          { nombre: "3. Libre Inversión Bancario", saldo_cop: 9500000, tasa_ea: 0.1680, cuota_mensual_cop: 380000, seguro_cuota_manejo_cop: 18000 },
-          { nombre: "4. Crédito Educativo Libranza", saldo_cop: 6200000, tasa_ea: 0.1240, cuota_mensual_cop: 240000, seguro_cuota_manejo_cop: 9500 }
-        ];
+        deudas = JSON.parse(JSON.stringify(DEUDAS_SEMILLA));
       } else if (id === "tc01_rojo") {
         document.getElementById("ingresoNeto").value = 6000000;
         document.getElementById("abonoExtra").value = 0;
