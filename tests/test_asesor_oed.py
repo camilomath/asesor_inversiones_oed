@@ -17,7 +17,11 @@ from src.mod5_decisiones_vida import evaluar_viabilidad_decision_vida
 from src.mod6_educacion_financiera import (
     comparar_azar_vs_inversion_compuesta,
     detectar_esquema_piramidal_ponzi,
+    evaluar_cuestionario_suitability_completo,
+    obtener_cuestionario_suitability,
+    obtener_trivias_cultura_financiera,
     perfilar_inversionista_decreto_2555,
+    simular_trayectoria_mensual_azar_vs_inversion,
 )
 
 
@@ -92,3 +96,42 @@ def test_flujo_integrado_6_modulos_oed():
         excedente_mensual_actual_cop=pres["excedente_mensual_cop"] + 1_200_000.0,
     )
     assert vida["vpa_decision_cop"] > 0
+
+
+def test_modulo_6_educacion_probabilidad_salin():
+    cuestionario = obtener_cuestionario_suitability()
+    assert len(cuestionario) == 8
+
+    # Test con respuestas moderadas
+    respuestas = {
+        "p1_horizonte": 2,
+        "p2_reaccion_caida": 2,
+        "p3_objetivo_inversion": 2,
+        "p4_conocimiento_financiero": 2,
+        "p5_dependencia_ingresos": 2,
+        "p6_porcentaje_patrimonio": 2,
+        "p7_fondo_emergencia": 2,
+        "p8_educacion_tributaria": 2,
+    }
+    evaluacion = evaluar_cuestionario_suitability_completo(respuestas)
+    assert evaluacion["perfil_riesgo"] in ("Conservador", "Moderado", "Agresivo")
+    assert "distribucion_activos_sugerida" in evaluacion
+
+    # Test de inconsistencia conductual
+    respuestas_inconsistentes = {
+        "p1_horizonte": 3,
+        "p2_reaccion_caida": 0,  # Pánico total con 0% tolerancia
+        "p3_objetivo_inversion": 3,  # Desea máxima rentabilidad agresiva
+    }
+    eval_inconsistente = evaluar_cuestionario_suitability_completo(respuestas_inconsistentes)
+    assert eval_inconsistente["alerta_conductual_suitability"] is not None
+
+    # Test de serie mensual azar vs inversion
+    serie = simular_trayectoria_mensual_azar_vs_inversion(200_000.0, anios=10)
+    assert len(serie) > 0
+    assert serie[-1]["patrimonio_inversion_cop"] > serie[-1]["valor_esperado_azar_cop"]
+
+    # Test de trivias
+    trivias = obtener_trivias_cultura_financiera()
+    assert len(trivias) >= 4
+
