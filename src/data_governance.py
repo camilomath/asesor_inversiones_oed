@@ -182,11 +182,23 @@ def calcular_permanencia_centrales_riesgo_ley_1266(
             "norma_aplicada": "Ley 1266 de 2008 - Historial positivo permanece indefinidamente a favor del titular.",
         }
 
-    if not obligacion_pagada and meses_desde_mora_sin_pagar >= 96:
+    if not obligacion_pagada:
+        if meses_desde_mora_sin_pagar >= 96 or meses_mora >= 96:
+            return {
+                "reporte_negativo_activo": False,
+                "meses_en_mora_registrados": meses_mora,
+                "meses_permanencia_post_pago": 0,
+                "norma_aplicada": "Ley 2157 de 2021 (Art. 3): Caducidad del dato negativo por superar 8 años (96 meses) desde el inicio de la mora.",
+            }
         return {
-            "reporte_negativo_activo": False,
-            "meses_permanencia_post_pago": 0,
-            "norma_aplicada": "Ley 2157 de 2021 (Art. 3): Caducidad del dato negativo por superar 8 años (96 meses) desde el inicio de la mora.",
+            "reporte_negativo_activo": True,
+            "meses_en_mora_registrados": meses_mora,
+            "meses_permanencia_post_pago": 96,
+            "notificacion_previa_obligatoria_dias": 20,
+            "norma_aplicada": (
+                "Ley 2157 de 2021 (Art. 3 — Obligación Insoluta / No Pagada): Mientras la obligación no se pague, "
+                "el reporte negativo permanece activo hasta cumplir la caducidad máxima de 8 años (96 meses) desde que entró en mora."
+            ),
         }
 
     permanencia_meses = min(meses_mora * 2, 48)
