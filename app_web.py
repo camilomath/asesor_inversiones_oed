@@ -25,7 +25,7 @@ from src.finance import (
     em_a_ea,
     validar_usura_sfc,
     valor_futuro_aportes_periodicos,
-    tabla_amortizacion_cuota_fija,
+    cuota_fija_francesa,
 )
 from src.mod1_presupuesto import diagnosticar_presupuesto_y_flujo_caja
 from src.mod2_inversiones_salario import estructurar_portafolio_salario
