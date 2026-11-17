@@ -1793,5 +1793,10 @@ def iniciar_interfaz_grafica_local() -> None:
         servidor.server_close()
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Punto de entrada principal del orquestador e interfaz gráfica local OED."""
     iniciar_interfaz_grafica_local()
+
+
+if __name__ == "__main__":
+    main()
