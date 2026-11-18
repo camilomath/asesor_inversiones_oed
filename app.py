@@ -48,6 +48,14 @@ from src.mod6_educacion_financiera import (
     detectar_esquema_piramidal_ponzi,
     perfilar_inversionista_decreto_2555,
 )
+from src.oed_design_system import (
+    COLORES_GRAFICAS_OED,
+    GLOSARIO_LENGUAJE_CLARO_OED,
+    PALETA_MARCA_OED,
+    RUTA_CLINICA_FINANCIERA_OED,
+    enriquecer_texto_con_explicaciones,
+    formatear_cop_claro,
+)
 
 
 def _to_float(val: Any, default: float) -> float:
@@ -1073,9 +1081,88 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
         ingreso_familiar_neto_cop=ingreso_neto_hogar if ingreso_neto_hogar > 0 else 6_500_000.0,
     )
 
+    # 6. Diagnóstico cálido del "Médico Financiero Amigo" + Receta del Mes (Manual de Marca OED)
+    decs_activas = []
+    if desea_boda:
+        decs_activas.append(("Boda", decisiones_eval["CASARSE"]))
+    if numero_hijos > 0:
+        decs_activas.append((f"Hijos ({numero_hijos})", decisiones_eval["HIJOS"]))
+    if desea_credito:
+        decs_activas.append(("Crédito", decisiones_eval["CREDITO"]))
+
+    if not decs_activas:
+        nivel_med = "azul"
+        titulo_med = "Bienvenida tranquila a tu Consultorio Financiero Amigo OED"
+        explicacion_med = (
+            "Tus signos vitales están listos en $0 COP esperando que elijas tus metas en el Paso 1. "
+            "Aquí evaluamos tus planes con simulación actuarial de Monte Carlo, descuento en EA y ajuste por IPC, "
+            "cuidando tu privacidad bajo Habeas Data y Ley 1581."
+        )
+        receta_med = (
+            "Selecciona arriba a la izquierda cuántos hijos deseas proyectar (0 a 6), si deseas un crédito o una boda, "
+            "y separa desde hoy un primer ahorro mensual en un FIC o CDT protegido por Fogafín."
+        )
+    else:
+        prob_min = min(d["probabilidad_exito_montecarlo_pct"] for _, d in decs_activas)
+        impacto_tot_mes = sum(d["impacto_flujo_mensual_inmediato_cop"] for _, d in decs_activas)
+        vpa_tot_planes = sum(d["vpa_decision_cop"] for _, d in decs_activas)
+        if prob_min >= 80.0:
+            nivel_med = "verde"
+            titulo_med = "Tus signos vitales financieros están firmes y saludables"
+            explicacion_med = (
+                f"¡Excelente noticia! Con tu excedente mensual de {formatear_cop_claro(excedente_mensual)} y tu reserva "
+                f"de {formatear_cop_claro(liquidez_emergencia)}, superas el {prob_min:.1f}% de los 1.000 escenarios de "
+                f"Monte Carlo frente a un compromiso mensual estimado de {formatear_cop_claro(impacto_tot_mes)} "
+                f"(valor presente total de {formatear_cop_claro(vpa_tot_planes)} descontado en EA frente al IPC)."
+            )
+            receta_med = (
+                f"Programa un débito automático mensual de {formatear_cop_claro(max(200_000.0, impacto_tot_mes * 0.25))} "
+                "el mismo día que recibes tu pago hacia un FIC o CDT vigilado con seguro Fogafín para blindar tu tranquilidad."
+            )
+        elif prob_min >= 55.0:
+            nivel_med = "ambar"
+            titulo_med = "Chequeo preventivo a tiempo: tu meta es viable cuidando el flujo mensual"
+            explicacion_med = (
+                f"Tu plan alcanza una solvencia de {prob_min:.1f}% en la prueba de esfuerzo de Monte Carlo. "
+                f"El flujo requerido hoy es de {formatear_cop_claro(impacto_tot_mes)}/mes frente a tu excedente de "
+                f"{formatear_cop_claro(excedente_mensual)}/mes, por lo que conviene vigilar la inflación del IPC y "
+                "evitar créditos cercanos a la Tasa de Usura."
+            )
+            brecha_preventiva = max(150_000.0, impacto_tot_mes - excedente_mensual) if impacto_tot_mes > excedente_mensual else max(200_000.0, impacto_tot_mes * 0.15)
+            receta_med = (
+                f"Fortalece tu colchón separando {formatear_cop_claro(brecha_preventiva)} adicionales este mes en un FIC "
+                "con interés compuesto antes de asumir nuevos compromisos fijos."
+            )
+        else:
+            nivel_med = "rojo"
+            titulo_med = "Hagamos una pausa protectora para cuidar tu sueño tranquilo"
+            brecha_mes = max(0.0, impacto_tot_mes - excedente_mensual)
+            explicacion_med = (
+                f"Cero regaños, estamos aquí para cuidarte: hoy tus planes requieren {formatear_cop_claro(impacto_tot_mes)}/mes "
+                f"y tu excedente libre es de {formatear_cop_claro(excedente_mensual)}/mes (brecha de {formatear_cop_claro(brecha_mes)}/mes). "
+                f"En la prueba de Monte Carlo tu solvencia actual es {prob_min:.1f}%, así que primero demos oxígeno a tu caja."
+            )
+            dosis_inicial = max(100_000.0, round((brecha_mes if brecha_mes > 0 else 300_000.0) * 0.20, -3))
+            receta_med = (
+                f"Empieza este mes separando una dosis suave de {formatear_cop_claro(dosis_inicial)} en un CDT o FIC protegido por Fogafín "
+                "y aplaza 6 a 12 meses los gastos no urgentes para evitar sobreendeudamiento."
+            )
+
     return {
         "mensaje_ejecucion": "PRUEBA EXITOSA",
         "timestamp_calculo": datetime.now().strftime("%H:%M:%S"),
+        "manual_marca_oed": {
+            "paleta": PALETA_MARCA_OED,
+            "colores_graficas": COLORES_GRAFICAS_OED,
+            "ruta_clinica": RUTA_CLINICA_FINANCIERA_OED,
+            "glosario": GLOSARIO_LENGUAJE_CLARO_OED,
+            "diagnostico_medico_amigo": {
+                "nivel": nivel_med,
+                "titulo_html": enriquecer_texto_con_explicaciones(titulo_med),
+                "explicacion_html": enriquecer_texto_con_explicaciones(explicacion_med),
+                "receta_html": enriquecer_texto_con_explicaciones(receta_med),
+            },
+        },
         "parametros_activos": {
             "ingreso_neto_hogar": ingreso_neto_hogar,
             "excedente_mensual": excedente_mensual,
@@ -1151,109 +1238,176 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Asesor Financiero OED — Interfaz Gráfica Local (Nelson Angel)</title>
+<title>Consultorio Financiero Amigo OED — Positiva (Nelson Angel)</title>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <style>
   :root {
-    --bg: #f4f7fb;
-    --card: #ffffff;
-    --primary: #0f4c81;
-    --accent: #1e88e5;
-    --success: #2e7d32;
-    --warn: #ef6c00;
-    --danger: #c62828;
-    --text: #1c2833;
-    --muted: #566573;
-    --border: #dce4ec;
+    /* PALETA OFICIAL DEL CONSULTORIO FINANCIERO AMIGO OED + TONOS SUAVES */
+    --bg: #F4F7FB;
+    --card: #FFFFFF;
+    --primary: #0F294A;       /* Azul Bata Médica (Confianza OED) */
+    --accent: #1D4ED8;        /* Azul Cuidado Activo */
+    --positiva: #EA580C;      /* Naranja Receta Positiva */
+    --positiva-soft: #FFF7ED; /* Fondo suave Crema Positiva */
+    --success: #15803D;       /* Verde Signos Vitales Sanos */
+    --warn: #B45309;          /* Ámbar Chequeo Preventivo */
+    --danger: #B91C1C;        /* Rojo Cuidado Intensivo (Sin Regaños) */
+    --text: #0F294A;
+    --muted: #475569;
+    --border: #DDE4EE;
   }
   * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
   body { margin: 0; background: var(--bg); color: var(--text); }
   header {
-    background: linear-gradient(135deg, #0a2540 0%, #0f4c81 60%, #1e88e5 100%);
-    color: #fff; padding: 16px 28px; display: flex; justify-content: space-between; align-items: center;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+    background: linear-gradient(135deg, #0F294A 0%, #163A66 58%, #1D4ED8 100%);
+    color: #fff; padding: 14px 28px; display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 4px 16px rgba(15, 41, 74, 0.12); border-bottom: 3px solid #EA580C;
   }
-  header h1 { margin: 0; font-size: 1.3rem; font-weight: 700; }
-  header p { margin: 4px 0 0; font-size: 0.86rem; opacity: 0.9; }
+  .header-brand {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .positiva-logo-wrap {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, #FFFFFF 0%, #FFF7ED 100%);
+    border: 2px solid #FDBA74; border-radius: 12px; padding: 5px 8px;
+    box-shadow: 0 3px 10px rgba(234, 88, 12, 0.22); flex-shrink: 0;
+  }
+  .positiva-logo-wrap span {
+    font-size: 0.6rem; font-weight: 800; letter-spacing: 0.9px; color: #EA580C; margin-top: 1px;
+    text-transform: uppercase;
+  }
+  header h1 { margin: 0; font-size: 1.26rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.2px; }
+  header p { margin: 3px 0 0; font-size: 0.85rem; color: #E2E8F0; }
   .badge-top {
-    background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.3);
-    padding: 7px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600;
+    background: rgba(255, 247, 237, 0.14); border: 1px solid rgba(253, 186, 116, 0.55);
+    padding: 7px 14px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; color: #FFF7ED;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .oed-steps-bar {
+    background: #FFFFFF; border-bottom: 1px solid var(--border); padding: 9px 28px;
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  }
+  .oed-step-pill {
+    font-size: 0.75rem; padding: 4px 11px; border-radius: 999px;
+    border: 1px solid #CBD5E1; background: #F8FAFC; color: #475569; font-weight: 500;
+    transition: all 0.18s ease;
+  }
+  .oed-step-active {
+    background: #EA580C; color: #FFFFFF; border-color: #EA580C; font-weight: 700;
+    box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);
+  }
+  .oed-medico-banner {
+    background: linear-gradient(135deg, #EFF6FF 0%, #FFF7ED 100%);
+    border: 1px solid #BFDBFE; border-left: 5px solid #0F294A;
+    border-radius: 12px; padding: 11px 16px; margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .oed-medico-banner p { margin: 0; font-size: 0.86rem; color: #0F294A; line-height: 1.45; }
+  .oed-doc-card {
+    border-radius: 12px; padding: 12px 15px; margin: 0 0 10px 0; border-left: 6px solid;
+    font-size: 0.88rem; line-height: 1.5; box-shadow: 0 2px 6px rgba(15, 41, 74, 0.04);
+  }
+  .oed-doc-verde { background: #F0FDF4; border-color: #15803D; color: #14532D; }
+  .oed-doc-azul  { background: #EFF6FF; border-color: #1D4ED8; color: #1E3A8A; }
+  .oed-doc-ambar { background: #FFFBEB; border-color: #B45309; color: #78350F; }
+  .oed-doc-rojo  { background: #FEF2F2; border-color: #B91C1C; color: #7F1D1D; }
+  .oed-rx-box {
+    background: #FFF7ED; border: 1px solid #FED7AA; border-left: 6px solid #EA580C;
+    padding: 11px 15px; border-radius: 12px; margin: 0 0 14px 0; color: #431407;
+    font-size: 0.87rem; line-height: 1.48;
+  }
+  .oed-term {
+    position: relative; border-bottom: 2px dotted #1D4ED8; cursor: help;
+    font-weight: 600; padding: 0 2px; border-radius: 3px; background: rgba(29, 78, 216, 0.07);
+  }
+  .oed-q {
+    font-size: 0.68em; color: #FFFFFF; background: #1D4ED8; border-radius: 999px;
+    padding: 0 4px; margin-left: 2px; font-weight: 700;
+  }
+  .oed-term:hover::after, .oed-term:focus::after {
+    content: attr(data-tip); position: absolute; left: 0; bottom: 125%;
+    min-width: 250px; max-width: 330px; background: #0F294A; color: #FFFFFF;
+    padding: 9px 11px; border-radius: 9px; font-size: 0.78rem; font-weight: 400;
+    line-height: 1.4; z-index: 9999; box-shadow: 0 8px 20px rgba(15, 41, 74, 0.28);
+    white-space: normal;
   }
   .tabs {
-    display: flex; gap: 8px; padding: 12px 28px 0; background: #e9eff6; border-bottom: 1px solid var(--border);
+    display: flex; gap: 8px; padding: 10px 28px 0; background: #EEF3F9; border-bottom: 1px solid var(--border);
   }
   .tab-btn {
-    border: none; background: transparent; padding: 10px 18px; font-size: 0.92rem; font-weight: 600;
-    color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0;
+    border: none; background: transparent; padding: 10px 18px; font-size: 0.9rem; font-weight: 600;
+    color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; border-radius: 10px 10px 0 0;
+    transition: all 0.15s ease;
   }
-  .tab-btn.active { background: var(--card); color: var(--primary); border-bottom-color: var(--accent); }
-  .container { max-width: 1480px; margin: 0 auto; padding: 18px 24px 40px; }
+  .tab-btn.active { background: var(--card); color: var(--primary); border-bottom-color: var(--positiva); font-weight: 700; }
+  .container { max-width: 1480px; margin: 0 auto; padding: 16px 24px 40px; }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
   .grid-sidebar { display: grid; grid-template-columns: 375px 1fr; gap: 20px; align-items: start; }
   .card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
-    box-shadow: 0 2px 6px rgba(15,76,129,0.05); margin-bottom: 16px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 13px; padding: 16px;
+    box-shadow: 0 2px 8px rgba(15, 41, 74, 0.04); margin-bottom: 16px;
   }
-  .card h3 { margin: 0 0 10px; font-size: 1.0rem; color: var(--primary); }
+  .card h3 { margin: 0 0 10px; font-size: 0.98rem; color: var(--primary); }
   .sub-panel {
-    background: #f8fafd; border: 1px solid #d0e1f9; border-radius: 9px; padding: 11px 12px; margin-bottom: 12px;
+    background: #F8FAFC; border: 1px solid #DBEAFE; border-radius: 10px; padding: 11px 12px; margin-bottom: 12px;
   }
-  .sub-panel h4 { margin: 0 0 8px; font-size: 0.86rem; color: #0d47a1; }
+  .sub-panel h4 { margin: 0 0 8px; font-size: 0.85rem; color: #0F294A; }
   .child-input-box {
-    border-radius: 8px; padding: 9px 10px; margin-bottom: 9px; border: 1px solid #cbd5e1;
+    border-radius: 9px; padding: 9px 10px; margin-bottom: 9px; border: 1px solid #DDE4EE;
   }
-  .child-input-h1 { background: #eff6ff; border-left: 4px solid #1e88e5; }
-  .child-input-h2 { background: #faf5ff; border-left: 4px solid #8e24aa; }
-  .child-input-h3 { background: #f0fdf4; border-left: 4px solid #2e7d32; }
-  .child-input-h4 { background: #fff7ed; border-left: 4px solid #ef6c00; }
-  .child-input-h5 { background: #ecfeff; border-left: 4px solid #00838f; }
-  .child-input-h6 { background: #fdf2f8; border-left: 4px solid #ad1457; }
-  .child-input-box h5 { margin: 0 0 6px; font-size: 0.82rem; font-weight: 700; color: #0f4c81; }
+  .child-input-h1 { background: #EFF6FF; border-left: 4px solid #1D4ED8; }
+  .child-input-h2 { background: #FFF7ED; border-left: 4px solid #EA580C; }
+  .child-input-h3 { background: #F0FDF4; border-left: 4px solid #15803D; }
+  .child-input-h4 { background: #F5F3FF; border-left: 4px solid #7C3AED; }
+  .child-input-h5 { background: #FEF2F2; border-left: 4px solid #DC2626; }
+  .child-input-h6 { background: #F8FAFC; border-left: 4px solid #475569; }
+  .child-input-box h5 { margin: 0 0 6px; font-size: 0.82rem; font-weight: 700; color: #0F294A; }
   .children-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(275px, 1fr)); gap: 14px; margin-bottom: 16px;
   }
   .child-card {
-    background: #ffffff; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
-    box-shadow: 0 3px 10px rgba(15,76,129,0.06); position: relative; overflow: hidden;
+    background: #FFFFFF; border: 1px solid var(--border); border-radius: 13px; padding: 14px 16px;
+    box-shadow: 0 3px 10px rgba(15, 41, 74, 0.05); position: relative; overflow: hidden;
   }
-  .child-card.h1 { border-top: 5px solid #1e88e5; }
-  .child-card.h2 { border-top: 5px solid #8e24aa; }
-  .child-card.h3 { border-top: 5px solid #2e7d32; }
-  .child-card.h4 { border-top: 5px solid #ef6c00; }
-  .child-card.h5 { border-top: 5px solid #00838f; }
-  .child-card.h6 { border-top: 5px solid #ad1457; }
+  .child-card.h1 { border-top: 5px solid #1D4ED8; }
+  .child-card.h2 { border-top: 5px solid #EA580C; }
+  .child-card.h3 { border-top: 5px solid #15803D; }
+  .child-card.h4 { border-top: 5px solid #7C3AED; }
+  .child-card.h5 { border-top: 5px solid #DC2626; }
+  .child-card.h6 { border-top: 5px solid #475569; }
   .child-card.consolidado {
-    background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 100%);
-    border: 2px solid #0f4c81; border-top: 5px solid #0a2540;
-    box-shadow: 0 4px 14px rgba(10,37,64,0.12);
+    background: linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 100%);
+    border: 2px solid #0F294A; border-top: 5px solid #EA580C;
+    box-shadow: 0 4px 14px rgba(15, 41, 74, 0.10);
   }
   .child-badge {
-    display: inline-block; padding: 3px 10px; border-radius: 14px; font-size: 0.74rem; font-weight: 700;
+    display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.73rem; font-weight: 700;
     margin-bottom: 6px;
   }
-  .badge-h1 { background: #e3f2fd; color: #0d47a1; }
-  .badge-h2 { background: #f3e5f5; color: #6a1b9a; }
-  .badge-h3 { background: #e8f5e9; color: #1b5e20; }
-  .badge-h4 { background: #fff3e0; color: #e65100; }
-  .badge-h5 { background: #e0f7fa; color: #006064; }
-  .badge-h6 { background: #fce4ec; color: #880e4f; }
-  .badge-cons { background: #0a2540; color: #ffffff; }
+  .badge-h1 { background: #DBEAFE; color: #1E3A8A; }
+  .badge-h2 { background: #FFEDD5; color: #9A3412; }
+  .badge-h3 { background: #DCFCE7; color: #14532D; }
+  .badge-h4 { background: #EDE9FE; color: #5B21B6; }
+  .badge-h5 { background: #FEE2E2; color: #991B1B; }
+  .badge-h6 { background: #F1F5F9; color: #334155; }
+  .badge-cons { background: #0F294A; color: #FFFFFF; }
   .wizard-box {
-    background: linear-gradient(135deg, #e3f2fd 0%, #f8fafd 100%);
-    border: 2px solid #1e88e5; border-radius: 10px; padding: 12px 13px; margin-bottom: 14px;
+    background: linear-gradient(135deg, #EFF6FF 0%, #FFF7ED 100%);
+    border: 1.5px solid #93C5FD; border-left: 5px solid #EA580C;
+    border-radius: 11px; padding: 12px 13px; margin-bottom: 14px;
   }
-  .wizard-box h3 { margin: 0 0 8px; font-size: 0.94rem; color: #0a2540; }
-  .child-vpa-main { font-size: 1.28rem; font-weight: 800; color: #0a2540; margin: 2px 0 4px; }
-  .child-vpa-sub { font-size: 0.77rem; color: var(--muted); margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed #cbd5e1; }
+  .wizard-box h3 { margin: 0 0 8px; font-size: 0.93rem; color: #0F294A; }
+  .child-vpa-main { font-size: 1.26rem; font-weight: 800; color: #0F294A; margin: 2px 0 4px; }
+  .child-vpa-sub { font-size: 0.77rem; color: var(--muted); margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed #CBD5E1; }
   .metric-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-  .metric-table td { padding: 4px 0; border-bottom: 1px solid #f1f5f9; }
-  .metric-table td:last-child { text-align: right; font-weight: 700; color: #1e293b; }
+  .metric-table td { padding: 4px 0; border-bottom: 1px solid #F1F5F9; }
+  .metric-table td:last-child { text-align: right; font-weight: 700; color: #0F294A; }
   .metric-table tr.total-row td {
-    border-top: 2px solid #cbd5e1; border-bottom: none; padding-top: 7px; font-size: 0.85rem; font-weight: 800; color: #0d47a1;
+    border-top: 2px solid #CBD5E1; border-bottom: none; padding-top: 7px; font-size: 0.85rem; font-weight: 800; color: #1D4ED8;
   }
   .metric-table tr.highlight-row td {
-    background: #fff8e1; padding: 5px 6px; border-radius: 4px; color: #b71c1c; font-weight: 800;
+    background: #FFF7ED; padding: 5px 6px; border-radius: 4px; color: #EA580C; font-weight: 800;
   }
   .section-label {
     font-size: 0.88rem; font-weight: 800; color: var(--primary); margin: 0 0 10px;
@@ -1267,66 +1421,73 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
   }
   .tip-badge {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 15px; height: 15px; border-radius: 50%; background: #dbeafe; color: #0f4c81;
+    width: 15px; height: 15px; border-radius: 50%; background: #DBEAFE; color: #1D4ED8;
     font-size: 0.68rem; font-weight: 800; margin-left: 4px; flex-shrink: 0;
   }
   .form-group input, .form-group select {
-    width: 100%; padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%; padding: 7px 9px; border: 1px solid #CBD5E1; border-radius: 7px; font-size: 0.87rem;
+    background: #FFFFFF; color: #0F294A; transition: border-color 0.15s, box-shadow 0.15s;
   }
   .form-group input:hover, .form-group select:hover,
   .form-group input:focus, .form-group select:focus {
-    border-color: #1e88e5; box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.16); outline: none;
+    border-color: #1D4ED8; box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.14); outline: none;
   }
   .oed-tooltip-floating {
     position: fixed; z-index: 99999; pointer-events: none;
-    background: linear-gradient(135deg, #0a2540 0%, #0f4c81 100%);
-    color: #ffffff; padding: 8px 12px; border-radius: 8px;
-    font-size: 0.8rem; line-height: 1.38; font-weight: 500;
-    max-width: 290px; box-shadow: 0 8px 22px rgba(10, 37, 64, 0.32);
-    border: 1px solid rgba(147, 197, 253, 0.45);
+    background: #0F294A; color: #FFFFFF; padding: 9px 12px; border-radius: 9px;
+    font-size: 0.8rem; line-height: 1.4; font-weight: 400;
+    max-width: 295px; box-shadow: 0 8px 22px rgba(15, 41, 74, 0.30);
+    border-left: 4px solid #EA580C;
     opacity: 0; transform: translateY(4px); transition: opacity 0.12s ease, transform 0.12s ease;
   }
   .oed-tooltip-floating.visible {
     opacity: 1; transform: translateY(0);
   }
   .oed-tooltip-floating strong {
-    display: block; color: #93c5fd; font-size: 0.74rem; text-transform: uppercase;
+    display: block; color: #FDBA74; font-size: 0.74rem; text-transform: uppercase;
     letter-spacing: 0.3px; margin-bottom: 2px;
   }
   .btn {
-    display: inline-block; width: 100%; padding: 10px 14px; border: none; border-radius: 8px;
-    font-weight: 700; font-size: 0.9rem; cursor: pointer; text-align: center; transition: 0.2s;
+    display: inline-block; width: 100%; padding: 10px 14px; border: none; border-radius: 9px;
+    font-weight: 700; font-size: 0.89rem; cursor: pointer; text-align: center; transition: 0.18s;
     margin-top: 6px;
   }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { background: #1565c0; transform: translateY(-1px); }
-  .btn-success { background: var(--success); color: #fff; }
-  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-primary { background: #1D4ED8; color: #fff; }
+  .btn-primary:hover { background: #0F294A; transform: translateY(-1px); }
+  .btn-success { background: #15803D; color: #fff; }
+  .btn-danger { background: #B91C1C; color: #fff; }
   .status-banner {
     margin-top: 9px; padding: 7px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
-    background: #e8f5e9; color: #1b5e20; text-align: center; border: 1px solid #a5d6a7;
+    background: #F0FDF4; color: #14532D; text-align: center; border: 1px solid #BBF7D0;
   }
-  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 16px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(275px, 1fr)); gap: 14px; margin-bottom: 16px; }
   .kpi-card {
     background: var(--card); border: 1px solid var(--border); border-left: 5px solid var(--accent);
-    border-radius: 10px; padding: 14px 16px; transition: box-shadow 0.25s;
+    border-radius: 12px; padding: 14px 16px; transition: box-shadow 0.25s;
   }
-  .kpi-card.flash { box-shadow: 0 0 0 3px rgba(30,136,229,0.35); }
-  .kpi-title { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; }
-  .kpi-val { font-size: 1.3rem; font-weight: 800; color: var(--text); margin: 5px 0; }
+  .kpi-card.flash { box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.28); }
+  .kpi-title { font-size: 0.77rem; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  .kpi-val { font-size: 1.28rem; font-weight: 800; color: var(--primary); margin: 5px 0; }
   .kpi-sub { font-size: 0.79rem; color: var(--muted); line-height: 1.45; }
-  .pill { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 0.74rem; font-weight: 700; }
-  .pill-ok { background: #e8f5e9; color: #2e7d32; }
-  .pill-warn { background: #fff3e0; color: #ef6c00; }
-  .pill-bad { background: #ffebee; color: #c62828; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; }
+  .pill-ok { background: #F0FDF4; color: #15803D; border: 1px solid #BBF7D0; }
+  .pill-warn { background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
+  .pill-bad { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
   .legal-box {
-    background: #f0f6ff; border-left: 4px solid var(--primary); padding: 12px 14px;
-    border-radius: 6px; font-size: 0.84rem; line-height: 1.45; margin-bottom: 12px;
+    background: #EFF6FF; border-left: 4px solid var(--primary); padding: 12px 14px;
+    border-radius: 8px; font-size: 0.84rem; line-height: 1.45; margin-bottom: 12px;
   }
   .code-box {
-    background: #1e293b; color: #a7f3d0; font-family: Consolas, monospace; font-size: 0.8rem;
-    padding: 10px 12px; border-radius: 7px; overflow-x: auto; margin-top: 8px;
+    background: #0F294A; color: #A7F3D0; font-family: Consolas, monospace; font-size: 0.8rem;
+    padding: 10px 12px; border-radius: 8px; overflow-x: auto; margin-top: 8px;
+  }
+  .glossary-pill {
+    display: inline-block; padding: 4px 11px; border-radius: 999px; font-size: 0.76rem;
+    border: 1px solid #CBD5E1; margin: 3px; cursor: pointer; background: #FFFFFF; color: #334155;
+    transition: all 0.15s;
+  }
+  .glossary-pill.active {
+    background: #1D4ED8; color: #FFFFFF; border-color: #1D4ED8; font-weight: 700;
   }
   .charts-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 1100px) {
@@ -1337,20 +1498,56 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 <body>
 
 <header>
-  <div>
-    <h1>🛡️ Asesor Financiero e Inversiones OED — Interfaz Gráfica Local</h1>
-    <p>Líder de Gobierno de Datos y Módulo 5 Actuarial: <strong>Nelson Angel</strong> (Rama <code>nean</code>) | Simulador Paramétrico Adaptativo</p>
+  <div class="header-brand">
+    <!-- LOGO SIMÉTRICO Y SUAVE DE POSITIVA COMPAÑÍA DE SEGUROS / OED -->
+    <div class="positiva-logo-wrap" title="Positiva Compañía de Seguros — Consultorio Financiero Amigo OED">
+      <svg id="logo-positiva-svg" width="38" height="38" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Logo Positiva">
+        <rect x="4" y="4" width="56" height="56" rx="16" fill="#0F294A" stroke="#EA580C" stroke-width="3"/>
+        <circle cx="32" cy="32" r="20" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+        <!-- Cruz simétrica cálida Positiva -->
+        <rect x="28" y="16" width="8" height="32" rx="4" fill="#EA580C"/>
+        <rect x="16" y="28" width="32" height="8" rx="4" fill="#EA580C"/>
+        <!-- Punto central de equilibrio y bienestar -->
+        <circle cx="32" cy="32" r="5" fill="#0F294A"/>
+        <circle cx="32" cy="32" r="2.2" fill="#FFFFFF"/>
+      </svg>
+      <span>POSITIVA</span>
+    </div>
+    <div>
+      <h1>🩺 Consultorio Financiero Amigo OED — Tu Médico Financiero de Cabecera</h1>
+      <p>Especialista Paso 6 y Paso 0: <strong>Nelson Angel</strong> (Rama <code>nean</code>) &bull; Manual de Marca Oficial OED &bull; Cero Palabras Huérfanas (<code>?</code>)</p>
+    </div>
   </div>
-  <div class="badge-top" id="badge-hora">🔒 Ley 1581/2012 &bull; Ley 1266/2008 &bull; Monte Carlo Activo</div>
+  <div class="badge-top" id="badge-hora">🛡️ Positiva OED &bull; Ley 1581 &bull; Monte Carlo</div>
 </header>
 
+<!-- BLOQUE 1 DEL MANUAL DE MARCA: BARRA DE PROGRESO DE LOS 7 PASOS (PASOS 0 AL 6) -->
+<div class="oed-steps-bar" id="barra-7-pasos-oed">
+  <span class="oed-step-pill" id="pill-paso-0">Paso 0: 🩺 Bienvenida y Confidencialidad (Nelson + Camilo)</span>
+  <span class="oed-step-pill">Paso 1: 🫀 Pulso ante el Riesgo (Salin)</span>
+  <span class="oed-step-pill">Paso 2: 🩻 Radiografía de tu Sueldo (Nidia)</span>
+  <span class="oed-step-pill">Paso 3: 🩹 Alivio de Deudas (Catalina)</span>
+  <span class="oed-step-pill">Paso 4: 🌱 Vitaminas de Inversión (Camilo)</span>
+  <span class="oed-step-pill">Paso 5: 🏡 Comprar Casa sin Ahogarte (Jesi)</span>
+  <span class="oed-step-pill oed-step-active" id="pill-paso-6">Paso 6: 🛡️ Prueba de Esfuerzo Grandes Planes (Nelson)</span>
+</div>
+
 <div class="tabs">
-  <button class="tab-btn active" onclick="abrirTab('tab-mod5', this)">📊 Módulo 5: Simulador Actuarial Paramétrico</button>
-  <button class="tab-btn" onclick="abrirTab('tab-habeas', this)">🔐 Fase 0: Gobierno de Datos y Habeas Data (Nelson)</button>
-  <button class="tab-btn" onclick="abrirTab('tab-integrado', this)">🚀 Caso Maestro OED: Los 6 Módulos Integrados</button>
+  <button class="tab-btn active" onclick="abrirTab('tab-mod5', this)">🛡️ Paso 6: Prueba de Esfuerzo Actuarial (Módulo 5 — Nelson)</button>
+  <button class="tab-btn" onclick="abrirTab('tab-habeas', this)">🩺 Paso 0: Confidencialidad y Habeas Data (Nelson)</button>
+  <button class="tab-btn" onclick="abrirTab('tab-integrado', this)">🚀 Consulta Completa OED: Los 6 Módulos + Glosario</button>
 </div>
 
 <div class="container">
+
+  <!-- SALUDO CÁLIDO DEL MÉDICO FINANCIERO AMIGO (BLOQUE 1 MANUAL DE MARCA) -->
+  <div class="oed-medico-banner">
+    <p id="saludo-medico-top">
+      🩺 <strong>Saludo de tu Médico Financiero Amigo (Nelson Angel):</strong>
+      <i>"Hagamos una prueba de esfuerzo con 1.000 escenarios futuros para que casarte, tener hijos o tomar un crédito te tome bien preparado y durmiendo tranquilo."</i>
+    </p>
+    <span class="pill" style="background:#FFF7ED;color:#EA580C;border:1px solid #FED7AA;flex-shrink:0;">🧡 Voz Médico Amigo</span>
+  </div>
 
   <!-- ==================== PESTAÑA 1: MÓDULO 5 ACTUARIAL PARAMÉTRICO (NELSON) ==================== -->
   <div id="tab-mod5" class="tab-content active">
@@ -1673,6 +1870,9 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
       </div>
 
       <div>
+        <!-- BLOQUE 3 MANUAL DE MARCA: DIAGNÓSTICO DEL MÉDICO AMIGO + BURBUJAS (?) + RECETA DEL MES -->
+        <div id="box-diagnostico-medico-oed"></div>
+
         <!-- SECCIÓN SUPERIOR DINÁMICA: CUADROS POR HIJO + CONSOLIDADO (SE OCULTA SI NUMERO_HIJOS == 0) -->
         <div id="seccion-cuadros-hijos" style="display:none;">
           <div class="section-label">
@@ -1688,6 +1888,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
         </div>
         <div class="kpi-row" id="kpis-decisiones"></div>
 
+        <!-- BLOQUE 4 MANUAL DE MARCA: GRÁFICAS INTERACTIVAS CON PALETA OFICIAL DEL CONSULTORIO -->
         <div class="card" id="card-chart-hijo" style="display:none;">
           <h3 id="titulo-curva-hijo">📈 1. Curva Actuarial de Costos Educativos por Hijo y Consolidado</h3>
           <div id="chart-hijo" style="height:410px;"></div>
@@ -1765,6 +1966,20 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- ==================== BLOQUE 5 MANUAL DE MARCA: DICCIONARIO DEL MÉDICO AMIGO ==================== -->
+  <div class="card" id="bloque-glosario-oed" style="margin-top:18px;border-top:4px solid #0F294A;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+      <h3 style="margin:0;">🩺 ¿Alguna palabra te sonó a chino? Diccionario del Médico Financiero Amigo (5 Familias OED)</h3>
+      <input type="text" id="buscador-glosario-oed" placeholder="🔍 Buscar sigla o concepto (ej. EA, IPC, Monte Carlo, Habeas Data, UVR, Fogafín)..."
+             title="Escriba cualquier sigla o término para ver su explicación sencilla y ejemplo en pesos."
+             data-tooltip="Escriba cualquier sigla o término para ver su explicación sencilla y ejemplo en pesos."
+             style="width:360px;max-width:100%;padding:7px 11px;border:1px solid #CBD5E1;border-radius:8px;font-size:0.84rem;"
+             oninput="filtrarGlosarioOED()">
+    </div>
+    <div id="pills-glosario-oed" style="margin-bottom:10px;"></div>
+    <div id="detalle-glosario-oed"></div>
+  </div>
+
 </div>
 
 <script>
@@ -1782,7 +1997,8 @@ const TARIFAS_AGUSTINIANO = {
   univ_sem7:           { semestre_actual: 7, semestres_cursar: 4,  semestre_univ: 13000000, edad: 20, etapa: 'universidad' }
 };
 
-const COLORES_HIJOS = ['#1e88e5', '#8e24aa', '#2e7d32', '#ef6c00', '#00838f', '#ad1457'];
+/* PALETA OFICIAL DE GRÁFICAS DEL CONSULTORIO OED (src/oed_design_system.py) */
+const COLORES_HIJOS = ['#1D4ED8', '#EA580C', '#15803D', '#7C3AED', '#DC2626', '#475569'];
 const ICONOS_HIJOS = ['👦', '👧', '🧒', '👶', '🧑', '🎓'];
 
 function crearHtmlHijoExtra(i) {
@@ -2092,6 +2308,24 @@ function abrirTab(tabId, btn) {
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
   document.getElementById(tabId).classList.add('active');
   btn.classList.add('active');
+
+  const pill0 = document.getElementById('pill-paso-0');
+  const pill6 = document.getElementById('pill-paso-6');
+  const saludoEl = document.getElementById('saludo-medico-top');
+  if (tabId === 'tab-habeas') {
+    if (pill0) pill0.classList.add('oed-step-active');
+    if (pill6) pill6.classList.remove('oed-step-active');
+    if (saludoEl) {
+      saludoEl.innerHTML = '🩺 <strong>Paso 0 — Bienvenida al Consultorio y Confidencialidad (Nelson + Camilo):</strong> <i>"Igual que en una historia clínica médica, tus datos son privados, se quedan cifrados en tu equipo y nadie más los ve."</i>';
+    }
+  } else {
+    if (pill0) pill0.classList.remove('oed-step-active');
+    if (pill6) pill6.classList.add('oed-step-active');
+    if (saludoEl) {
+      saludoEl.innerHTML = '🛡️ <strong>Paso 6 — Prueba de Esfuerzo para tus Grandes Planes (Nelson Angel):</strong> <i>"Hagamos una prueba de esfuerzo con 1.000 escenarios futuros para que casarte, tener hijos o estudiar te tome bien preparado."</i>';
+    }
+  }
+
   setTimeout(() => {
     window.dispatchEvent(new Event('resize'));
     ['chart-hijo', 'chart-mc', 'chart-sens', 'chart-habeas'].forEach(id => {
@@ -2261,6 +2495,39 @@ function renderizarTodo(data, animar = false) {
   const cons = infoHijos.consolidado || {};
   const esCompleto = infoHijos.modo_horizonte === 'ciclo_completo';
 
+  // 0. BLOQUE 3 MANUAL DE MARCA: DIAGNÓSTICO DEL MÉDICO FINANCIERO AMIGO + RECETA DEL MES
+  const manualOED = data.manual_marca_oed || {};
+  if (manualOED.glosario) {
+    window.__GLOSARIO_OED = manualOED.glosario;
+    if (!window.__glosarioInicializado) {
+      window.__glosarioInicializado = true;
+      filtrarGlosarioOED();
+    }
+  }
+  const diagMed = manualOED.diagnostico_medico_amigo;
+  const boxDiagEl = document.getElementById('box-diagnostico-medico-oed');
+  if (boxDiagEl && diagMed) {
+    const mapaNivel = {
+      verde: { clase: 'oed-doc-verde', icono: '🩺💚', prefijo: 'Signos vitales saludables:' },
+      azul:  { clase: 'oed-doc-azul',  icono: '🩺💙', prefijo: 'Lectura tranquila de tu médico financiero:' },
+      ambar: { clase: 'oed-doc-ambar', icono: '🩺🧡', prefijo: 'Chequeo preventivo a tiempo:' },
+      rojo:  { clase: 'oed-doc-rojo',  icono: '🩺❤️‍🩹', prefijo: 'Pausa protectora para cuidar tu tranquilidad:' }
+    };
+    const cfgNiv = mapaNivel[diagMed.nivel] || mapaNivel.azul;
+    boxDiagEl.innerHTML = `
+      <div class="oed-doc-card ${cfgNiv.clase}">
+        <div><strong>${cfgNiv.icono} ${cfgNiv.prefijo} ${diagMed.titulo_html}</strong></div>
+        <div style="margin-top:4px;">${diagMed.explicacion_html}</div>
+        <div style="margin-top:5px;font-size:0.76rem;opacity:0.86;">
+          💡 <i>Tip Manual de Marca OED: Pasa el cursor sobre cualquier término subrayado con <b>?</b> para ver su explicación sencilla.</i>
+        </div>
+      </div>
+      <div class="oed-rx-box">
+        <strong>💊 Tu Receta Práctica para este Mes:</strong> ${diagMed.receta_html}
+      </div>
+    `;
+  }
+
   const seccionHijosEl = document.getElementById('seccion-cuadros-hijos');
   const cardChartHijoEl = document.getElementById('card-chart-hijo');
 
@@ -2325,14 +2592,14 @@ function renderizarTodo(data, animar = false) {
     });
 
     const vpaConsMostrar = esCompleto ? cons.vpa_ciclo_completo_total_cop : cons.vpa_restante_total_cop;
-    const balanceFlujoColor = cons.balance_flujo_mensual_cop >= 0 ? '#2e7d32' : '#c62828';
+    const balanceFlujoColor = cons.balance_flujo_mensual_cop >= 0 ? '#15803D' : '#B91C1C';
     const balanceFlujoLbl = cons.balance_flujo_mensual_cop >= 0 ? 'Superávit' : 'Déficit';
 
     htmlCardsHijos += `
       <div class="child-card consolidado ${animar ? 'flash' : ''}">
         <span class="child-badge badge-cons">👨‍👩‍👧‍👦 CUADRO ${nHijos + 1}: CONSOLIDADO TOTAL (${nHijos} ${nHijos === 1 ? 'HIJO' : 'HIJOS'})</span>
         <div class="kpi-title">VPA Consolidado Familiar (Suma Exacta Hijos 1 a ${nHijos})</div>
-        <div class="child-vpa-main" style="color:#0a2540;font-size:1.38rem;">${fmtCOP(vpaConsMostrar)}</div>
+        <div class="child-vpa-main" style="color:#0F294A;font-size:1.38rem;">${fmtCOP(vpaConsMostrar)}</div>
         <div class="child-vpa-sub">
           ${resumenLineasConsolidado.join('<br>')}
         </div>
@@ -2341,14 +2608,14 @@ function renderizarTodo(data, animar = false) {
           <tr><td>🍎 Manutención + Otros (${nHijos} ${nHijos === 1 ? 'Hijo' : 'Hijos'})</td><td>${fmtCOP(cons.manutencion_y_otros_sumados_mes_cop)}/mes</td></tr>
           <tr class="highlight-row"><td>🔥 GASTO MENSUAL CONSOLIDADO</td><td>${fmtCOP(cons.gasto_mes_directo_total_cop)}/mes</td></tr>
           <tr class="total-row"><td>📊 Impacto Anualizado Consolidado</td><td>${fmtCOP(cons.impacto_mes_anualizado_total_cop)}/mes</td></tr>
-          <tr><td>🗓️ Desembolso Anual Total (${nHijos} ${nHijos === 1 ? 'Hijo' : 'Hijos'})</td><td style="color:#0a2540;font-weight:800;">${fmtCOP(cons.flujo_anual_total_hoy_cop)}/año</td></tr>
+          <tr><td>🗓️ Desembolso Anual Total (${nHijos} ${nHijos === 1 ? 'Hijo' : 'Hijos'})</td><td style="color:#0F294A;font-weight:800;">${fmtCOP(cons.flujo_anual_total_hoy_cop)}/año</td></tr>
           <tr><td>⚠️ Excedente: ${fmtCOP(cons.excedente_mensual_cop)} | Ahorro: ${fmtCOP(cons.liquidez_emergencia_cop)}</td><td style="color:${balanceFlujoColor};font-weight:800;">${balanceFlujoLbl}: ${fmtCOP(cons.balance_flujo_mensual_cop)}/mes</td></tr>
         </table>
       </div>
     `;
     document.getElementById('grid-hijos-detalle').innerHTML = htmlCardsHijos;
 
-    // Gráfico Curva Actuarial Hijos (traza cada uno de los N hijos + Consolidado)
+    // Gráfico Curva Actuarial Hijos (Paleta Oficial Manual de Marca OED)
     const nivSel = data.actuaria_mod5.nivel_seleccionado;
     const cHijo = data.actuaria_mod5.curvas_hijo;
     document.getElementById('titulo-curva-hijo').innerText =
@@ -2360,7 +2627,7 @@ function renderizarTodo(data, animar = false) {
         y: cHijo[nivSel].flujo_nominal_m,
         type: 'bar',
         name: `Flujo Anual Consolidado (${nHijos} ${nHijos === 1 ? 'Hijo' : 'Hijos'})`,
-        marker: { color: '#90caf9' }
+        marker: { color: '#BFDBFE' }
       }
     ];
     listaHijos.forEach((h, idx) => {
@@ -2381,10 +2648,12 @@ function renderizarTodo(data, animar = false) {
       y: cHijo['Agustiniano_Suba'].vpa_acum_m,
       mode: 'lines+markers',
       name: `👨‍👩‍👧‍👦 VPA Consolidado Familiar (${nHijos} ${nHijos === 1 ? 'Hijo' : 'Hijos'})`,
-      line: { color: '#0a2540', width: 4 }
+      line: { color: '#0F294A', width: 4 }
     });
 
     Plotly.react('chart-hijo', trazasHijos, {
+      template: 'plotly_white',
+      font: { family: 'Segoe UI, system-ui, sans-serif', color: '#0F294A', size: 12 },
       margin: { t: 20, r: 20, b: 45, l: 55 },
       xaxis: { title: esCompleto ? 'Edad de los Hijos (Años 0 a 23)' : 'Horizonte de Pago desde Hoy (Años Restantes)' },
       yaxis: { title: 'Millones de Pesos ($ COP)' },
@@ -2407,12 +2676,12 @@ function renderizarTodo(data, animar = false) {
   let htmlKpis = '';
   if (decisionesMostrar.length === 0) {
     htmlKpis = `
-      <div class="kpi-card" style="grid-column: 1 / -1; border-left-color: #0f4c81; background: #f8fafd;">
-        <div class="kpi-title">🧭 MODO PARAMÉTRICO EN CERO ($0 COP) — NINGUNA DECISIÓN SELECCIONADA AÚN</div>
+      <div class="kpi-card" style="grid-column: 1 / -1; border-left-color: #0F294A; background: #F8FAFC;">
+        <div class="kpi-title">🩺 MODO CONSULTORIO EN CERO ($0 COP) — ELIJA SUS METAS EN EL PASO 1</div>
         <div class="kpi-val">$0 COP</div>
         <div class="kpi-sub">
           En el <strong>Paso 1 (Preguntas Iniciales)</strong> arriba a la izquierda, seleccione:<br>
-          &bull; <strong>¿Tiene hijos o cuántos desea evaluar?</strong> (1, 2, 3, 4 o más hijos, pudiendo elegir en cada uno si está en <em>Jardín, Primaria, Bachillerato o Universidad</em>).<br>
+          &bull; <strong>¿Tiene hijos o cuántos desea evaluar?</strong> (1 a 6 hijos, pudiendo elegir en cada uno si está en <em>Jardín, Primaria, Bachillerato o Universidad</em>).<br>
           &bull; <strong>¿Desea un Crédito?</strong> (Sí / No) &nbsp;|&nbsp; <strong>¿Desea una Boda?</strong> (Sí / No).
         </div>
       </div>
@@ -2423,10 +2692,10 @@ function renderizarTodo(data, animar = false) {
       const pillClass = d.probabilidad_exito_montecarlo_pct >= 80 ? 'pill-ok' : (d.probabilidad_exito_montecarlo_pct >= 55 ? 'pill-warn' : 'pill-bad');
       let extraInfo = '';
       if (k === 'CASARSE' && d.ahorro_sinergia_mensual_cop !== undefined) {
-        extraInfo = `<br><strong>Ahorro Sinergia Pareja:</strong> <span style="color:#2e7d32;font-weight:700;">+${fmtCOP(d.ahorro_sinergia_mensual_cop)}/mes</span>`;
+        extraInfo = `<br><strong>Ahorro Sinergia Pareja:</strong> <span style="color:#15803D;font-weight:700;">+${fmtCOP(d.ahorro_sinergia_mensual_cop)}/mes</span>`;
       } else if (k === 'HIJOS' && listaHijos.length > 0) {
         extraInfo = '<br>' + listaHijos.map(h => `<strong>Hijo ${h.indice} (${h.etiqueta_grado}):</strong> ${fmtCOP(h.gasto_mes_directo_cop)}/mes`).join(' + ') +
-          `<br><strong>👨‍👩‍👧‍👦 Gasto Mensual Consolidado:</strong> <span style="color:#c62828;font-weight:800;">${fmtCOP(cons.gasto_mes_directo_total_cop)}/mes</span>`;
+          `<br><strong>👨‍👩‍👧‍👦 Gasto Mensual Consolidado:</strong> <span style="color:#EA580C;font-weight:800;">${fmtCOP(cons.gasto_mes_directo_total_cop)}/mes</span>`;
       } else if (k === 'CREDITO' && d.cuota_pura_credito_cop !== undefined) {
         extraInfo = `<br><strong>Cuota Pura:</strong> ${fmtCOP(d.cuota_pura_credito_cop)}/mes + <strong>TCO:</strong> ${fmtCOP(d.costo_tco_mensual_cop)}/mes`;
       }
@@ -2440,57 +2709,61 @@ function renderizarTodo(data, animar = false) {
           <div class="kpi-sub">
             <strong>Impacto Mensual Anualizado:</strong> <span style="font-weight:700;">${fmtCOP(d.impacto_flujo_mensual_inmediato_cop)}/mes</span><br>
             <strong>Ahorro Mensual Requerido:</strong> ${fmtCOP(d.ahorro_mensual_requerido_cop)}${extraInfo}<br>
-            <span style="display:block;margin-top:5px;color:#0f4c81;">${d.recomendacion_actuarial_y_legal}</span>
+            <span style="display:block;margin-top:5px;color:#0F294A;">${d.recomendacion_actuarial_y_legal}</span>
           </div>
         </div>`;
     }
   }
   document.getElementById('kpis-decisiones').innerHTML = htmlKpis;
 
-  // 3. Gráfico Monte Carlo (1.000 escenarios de las decisiones activas)
+  // 3. Gráfico Monte Carlo (Paleta Oficial Manual de Marca OED: #15803D, #1D4ED8, #EA580C)
   const mc = data.actuaria_mod5.trayectorias_mc;
   const trazasMc = [];
   if (pAct.desea_boda || decisionesMostrar.length === 0) {
-    trazasMc.push({ x: mc.CASARSE, type: 'histogram', name: 'Casarse (Con Sinergia)', opacity: 0.65, marker: { color: '#2e7d32' } });
+    trazasMc.push({ x: mc.CASARSE, type: 'histogram', name: 'Casarse (Con Sinergia)', opacity: 0.68, marker: { color: '#15803D' } });
   }
   if (nHijos > 0 || decisionesMostrar.length === 0) {
-    trazasMc.push({ x: mc.HIJOS, type: 'histogram', name: `Hijos (${nHijos})`, opacity: 0.65, marker: { color: '#1565c0' } });
+    trazasMc.push({ x: mc.HIJOS, type: 'histogram', name: `Hijos (${nHijos})`, opacity: 0.68, marker: { color: '#1D4ED8' } });
   }
   if (pAct.desea_credito || decisionesMostrar.length === 0) {
-    trazasMc.push({ x: mc.CREDITO, type: 'histogram', name: 'Crédito (+TCO)', opacity: 0.65, marker: { color: '#ef6c00' } });
+    trazasMc.push({ x: mc.CREDITO, type: 'histogram', name: 'Crédito (+TCO)', opacity: 0.68, marker: { color: '#EA580C' } });
   }
   Plotly.react('chart-mc', trazasMc, {
+    template: 'plotly_white',
+    font: { family: 'Segoe UI, system-ui, sans-serif', color: '#0F294A', size: 12 },
     barmode: 'overlay',
     margin: { t: 20, r: 20, b: 45, l: 50 },
     xaxis: { title: 'Flujo de Caja Mensual Post-Decisión (Millones COP)' },
     yaxis: { title: 'Escenarios (de 1.000)' },
     shapes: [{
       type: 'line', x0: 0, x1: 0, y0: 0, y1: 1, yref: 'paper',
-      line: { color: '#c62828', width: 2.5, dash: 'dash' }
+      line: { color: '#B91C1C', width: 2.5, dash: 'dash' }
     }],
     legend: { orientation: 'h', y: 1.12 }
   }, { responsive: true });
 
-  // 4. Gráfico Sensibilidad con marcador vertical en el excedente actual
+  // 4. Gráfico Sensibilidad con Paleta Oficial Manual de Marca OED
   const sens = data.actuaria_mod5.sensibilidad;
   const excActualM = data.parametros_activos.excedente_m;
   const trazasSens = [];
   if (pAct.desea_boda || decisionesMostrar.length === 0) {
-    trazasSens.push({ x: sens.excedentes_m, y: sens.CASARSE, mode: 'lines+markers', name: 'Casarse', line: { color: '#2e7d32', width: 3 } });
+    trazasSens.push({ x: sens.excedentes_m, y: sens.CASARSE, mode: 'lines+markers', name: 'Casarse', line: { color: '#15803D', width: 3 } });
   }
   if (nHijos > 0 || decisionesMostrar.length === 0) {
-    trazasSens.push({ x: sens.excedentes_m, y: sens.HIJOS, mode: 'lines+markers', name: `Hijos (${nHijos})`, line: { color: '#1565c0', width: 3 } });
+    trazasSens.push({ x: sens.excedentes_m, y: sens.HIJOS, mode: 'lines+markers', name: `Hijos (${nHijos})`, line: { color: '#1D4ED8', width: 3 } });
   }
   if (pAct.desea_credito || decisionesMostrar.length === 0) {
-    trazasSens.push({ x: sens.excedentes_m, y: sens.CREDITO, mode: 'lines+markers', name: 'Crédito (+TCO)', line: { color: '#ef6c00', width: 3 } });
+    trazasSens.push({ x: sens.excedentes_m, y: sens.CREDITO, mode: 'lines+markers', name: 'Crédito (+TCO)', line: { color: '#EA580C', width: 3 } });
   }
   Plotly.react('chart-sens', trazasSens, {
+    template: 'plotly_white',
+    font: { family: 'Segoe UI, system-ui, sans-serif', color: '#0F294A', size: 12 },
     margin: { t: 20, r: 20, b: 45, l: 50 },
     xaxis: { title: 'Excedente Mensual Disponible (Millones COP)' },
     yaxis: { title: 'Probabilidad de Solvencia (%)', range: [0, 105] },
     shapes: [{
       type: 'line', x0: excActualM, x1: excActualM, y0: 0, y1: 1, yref: 'paper',
-      line: { color: '#0f4c81', width: 2, dash: 'dot' }
+      line: { color: '#0F294A', width: 2, dash: 'dot' }
     }],
     legend: { orientation: 'h', y: 1.12 }
   }, { responsive: true });
@@ -2514,16 +2787,18 @@ function renderizarTodo(data, animar = false) {
       y: hb.curva_habeas.map(r => r.permanencia),
       mode: 'lines+markers',
       name: 'Permanencia Legal Post-Pago (Meses)',
-      line: { color: '#1e88e5', width: 3 }
+      line: { color: '#1D4ED8', width: 3 }
     },
     {
       x: [hb.permanencia.meses_en_mora_registrados || 0],
       y: [hb.permanencia.meses_permanencia_post_pago],
       mode: 'markers',
       name: 'Caso Evaluado Actual',
-      marker: { color: '#c62828', size: 13 }
+      marker: { color: '#EA580C', size: 13 }
     }
   ], {
+    template: 'plotly_white',
+    font: { family: 'Segoe UI, system-ui, sans-serif', color: '#0F294A', size: 12 },
     margin: { t: 20, r: 20, b: 45, l: 55 },
     xaxis: { title: 'Tiempo en Mora antes del Pago (Meses)' },
     yaxis: { title: 'Permanencia Máxima del Reporte Negativo (Meses)', range: [0, Math.max(54, (hb.permanencia.meses_permanencia_post_pago || 48) + 10)] },
@@ -2534,7 +2809,7 @@ function renderizarTodo(data, animar = false) {
   const m6 = data.caso_integrado_6_modulos;
   document.getElementById('kpis-6-modulos').innerHTML = `
     <div class="kpi-card">
-      <div class="kpi-title">🎲 Módulo 6 — Salin Avellaneda</div>
+      <div class="kpi-title">🫀 Paso 1 — Módulo 6 (Salin Avellaneda)</div>
       <div class="kpi-val">Perfil: ${m6.mod6_salin.perfil_riesgo}</div>
       <div class="kpi-sub">
         Puntaje Suitability SFC: ${m6.mod6_salin.puntaje}/100<br>
@@ -2543,7 +2818,7 @@ function renderizarTodo(data, animar = false) {
       </div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-title">⚙️ Módulo 1 — Nidia Velásquez</div>
+      <div class="kpi-title">🩻 Paso 2 — Módulo 1 (Nidia Velásquez)</div>
       <div class="kpi-val">${fmtCOP(m6.mod1_nidia.ingreso_neto_cop)}</div>
       <div class="kpi-sub">
         Ingreso Disponible Neto (de $6.5M brutos)<br>
@@ -2552,7 +2827,7 @@ function renderizarTodo(data, animar = false) {
       </div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-title">📉 Módulo 3 — Catalina Moreno</div>
+      <div class="kpi-title">🩹 Paso 3 — Módulo 3 (Catalina Moreno)</div>
       <div class="kpi-val">Estrategia ${m6.mod3_catalina.estrategia_optima}</div>
       <div class="kpi-sub">
         Índice Endeudamiento: ${m6.mod3_catalina.indice_endeudamiento_pct}%<br>
@@ -2561,7 +2836,7 @@ function renderizarTodo(data, animar = false) {
       </div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-title">📈 Módulo 2 — Camilo Matson</div>
+      <div class="kpi-title">🌱 Paso 4 — Módulo 2 (Camilo Matson)</div>
       <div class="kpi-val">${fmtCOP(m6.mod2_camilo.patrimonio_5a_nominal_cop)}</div>
       <div class="kpi-sub">
         Patrimonio Proyectado a 5 Años (Nominal)<br>
@@ -2570,7 +2845,7 @@ function renderizarTodo(data, animar = false) {
       </div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-title">🏠 Módulo 4 — Jesi</div>
+      <div class="kpi-title">🏡 Paso 5 — Módulo 4 (Jesi)</div>
       <div class="kpi-val">${fmtCOP(m6.mod4_jesi.primera_cuota_pesos_cop)}/mes</div>
       <div class="kpi-sub">
         Segmento: ${m6.mod4_jesi.segmento}<br>
@@ -2578,16 +2853,60 @@ function renderizarTodo(data, animar = false) {
         Cap Rate Neto Inmobiliario: ${m6.mod4_jesi.cap_rate_neto_pct}% EA
       </div>
     </div>
-    <div class="kpi-card" style="border-left-color:#2e7d32;">
-      <div class="kpi-title">🛡️ Módulo 5 + Habeas Data — Nelson Angel</div>
+    <div class="kpi-card" style="border-left-color:#EA580C;">
+      <div class="kpi-title">🛡️ Paso 6 + Paso 0 — Módulo 5 y Habeas Data (Nelson Angel)</div>
       <div class="kpi-val">${fmtCOP(decs.HIJOS.vpa_decision_cop)}</div>
       <div class="kpi-sub">
-        VPA Hijos (Agustiniano Suba + Univ.) | Seguro Vida<br>
+        VPA Hijos Consolidado | Simulación Monte Carlo<br>
         Éxito Monte Carlo Hijos: <strong>${decs.HIJOS.probabilidad_exito_montecarlo_pct}% (${decs.HIJOS.dictamen_viabilidad})</strong><br>
         Protección Ley 1581 y Ley 1266 Activa
       </div>
     </div>
   `;
+}
+
+function verTerminoGlosarioOED(clave) {
+  const glosario = window.__GLOSARIO_OED || {};
+  const f = glosario[clave];
+  if (!f) return;
+  document.querySelectorAll('#pills-glosario-oed .glossary-pill').forEach(el => {
+    el.classList.toggle('active', el.dataset.k === clave);
+  });
+  const cont = document.getElementById('detalle-glosario-oed');
+  if (cont) {
+    cont.innerHTML = `
+      <div style="font-size:0.74rem;color:#1D4ED8;font-weight:700;text-transform:uppercase;margin-bottom:4px;">
+        Familia: ${f.categoria} &bull; ${f.termino_tecnico}
+      </div>
+      <div class="oed-doc-card oed-doc-verde" style="margin:4px 0 8px 0;">
+        <strong>🩺 Explicación sencilla de tu Médico Financiero Amigo:</strong> ${f.lenguaje_claro}
+      </div>
+      <div class="oed-rx-box" style="margin:0;">
+        <strong>🇨🇴 Ejemplo cotidiano en pesos ($ COP):</strong> ${f.ejemplo_cotidiano}
+      </div>
+    `;
+  }
+}
+
+function filtrarGlosarioOED() {
+  const glosario = window.__GLOSARIO_OED || {};
+  const q = (document.getElementById('buscador-glosario-oed')?.value || '').trim().toLowerCase();
+  const claves = Object.keys(glosario).filter(k => {
+    const f = glosario[k];
+    return !q ||
+      f.termino_tecnico.toLowerCase().includes(q) ||
+      f.lenguaje_claro.toLowerCase().includes(q) ||
+      f.categoria.toLowerCase().includes(q);
+  });
+  const pillsEl = document.getElementById('pills-glosario-oed');
+  if (!pillsEl) return;
+  pillsEl.innerHTML = claves.map(k =>
+    `<span class="glossary-pill" data-k="${k}" onclick="verTerminoGlosarioOED('${k}')">${glosario[k].termino_tecnico}</span>`
+  ).join('');
+  if (claves.length > 0) {
+    const preferido = claves.includes('MONTE_CARLO') ? 'MONTE_CARLO' : claves[0];
+    verTerminoGlosarioOED(preferido);
+  }
 }
 
 function inicializarTooltipsInteractivos() {
