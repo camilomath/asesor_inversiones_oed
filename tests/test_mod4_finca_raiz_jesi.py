@@ -27,6 +27,7 @@ if __package__ in (None, ""):
 
 from src.mod4_finca_raiz import (
     clasificar_segmento_vivienda_colombia,
+    estimar_costo_oportunidad_por_perfil_oed,
     evaluar_inversion_finca_raiz,
     simular_plan_cuota_inicial_planos,
     simular_sistemas_amortizacion_ley_546,
@@ -264,10 +265,151 @@ def test_adaptador_interaccion_ui_mod4():
 
     # Verifica que el dashboard web local de Jesi cumpla los 5 bloques del Manual de Marca OED
     html_local = _construir_html_dashboard_local()
-    assert "Paso 5: 🏡 Chequeo para Comprar Casa sin Ahogarte" in html_local
-    assert "Diccionario del Médico Amigo" in html_local
+    assert "Paso 5: 🏡 Viabilidad para Comprar Vivienda o Invertir en Finca Raíz" in html_local
+    assert "Diccionario Financiero OED" in html_local
+    assert "Plan de Acción para este Mes" in html_local
     assert verificar_sistema_diseno_oed() is True
     assert len(_filas_a_csv_bytes([{"mes": 1, "cuota": 1500000}])) > 10
+
+
+def test_integracion_mod1_nidia_modalidad_prestaciones_y_emergencia():
+    """Valida conexión con Módulo 1 (Nidia): modalidad OPS/Integral ($0 prestaciones) y alerta de fondo de emergencia."""
+    # 1. Contratista OPS / Independiente con fondo de emergencia aún incompleto
+    estado_ops = {
+        "ingreso_neto_mensual_cop": 6_200_000.0,
+        "fondo_emergencia_completo": False,
+        "liquidez_actual_fondo_emergencia_cop": 7_000_000.0,
+        "liquidacion_nomina": {
+            "modalidad_laboral": "Independiente",
+            "provisiones_prestacionales_informativas": {
+                "prima_servicios_mensualizada_cop": 0.0,
+                "cesantias_mensualizadas_cop": 0.0,
+                "intereses_cesantias_mensualizados_cop": 0.0,
+            },
+        },
+    }
+    defs_ops = extraer_valores_iniciales_desde_estado(estado_ops)
+    assert defs_ops["modalidad_laboral_titular"] == "Independiente"
+    assert defs_ops["cesantias_y_primas_anuales_cop"] == 0.0
+    assert defs_ops["fondo_emergencia_completo"] is False
+
+    # 2. Empleado tradicional: anualiza exactamente las provisiones prestacionales del Módulo 1
+    estado_emp = {
+        "ingreso_neto_mensual_cop": 5_800_000.0,
+        "liquidacion_nomina": {
+            "modalidad_laboral": "Empleado",
+            "provisiones_prestacionales_informativas": {
+                "prima_servicios_mensualizada_cop": 250_000.0,
+                "cesantias_mensualizadas_cop": 250_000.0,
+                "intereses_cesantias_mensualizados_cop": 30_000.0,
+            },
+        },
+    }
+    defs_emp = extraer_valores_iniciales_desde_estado(estado_emp)
+    assert defs_emp["cesantias_y_primas_anuales_cop"] == 6_360_000.0
+
+    # 3. Alertas preventivas de modalidad laboral y protección de fondo de emergencia (Fogafín)
+    res_alerta = evaluar_inversion_finca_raiz(
+        valor_inmueble_cop=200_000_000.0,
+        ingreso_familiar_neto_cop=9_000_000.0,
+        cesantias_y_primas_anuales_cop=4_000_000.0,
+        ahorro_previo_afc_cop=7_000_000.0,
+        fondo_emergencia_completo=False,
+        modalidad_laboral_titular="Independiente",
+    )
+    assert any("Revisión Laboral (Conexión Módulo 1)" in a for a in res_alerta["alertas_regulatorias"])
+    assert any("Revisión Preventiva Fondo de Emergencia (Conexión Módulo 1)" in a for a in res_alerta["alertas_regulatorias"])
+
+
+def test_integracion_mod3_catalina_capacidad_bancaria_total_40pct():
+    """Valida cruce con Módulo 3 (Catalina): cumple 30% Ley 546 en vivienda, pero excede 40% sumando otras deudas."""
+    defs_deuda = extraer_valores_iniciales_desde_estado({"cuota_mensual_total_actual_cop": 1_400_000.0})
+    assert defs_deuda["cuotas_otras_deudas_mensuales_cop"] == 1_400_000.0
+
+    # Con ingreso de $6.0M: tope 30% Ley 546 = $1.80M (la cuota de ~$1.51M pasa), pero tope 40% total = $2.40M
+    res_sobreendeudado = evaluar_inversion_finca_raiz(
+        valor_inmueble_cop=200_000_000.0,
+        ingreso_familiar_neto_cop=6_000_000.0,
+        porcentaje_cuota_inicial=0.30,
+        cuotas_otras_deudas_mensuales_cop=1_400_000.0,
+    )
+    assert res_sobreendeudado["cumple_ley_546_30pct"] is True
+    assert res_sobreendeudado["cumple_endeudamiento_total_bancario_40pct"] is False
+    assert res_sobreendeudado["cupo_mensual_a_liberar_deudas_cop"] > 0.0
+    assert (
+        res_sobreendeudado["dictamen_viabilidad_inmobiliaria"]
+        == "CUMPLE_LEY_546_PERO_EXCEDE_ENDEUDAMIENTO_BANCARIO_TOTAL"
+    )
+    resumen = generar_resumen_ejecutivo_ciudadano(res_sobreendeudado)
+    assert resumen["nivel"] == "warning"
+    assert "Avalancha" in resumen["receta"]
+
+    # Si libera exactamente el cupo sugerido con Avalancha, ya cumple el 40% bancario total
+    deuda_saneada = max(0.0, 1_400_000.0 - res_sobreendeudado["cupo_mensual_a_liberar_deudas_cop"])
+    res_saneado = evaluar_inversion_finca_raiz(
+        valor_inmueble_cop=200_000_000.0,
+        ingreso_familiar_neto_cop=6_000_000.0,
+        porcentaje_cuota_inicial=0.30,
+        cuotas_otras_deudas_mensuales_cop=deuda_saneada,
+    )
+    assert res_saneado["cumple_endeudamiento_total_bancario_40pct"] is True
+
+
+def test_blindaje_entradas_en_cero_estandar_nelson():
+    """Valida que entradas en $0 COP o 0% no dividan por cero ni otorguen subsidios o viabilidad falsa."""
+    clasif_cero = clasificar_segmento_vivienda_colombia(0.0, 0.0)
+    assert clasif_cero["codigo_segmento"] == "SIN_VALOR"
+    assert clasif_cero["elegible_subsidio_ccf"] is False
+    assert clasif_cero["subsidio_ccf_potencial_cop"] == 0.0
+
+    res_cero = evaluar_inversion_finca_raiz(
+        valor_inmueble_cop=0.0,
+        ingreso_familiar_neto_cop=0.0,
+        porcentaje_cuota_inicial=0.0,
+        plazo_entrega_planos_meses=0,
+        cesantias_y_primas_anuales_cop=0.0,
+        plazo_credito_anios=0,
+        tasa_ea_pesos=0.0,
+        tasa_ea_uvr_mas_spread=0.0,
+        canon_arriendo_mensual_estimado_cop=0.0,
+        costo_oportunidad_ea=0.0,
+        aplicar_subsidio_ccf=True,
+        incluir_tablas_detalle=True,
+    )
+    assert res_cero["dictamen_viabilidad_inmobiliaria"] == "PENDIENTE_DATOS_INMUEBLE_E_INGRESOS"
+    assert res_cero["cumple_ley_546_30pct"] is False
+    assert res_cero["subsidio_ccf_aplicado_cop"] == 0.0
+    assert res_cero["alertas_regulatorias"] == []
+    assert generar_resumen_ejecutivo_ciudadano(res_cero)["nivel"] == "info"
+
+    # También soporta campos vacíos enviados desde el navegador local
+    api_vacio = procesar_simulacion_api_local(
+        {"valor_inmueble_cop": "", "ingreso_titular_cop": "0", "ingreso_pareja_cop": "0"}
+    )
+    assert api_vacio["resultado"]["dictamen_viabilidad_inmobiliaria"] == "PENDIENTE_DATOS_INMUEBLE_E_INGRESOS"
+
+
+def test_integracion_mod6_salin_costo_oportunidad_por_perfil():
+    """Valida calibración automática del COK desde Módulo 6 (Salin) y Módulo 2 (Camilo)."""
+    cok_salin = estimar_costo_oportunidad_por_perfil_oed(
+        {"perfil_riesgo": "Agresivo", "tasa_ponderada_esperada_ea_pct": 14.2}
+    )
+    assert cok_salin["costo_oportunidad_ea"] == 0.142
+    assert cok_salin["fuente"] == "portafolio_riesgo_mod6_salin"
+
+    defs_salin = extraer_valores_iniciales_desde_estado(
+        {"perfil_riesgo": "Moderado", "tasa_ponderada_esperada_ea_pct": 11.6}
+    )
+    assert defs_salin["costo_oportunidad_ea_pct"] == 11.6
+    assert defs_salin["conectado_con_modulos_previos"] is True
+
+    assert estimar_costo_oportunidad_por_perfil_oed({"perfil_riesgo": "Conservador"})["costo_oportunidad_ea"] == 0.101
+    assert estimar_costo_oportunidad_por_perfil_oed({"perfil_riesgo": "Moderado"})["costo_oportunidad_ea"] == 0.112
+    assert estimar_costo_oportunidad_por_perfil_oed({"perfil_riesgo": "Agresivo"})["costo_oportunidad_ea"] == 0.130
+    assert (
+        estimar_costo_oportunidad_por_perfil_oed({"tasa_nominal_portafolio_ea_pct": 11.8})["costo_oportunidad_ea"]
+        == 0.118
+    )
 
 
 if __name__ == "__main__":
@@ -283,6 +425,10 @@ if __name__ == "__main__":
         test_leasing_habitacional_vs_hipotecario_y_alerta_ltv,
         test_estructura_notebook_jesi_valida,
         test_adaptador_interaccion_ui_mod4,
+        test_integracion_mod1_nidia_modalidad_prestaciones_y_emergencia,
+        test_integracion_mod3_catalina_capacidad_bancaria_total_40pct,
+        test_blindaje_entradas_en_cero_estandar_nelson,
+        test_integracion_mod6_salin_costo_oportunidad_por_perfil,
         test_flujo_integrado_6_modulos_oed,
     ]
 

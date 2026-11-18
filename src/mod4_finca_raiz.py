@@ -45,6 +45,57 @@ from src.finance import (
 
 
 # ==============================================================================
+# PASO 0 AUXILIAR: COSTO DE OPORTUNIDAD SEGÚN PERFIL DE RIESGO (CONEXIÓN MÓD. 6 Y 2)
+# ==============================================================================
+
+
+def estimar_costo_oportunidad_por_perfil_oed(
+    perfil_estado: Dict[str, Any] | None = None,
+    config: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """
+    Determina la rentabilidad alternativa (COK Efectiva Anual) personalizada para comparar
+    el inmueble contra un portafolio financiero regulado en Colombia:
+    1. Si viene `costo_oportunidad_ea` explícito, lo respeta.
+    2. Si viene `tasa_ponderada_esperada_ea_pct` del Módulo 6 de Salin, la conecta automáticamente.
+    3. Si viene `tasa_portafolio_ea` o `tasa_real_neta_portafolio_pct` del Módulo 2 de Camilo, la usa.
+    4. Si viene `perfil_riesgo` ('Conservador', 'Moderado', 'Agresivo'), asigna su referencia SFC.
+    """
+    _ = config or cargar_configuracion()
+    estado = perfil_estado or {}
+
+    if "costo_oportunidad_ea" in estado and estado["costo_oportunidad_ea"] is not None:
+        tasa = max(0.0, float(estado["costo_oportunidad_ea"]))
+        return {"costo_oportunidad_ea": round(tasa, 4), "fuente": "parametro_explicito"}
+
+    # Conexión directa con Módulo 6 (Salin)
+    mod6 = estado.get("modulo6_salin", {}) if isinstance(estado.get("modulo6_salin"), dict) else {}
+    tasa_salin_pct = estado.get("tasa_ponderada_esperada_ea_pct", mod6.get("tasa_ponderada_esperada_ea_pct"))
+    if tasa_salin_pct is not None:
+        tasa = max(0.0, float(tasa_salin_pct) / 100.0)
+        return {"costo_oportunidad_ea": round(tasa, 4), "fuente": "portafolio_riesgo_mod6_salin"}
+
+    # Conexión con Módulo 2 (Camilo)
+    mod2 = estado.get("modulo2_camilo", {}) if isinstance(estado.get("modulo2_camilo"), dict) else {}
+    tasa_camilo_pct = estado.get("tasa_nominal_portafolio_ea_pct", mod2.get("tasa_nominal_portafolio_ea_pct"))
+    if tasa_camilo_pct is not None:
+        tasa = max(0.0, float(tasa_camilo_pct) / 100.0)
+        return {"costo_oportunidad_ea": round(tasa, 4), "fuente": "portafolio_salarial_mod2_camilo"}
+
+    # Referencia calibrada según Perfil de Riesgo SFC (Decreto 2555)
+    perfil = str(estado.get("perfil_riesgo", mod6.get("perfil_riesgo", ""))).strip().capitalize()
+    mapa_perfiles = {
+        "Conservador": 0.101,
+        "Moderado": 0.112,
+        "Agresivo": 0.130,
+    }
+    if perfil in mapa_perfiles:
+        return {"costo_oportunidad_ea": mapa_perfiles[perfil], "fuente": f"perfil_riesgo_{perfil.lower()}"}
+
+    return {"costo_oportunidad_ea": 0.105, "fuente": "referencia_fic_cdt_base"}
+
+
+# ==============================================================================
 # PASO 1: CLASIFICACIÓN VIS/VIP VS. NO VIS, SUBSIDIOS Y PLAN SOBRE PLANOS
 # ==============================================================================
 
@@ -65,6 +116,9 @@ def clasificar_segmento_vivienda_colombia(
     macro = cfg["parametros_macro_colombia"]
     viv = cfg["parametros_vivienda_ley_546"]
 
+    valor_inmueble_cop = max(0.0, float(valor_inmueble_cop))
+    ingreso_familiar_neto_cop = max(0.0, float(ingreso_familiar_neto_cop))
+
     smmlv = float(macro["smmlv_cop"])
     tope_vip_smmlv = float(viv["tope_vip_smmlv"])
     tope_vis_smmlv = float(viv["tope_vis_smmlv"]) if aglomeracion_urbana else 135.0
@@ -72,8 +126,11 @@ def clasificar_segmento_vivienda_colombia(
     valor_en_smmlv = valor_inmueble_cop / smmlv if smmlv > 0 else 0.0
     ingreso_en_smmlv = ingreso_familiar_neto_cop / smmlv if smmlv > 0 else 0.0
 
-    es_vis_o_vip = valor_en_smmlv <= tope_vis_smmlv
-    if valor_en_smmlv <= tope_vip_smmlv:
+    es_vis_o_vip = (valor_inmueble_cop > 0) and (valor_en_smmlv <= tope_vis_smmlv)
+    if valor_inmueble_cop <= 0:
+        codigo_segmento = "SIN_VALOR"
+        segmento = "Pendiente definir valor del inmueble ($0 COP)"
+    elif valor_en_smmlv <= tope_vip_smmlv:
         codigo_segmento = "VIP"
         segmento = f"VIP (Vivienda de Interés Prioritario <= {int(tope_vip_smmlv)} SMMLV)"
     elif valor_en_smmlv <= tope_vis_smmlv:
@@ -93,10 +150,11 @@ def clasificar_segmento_vivienda_colombia(
             else float(viv["cuota_inicial_min_no_vis_pct"])
         )
 
-    # Subsidio de Caja de Compensación Familiar (CCF): aplica para VIS/VIP e ingresos <= 4 SMMLV
-    if es_vis_o_vip and ingreso_en_smmlv <= 2.0:
+    # Subsidio de Caja de Compensación Familiar (CCF): requiere valor > 0, ingreso > 0 y <= 4 SMMLV en VIS/VIP
+    datos_validos_subsidio = (valor_inmueble_cop > 0) and (ingreso_familiar_neto_cop > 0) and es_vis_o_vip
+    if datos_validos_subsidio and ingreso_en_smmlv <= 2.0:
         subsidio_ccf_smmlv = 30.0
-    elif es_vis_o_vip and ingreso_en_smmlv <= 4.0:
+    elif datos_validos_subsidio and ingreso_en_smmlv <= 4.0:
         subsidio_ccf_smmlv = 20.0
     else:
         subsidio_ccf_smmlv = 0.0
@@ -137,6 +195,13 @@ def simular_plan_cuota_inicial_planos(
     macro = cfg["parametros_macro_colombia"]
     trib = cfg["parametros_laborales_y_tributarios"]
 
+    valor_inmueble_cop = max(0.0, float(valor_inmueble_cop))
+    ingreso_familiar_neto_cop = max(0.0, float(ingreso_familiar_neto_cop))
+    porcentaje_cuota_inicial = min(1.0, max(0.0, float(porcentaje_cuota_inicial)))
+    cesantias_y_primas_anuales_cop = max(0.0, float(cesantias_y_primas_anuales_cop))
+    ahorro_previo_afc_cop = max(0.0, float(ahorro_previo_afc_cop))
+    tasa_ea_encargo_fiduciario = max(0.0, float(tasa_ea_encargo_fiduciario))
+
     clasificacion = clasificar_segmento_vivienda_colombia(
         valor_inmueble_cop=valor_inmueble_cop,
         ingreso_familiar_neto_cop=ingreso_familiar_neto_cop,
@@ -175,7 +240,7 @@ def simular_plan_cuota_inicial_planos(
     )
     aporte_afc_con_beneficio = min(cuota_inicial_mensual_cop, tope_mensual_afc_cop)
     # Tarifa marginal referencial de retención para salarios medios/altos en Colombia (> 95 UVT/mes)
-    aplica_retefuente_salarial = (ingreso_familiar_neto_cop / uvt_cop) > 95.0
+    aplica_retefuente_salarial = (ingreso_familiar_neto_cop / uvt_cop) > 95.0 if uvt_cop > 0 else False
     tasa_ahorro_tributario_estimada = 0.10 if aplica_retefuente_salarial else 0.0
     ahorro_tributario_afc_mensual_cop = aporte_afc_con_beneficio * tasa_ahorro_tributario_estimada
     ahorro_tributario_afc_total_cop = ahorro_tributario_afc_mensual_cop * max(0, plazo_entrega_planos_meses)
@@ -257,10 +322,13 @@ def simular_sistemas_amortizacion_ley_546(
     """
     cfg = config or cargar_configuracion()
     macro = cfg["parametros_macro_colombia"]
-    ipc_base = float(ipc_anual_proyectado if ipc_anual_proyectado is not None else macro["ipc_anual_dane"])
+    monto_credito_cop = max(0.0, float(monto_credito_cop))
+    tasa_ea_pesos = max(0.0, float(tasa_ea_pesos))
+    tasa_ea_uvr_mas_spread = max(0.0, float(tasa_ea_uvr_mas_spread))
+    ipc_base = max(0.0, float(ipc_anual_proyectado if ipc_anual_proyectado is not None else macro["ipc_anual_dane"]))
     uvr_inicial = float(macro["uvr_valor_cop"])
 
-    plazo_meses = max(1, int(plazo_credito_anios * 12))
+    plazo_meses = max(1, int(max(1, plazo_credito_anios) * 12))
     tasa_em_pesos = ea_a_em(tasa_ea_pesos)
     tasa_em_uvr_real = ea_a_em(tasa_ea_uvr_mas_spread)
     inflacion_mensual = ea_a_em(ipc_base)
@@ -427,22 +495,65 @@ def evaluar_inversion_finca_raiz(
     modalidad_financiacion: str = "HIPOTECARIO",
     incluir_tablas_detalle: bool = False,
     config: Dict[str, Any] | None = None,
+    cuotas_otras_deudas_mensuales_cop: float = 0.0,
+    fondo_emergencia_completo: bool = True,
+    modalidad_laboral_titular: str = "Empleado",
 ) -> Dict[str, Any]:
     """
     Ejecuta el Caso de Uso CU-04 (Módulo 4 - Jesi):
     Evalúa de forma integral la viabilidad regulatoria, crediticia y financiera de adquirir
     finca raíz en Colombia (vivienda propia o inversión para renta) frente a alternativas financieras.
+    Integra señales de los Módulos 1 (Nidia), 3 (Catalina), 2 (Camilo) y 6 (Salin), y soporta entradas en $0.
     """
     cfg = config or cargar_configuracion()
     macro = cfg["parametros_macro_colombia"]
     viv = cfg["parametros_vivienda_ley_546"]
     trib = cfg["parametros_laborales_y_tributarios"]
 
-    ipc_anual = float(macro["ipc_anual_dane"])
+    valor_inmueble_cop = max(0.0, float(valor_inmueble_cop))
+    ingreso_familiar_neto_cop = max(0.0, float(ingreso_familiar_neto_cop))
+    porcentaje_cuota_inicial = min(1.0, max(0.0, float(porcentaje_cuota_inicial)))
+    plazo_entrega_planos_meses = max(0, int(plazo_entrega_planos_meses))
+    plazo_credito_anios_seguro = max(1, int(plazo_credito_anios))
+    cesantias_y_primas_anuales_cop = max(0.0, float(cesantias_y_primas_anuales_cop))
+    tasa_ea_pesos = max(0.0, float(tasa_ea_pesos))
+    tasa_ea_uvr_mas_spread = max(0.0, float(tasa_ea_uvr_mas_spread))
+    costo_oportunidad_ea = max(0.0, float(costo_oportunidad_ea))
+    ahorro_previo_afc_cop = max(0.0, float(ahorro_previo_afc_cop))
+    cuotas_otras_deudas_cop = max(0.0, float(cuotas_otras_deudas_mensuales_cop))
+
+    ipc_anual = max(0.0, float(macro["ipc_anual_dane"]))
     tasa_ganancia_ocasional = float(trib.get("ganancia_ocasional_pct", 0.15))
     tasa_seguros_mensual = 0.00065  # ~0.065% mensual seguro de vida deudor + incendio y terremoto
 
     alertas: List[str] = []
+
+    # Validación preventiva de Modalidad Laboral y Colchón de Emergencia (Conexión Módulo 1 — Nidia)
+    mod_lab_raw = modalidad_laboral_titular.strip().lower()
+    if mod_lab_raw in ("independiente", "contratista", "ops"):
+        modalidad_laboral_norm = "Independiente"
+    elif mod_lab_raw in ("integral", "salario integral"):
+        modalidad_laboral_norm = "Integral"
+    else:
+        modalidad_laboral_norm = "Empleado"
+
+    if (
+        valor_inmueble_cop > 0
+        and modalidad_laboral_norm in ("Independiente", "Integral")
+        and cesantias_y_primas_anuales_cop > 0
+    ):
+        alertas.append(
+            f"Revisión Laboral (Conexión Módulo 1): En modalidad {modalidad_laboral_norm} no recibes primas ni "
+            f"cesantías adicionales del empleador; verifica que los ${cesantias_y_primas_anuales_cop:,.0f} COP/año "
+            "provengan de ahorro voluntario propio o de tu pareja."
+        )
+
+    if valor_inmueble_cop > 0 and (not fondo_emergencia_completo) and ahorro_previo_afc_cop > 0:
+        alertas.append(
+            "Revisión Preventiva Fondo de Emergencia (Conexión Módulo 1): Tu reserva de liquidez aún está en "
+            "construcción; evita comprometer todo tu efectivo en la cuota inicial sobre planos y mantén protegido "
+            "tu ahorro para imprevistos en una entidad cubierta por Fogafín."
+        )
 
     # 1. Clasificación regulatoria VIS / VIP / No VIS y Subsidios
     clasificacion = clasificar_segmento_vivienda_colombia(
@@ -452,7 +563,7 @@ def evaluar_inversion_finca_raiz(
         config=cfg,
     )
 
-    if porcentaje_cuota_inicial + 1e-9 < clasificacion["cuota_inicial_min_legal_pct"]:
+    if valor_inmueble_cop > 0 and porcentaje_cuota_inicial + 1e-9 < clasificacion["cuota_inicial_min_legal_pct"]:
         alertas.append(
             f"Alerta LTV Ley 546/1999: Para {clasificacion['codigo_segmento']} bajo modalidad "
             f"{modalidad_financiacion.upper()}, la cuota inicial mínima regulatoria es "
@@ -485,7 +596,7 @@ def evaluar_inversion_finca_raiz(
     # 3. Simulación de Sistemas de Amortización y Validación de Ley 546 de 1999 (Regla del 30%)
     amortizacion = simular_sistemas_amortizacion_ley_546(
         monto_credito_cop=monto_credito_cop,
-        plazo_credito_anios=plazo_credito_anios,
+        plazo_credito_anios=plazo_credito_anios_seguro,
         tasa_ea_pesos=tasa_ea_pesos,
         tasa_ea_uvr_mas_spread=tasa_ea_uvr_mas_spread,
         ipc_anual_proyectado=ipc_anual,
@@ -499,19 +610,20 @@ def evaluar_inversion_finca_raiz(
 
     relacion_max = float(viv["relacion_max_cuota_ingreso"])
     tope_cuota_ley_546_cop = ingreso_familiar_neto_cop * relacion_max
-    cumple_ley_546_pesos = primera_cuota_pesos_total <= (tope_cuota_ley_546_cop + 1e-6)
-    cumple_ley_546_uvr = primera_cuota_uvr_en_pesos <= (tope_cuota_ley_546_cop + 1e-6)
+    datos_base_activos = (valor_inmueble_cop > 0) and (ingreso_familiar_neto_cop > 0 or monto_credito_cop == 0)
+    cumple_ley_546_pesos = datos_base_activos and (primera_cuota_pesos_total <= (tope_cuota_ley_546_cop + 1e-6))
+    cumple_ley_546_uvr = datos_base_activos and (primera_cuota_uvr_en_pesos <= (tope_cuota_ley_546_cop + 1e-6))
     ingreso_familiar_minimo_pesos = (
         primera_cuota_pesos_total / relacion_max if relacion_max > 0 else 0.0
     )
     deficit_ingreso_familiar_cop = (
         float(math.ceil(max(0.0, ingreso_familiar_minimo_pesos - ingreso_familiar_neto_cop)))
-        if not cumple_ley_546_pesos
+        if (valor_inmueble_cop > 0 and not cumple_ley_546_pesos)
         else 0.0
     )
 
     # Cálculo exacto de cuánta cuota inicial extra se requiere si supera el 30% en Pesos
-    plazo_meses = plazo_credito_anios * 12
+    plazo_meses = plazo_credito_anios_seguro * 12
     tasa_em_pesos = ea_a_em(tasa_ea_pesos)
     factor_unitario_cuota_pesos = cuota_fija_francesa(1.0, tasa_em_pesos, plazo_meses) + tasa_seguros_mensual
     credito_maximo_ley_546_pesos = (
@@ -519,11 +631,28 @@ def evaluar_inversion_finca_raiz(
     )
     cuota_inicial_extra_requerida_cop = (
         float(math.ceil(max(0.0, monto_credito_cop - credito_maximo_ley_546_pesos)))
-        if not cumple_ley_546_pesos
+        if (valor_inmueble_cop > 0 and not cumple_ley_546_pesos)
         else 0.0
     )
 
-    if not cumple_ley_546_pesos:
+    # Evaluación de Capacidad Bancaria Total sumando deudas actuales (Conexión Módulo 3 — Catalina: DTI <= 40%)
+    tope_endeudamiento_total_40pct_cop = ingreso_familiar_neto_cop * 0.40
+    carga_financiera_total_mensual_cop = primera_cuota_pesos_total + cuotas_otras_deudas_cop
+    relacion_carga_total_pct = (
+        (carga_financiera_total_mensual_cop / ingreso_familiar_neto_cop) * 100.0
+        if ingreso_familiar_neto_cop > 0
+        else 0.0
+    )
+    cumple_endeudamiento_total_bancario_40pct = (
+        datos_base_activos and (carga_financiera_total_mensual_cop <= (tope_endeudamiento_total_40pct_cop + 1e-6))
+    )
+    cupo_mensual_a_liberar_deudas_cop = (
+        float(math.ceil(max(0.0, carga_financiera_total_mensual_cop - tope_endeudamiento_total_40pct_cop)))
+        if (valor_inmueble_cop > 0 and not cumple_endeudamiento_total_bancario_40pct)
+        else 0.0
+    )
+
+    if valor_inmueble_cop > 0 and not cumple_ley_546_pesos:
         alertas.append(
             f"Restricción Ley 546 de 1999: La primera cuota en Pesos (${primera_cuota_pesos_total:,.0f} COP) "
             f"supera el 30% del ingreso familiar (${tope_cuota_ley_546_cop:,.0f} COP). "
@@ -531,7 +660,15 @@ def evaluar_inversion_finca_raiz(
             f"o aportar ${cuota_inicial_extra_requerida_cop:,.0f} COP extra en la cuota inicial."
         )
 
-    if amortizacion["alerta_riesgo_uvr_fa01"]:
+    if valor_inmueble_cop > 0 and cuotas_otras_deudas_cop > 0 and not cumple_endeudamiento_total_bancario_40pct:
+        alertas.append(
+            f"Alerta Capacidad Bancaria Total (Conexión Módulo 3): Sumando la cuota de vivienda y tus otras deudas "
+            f"actuales (${cuotas_otras_deudas_cop:,.0f} COP/mes) comprometes el {relacion_carga_total_pct:.1f}% "
+            f"de tus ingresos (tope bancario sugerido: 40%). Aplica la estrategia Avalancha del Módulo 3 para "
+            f"liberar al menos ${cupo_mensual_a_liberar_deudas_cop:,.0f} COP/mes de flujo antes de pedir el crédito."
+        )
+
+    if monto_credito_cop > 0 and amortizacion["alerta_riesgo_uvr_fa01"]:
         alertas.append(
             f"Alerta FA-01 Riesgo UVR: Con inflación anual del {ipc_anual * 100:.1f}%, el saldo expresado en pesos "
             f"crece durante los primeros {amortizacion['mes_pico_saldo_pesos_uvr']} meses hasta "
@@ -541,11 +678,11 @@ def evaluar_inversion_finca_raiz(
     # 4. Analítica de Rentabilidad Inmobiliaria (Ley 820 de 2003: Canon <= 1% del valor comercial)
     tope_canon_ley_820 = valor_inmueble_cop * float(viv["canon_max_ley_820_mensual_pct"])
     canon_estimado_usuario = (
-        canon_arriendo_mensual_estimado_cop
+        max(0.0, float(canon_arriendo_mensual_estimado_cop))
         if canon_arriendo_mensual_estimado_cop is not None
         else valor_inmueble_cop * 0.0065
     )
-    recortado_por_ley_820 = canon_estimado_usuario > (tope_canon_ley_820 + 1e-6)
+    recortado_por_ley_820 = (valor_inmueble_cop > 0) and (canon_estimado_usuario > (tope_canon_ley_820 + 1e-6))
     canon_mensual = min(canon_estimado_usuario, tope_canon_ley_820)
 
     if recortado_por_ley_820:
@@ -578,12 +715,12 @@ def evaluar_inversion_finca_raiz(
     mes_corte_10a = min(120, len(amortizacion["tabla_pesos_cuota_fija"]))
     saldo_deuda_pesos_anio_10 = (
         amortizacion["tabla_pesos_cuota_fija"][mes_corte_10a - 1]["saldo_capital_cop"]
-        if plazo_credito_anios > 10 and mes_corte_10a > 0
+        if plazo_credito_anios_seguro > 10 and mes_corte_10a > 0
         else 0.0
     )
     saldo_deuda_uvr_anio_10 = (
         amortizacion["tabla_uvr_ciclica"][mes_corte_10a - 1]["saldo_capital_cop"]
-        if plazo_credito_anios > 10 and mes_corte_10a > 0
+        if plazo_credito_anios_seguro > 10 and mes_corte_10a > 0
         else 0.0
     )
 
@@ -594,7 +731,7 @@ def evaluar_inversion_finca_raiz(
 
     for anio in range(1, 11):
         noi_t = noi_ingreso_operativo_neto_anual * ((1.0 + ipc_anual) ** (anio - 1))
-        servicio_t = servicio_deuda_anual_pesos if anio <= plazo_credito_anios else 0.0
+        servicio_t = servicio_deuda_anual_pesos if anio <= plazo_credito_anios_seguro else 0.0
         flujo_neto_t = noi_t - servicio_t
         if anio == 10:
             flujo_neto_t += valor_venta_anio_10 - ganancia_ocasional_impuesto - saldo_deuda_pesos_anio_10
@@ -618,8 +755,12 @@ def evaluar_inversion_finca_raiz(
     )
     patrimonio_neto_10a_fic = proyeccion_fic_alternativo["valor_futuro_nominal_cop"]
 
-    # Semáforo Ejecutivo de Decisión Inmobiliaria
-    if cumple_ley_546_pesos and vpn_inmobiliario >= 0:
+    # Semáforo Ejecutivo de Decisión Inmobiliaria (incluye blindaje $0 y cruce DTI 40% Módulo 3)
+    if valor_inmueble_cop <= 0 or (monto_credito_cop > 0 and ingreso_familiar_neto_cop <= 0):
+        dictamen = "PENDIENTE_DATOS_INMUEBLE_E_INGRESOS"
+    elif cumple_ley_546_pesos and not cumple_endeudamiento_total_bancario_40pct:
+        dictamen = "CUMPLE_LEY_546_PERO_EXCEDE_ENDEUDAMIENTO_BANCARIO_TOTAL"
+    elif cumple_ley_546_pesos and vpn_inmobiliario >= 0:
         dictamen = "VIABLE_COMPRA_EN_PESOS_OPTIMA"
     elif cumple_ley_546_pesos and vpn_inmobiliario < 0:
         dictamen = "VIABLE_VIVIENDA_PROPIA_PERO_FIC_SUPERA_RENTA"
@@ -646,9 +787,16 @@ def evaluar_inversion_finca_raiz(
         "cap_rate_neto_pct": round(cap_rate_neto * 100.0, 2),
         "vpn_inmobiliario_cop": round(vpn_inmobiliario, 2),
         "tir_inmobiliaria_ea_pct": round(tir_inmobiliaria * 100.0, 2),
-        # --- Analítica Extendida de Jesi (Maestría en Analítica) ---
+        # --- Analítica Extendida de Jesi + Integraciones OED (Módulos 1, 2, 3 y 6) ---
         "codigo_segmento": clasificacion["codigo_segmento"],
         "modalidad_financiacion": modalidad_norm,
+        "modalidad_laboral_titular": modalidad_laboral_norm,
+        "fondo_emergencia_completo": bool(fondo_emergencia_completo),
+        "cuotas_otras_deudas_mensuales_cop": round(cuotas_otras_deudas_cop, 2),
+        "carga_financiera_total_mensual_cop": round(carga_financiera_total_mensual_cop, 2),
+        "relacion_carga_financiera_total_pct": round(relacion_carga_total_pct, 2),
+        "cumple_endeudamiento_total_bancario_40pct": cumple_endeudamiento_total_bancario_40pct,
+        "cupo_mensual_a_liberar_deudas_cop": round(cupo_mensual_a_liberar_deudas_cop, 2),
         "elegible_subsidio_ccf": clasificacion["elegible_subsidio_ccf"],
         "subsidio_ccf_potencial_cop": clasificacion["subsidio_ccf_potencial_cop"],
         "subsidio_ccf_aplicado_cop": plan_inicial["subsidio_ccf_aplicado_cop"],

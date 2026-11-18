@@ -27,7 +27,10 @@ if __package__ in (None, ""):
         sys.path.insert(0, str(_PROJECT_ROOT))
 
 from src.finance import cargar_configuracion
-from src.mod4_finca_raiz import evaluar_inversion_finca_raiz
+from src.mod4_finca_raiz import (
+    estimar_costo_oportunidad_por_perfil_oed,
+    evaluar_inversion_finca_raiz,
+)
 from src.oed_design_system import (
     _CSS_MEDICO_AMIGO_OED,
     GLOSARIO_LENGUAJE_CLARO_OED,
@@ -49,16 +52,44 @@ from src.oed_design_system import (
 def extraer_valores_iniciales_desde_estado(
     perfil_estado: Dict[str, Any] | None = None,
     config: Dict[str, Any] | None = None,
+    cargar_archivo_mod1_local: bool = False,
 ) -> Dict[str, Any]:
     """
     Obtiene los valores por defecto para los controles interactivos del Módulo 4:
-    - Si vienen resultados previos de Nidia (Módulo 1) o Camilo (Módulo 2) en `perfil_estado`,
-      los conecta automáticamente.
+    - Conecta salidas previas de Nidia (Módulo 1: modalidad laboral, prestaciones reales, fondo de emergencia),
+      Camilo (Módulo 2: portafolio salarial / AFC), Catalina (Módulo 3: cuotas de otras deudas actuales)
+      y Salin (Módulo 6: perfil de riesgo y tasa esperada de portafolio).
+    - Opcionalmente lee `data/processed/perfil_mod1_activo.json` si se ejecuta en modo UI local.
     - De lo contrario, usa el `perfil_semilla_taller` de `config/config.yaml` para trabajar sin bloqueos.
     """
     cfg = config or cargar_configuracion()
     semilla = cfg.get("perfil_semilla_taller", {})
-    estado = perfil_estado or {}
+    estado_raw: Dict[str, Any] = dict(perfil_estado) if perfil_estado else {}
+
+    if not estado_raw and cargar_archivo_mod1_local:
+        ruta_mod1 = Path(__file__).resolve().parent.parent / "data" / "processed" / "perfil_mod1_activo.json"
+        if ruta_mod1.exists():
+            try:
+                cargado = json.loads(ruta_mod1.read_text(encoding="utf-8"))
+                if isinstance(cargado, dict):
+                    estado_raw = cargado
+            except Exception:
+                estado_raw = {}
+
+    # Soporta tanto diccionario plano como estructuras anidadas de integración entre módulos
+    estado: Dict[str, Any] = {}
+    for sub_key in (
+        "entradas",
+        "diagnostico",
+        "resultado_mod1",
+        "modulo1_nidia",
+        "modulo2_camilo",
+        "modulo3_catalina",
+        "modulo6_salin",
+    ):
+        if isinstance(estado_raw.get(sub_key), dict):
+            estado.update(estado_raw[sub_key])
+    estado.update(estado_raw)
 
     ingreso_bruto_semilla = float(semilla.get("ingreso_bruto_mensual_cop", 6_500_000.0))
     # Si Nidia (Módulo 1) ya calculó `ingreso_neto_mensual_cop`, lo tomamos; si no, estimamos ~91% neto
@@ -66,6 +97,38 @@ def extraer_valores_iniciales_desde_estado(
         estado.get("ingreso_neto_mensual_cop", round(ingreso_bruto_semilla * 0.91, -3))
     )
     ingreso_pareja_neto = float(estado.get("ingreso_pareja_neto_cop", 3_500_000.0))
+
+    # Modalidad laboral y prestaciones reales (Conexión Módulo 1 — Nidia: Empleado vs. Independiente/OPS vs. Integral)
+    nomina = estado.get("liquidacion_nomina", {}) if isinstance(estado.get("liquidacion_nomina"), dict) else {}
+    mod_lab_raw = str(
+        estado.get("modalidad_laboral", nomina.get("modalidad_laboral", "Empleado"))
+    ).strip().lower()
+    if mod_lab_raw in ("independiente", "contratista", "ops"):
+        modalidad_laboral_norm = "Independiente"
+    elif mod_lab_raw in ("integral", "salario integral"):
+        modalidad_laboral_norm = "Integral"
+    else:
+        modalidad_laboral_norm = "Empleado"
+
+    provisiones = estado.get(
+        "provisiones_prestacionales_informativas",
+        nomina.get("provisiones_prestacionales_informativas"),
+    )
+    if "cesantias_y_primas_anuales_cop" in estado:
+        cesantias_y_primas_anuales = float(estado["cesantias_y_primas_anuales_cop"])
+    elif isinstance(provisiones, dict):
+        mensual_prestaciones = (
+            float(provisiones.get("prima_servicios_mensualizada_cop", 0.0))
+            + float(provisiones.get("cesantias_mensualizadas_cop", 0.0))
+            + float(provisiones.get("intereses_cesantias_mensualizados_cop", 0.0))
+        )
+        cesantias_y_primas_anuales = round(mensual_prestaciones * 12.0, 2)
+    elif modalidad_laboral_norm in ("Independiente", "Integral"):
+        cesantias_y_primas_anuales = 0.0
+    else:
+        cesantias_y_primas_anuales = 5_500_000.0
+
+    fondo_emergencia_completo = bool(estado.get("fondo_emergencia_completo", True))
 
     # Si Camilo (Módulo 2) ya proyectó capital o cuenta AFC previa, lo tomamos; si no, semilla $8M
     ahorro_previo_afc = float(
@@ -75,10 +138,30 @@ def extraer_valores_iniciales_desde_estado(
         )
     )
 
-    cesantias_y_primas_anuales = float(
-        estado.get("cesantias_y_primas_anuales_cop", round(ingreso_bruto_semilla * (2.0 / 1.18), -4))
-        if "cesantias_y_primas_anuales_cop" in estado
-        else 5_500_000.0
+    # Cuotas mensuales de otras deudas vigentes (Conexión Módulo 3 — Catalina y Módulo 1 — Nidia)
+    cuotas_otras_deudas = float(
+        estado.get(
+            "cuotas_otras_deudas_mensuales_cop",
+            estado.get(
+                "cuota_mensual_total_actual_cop",
+                estado.get("cuotas_deuda_mensual_cop", 0.0),
+            ),
+        )
+    )
+
+    # Costo de oportunidad personalizado según Perfil de Riesgo (Conexión Módulo 6 — Salin y Módulo 2 — Camilo)
+    cok_info = estimar_costo_oportunidad_por_perfil_oed(estado, cfg)
+
+    conectado = any(
+        llave in estado
+        for llave in (
+            "ingreso_neto_mensual_cop",
+            "modalidad_laboral",
+            "liquidacion_nomina",
+            "cuota_mensual_total_actual_cop",
+            "tasa_ponderada_esperada_ea_pct",
+            "perfil_riesgo",
+        )
     )
 
     return {
@@ -86,85 +169,134 @@ def extraer_valores_iniciales_desde_estado(
         "ingreso_titular_neto_cop": ingreso_titular_neto,
         "ingreso_pareja_neto_cop": ingreso_pareja_neto,
         "ingreso_familiar_neto_cop": ingreso_titular_neto + ingreso_pareja_neto,
+        "modalidad_laboral_titular": modalidad_laboral_norm,
+        "fondo_emergencia_completo": fondo_emergencia_completo,
+        "cuotas_otras_deudas_mensuales_cop": cuotas_otras_deudas,
         "porcentaje_cuota_inicial_pct": int(round(float(estado.get("porcentaje_cuota_inicial", 0.30)) * 100)),
         "plazo_entrega_planos_meses": int(estado.get("plazo_entrega_planos_meses", 24)),
         "plazo_credito_anios": int(estado.get("plazo_credito_anios", 15)),
         "tasa_ea_pesos_pct": round(float(estado.get("tasa_ea_pesos", 0.115)) * 100.0, 2),
         "tasa_ea_uvr_spread_pct": round(float(estado.get("tasa_ea_uvr_mas_spread", 0.065)) * 100.0, 2),
-        "costo_oportunidad_ea_pct": round(float(estado.get("costo_oportunidad_ea", 0.105)) * 100.0, 2),
+        "costo_oportunidad_ea_pct": round(float(cok_info["costo_oportunidad_ea"]) * 100.0, 2),
+        "fuente_costo_oportunidad": str(cok_info["fuente"]),
         "ahorro_previo_afc_cop": ahorro_previo_afc,
         "cesantias_y_primas_anuales_cop": cesantias_y_primas_anuales,
         "canon_arriendo_estimado_cop": float(estado.get("canon_arriendo_mensual_estimado_cop", 1_400_000.0)),
         "modalidad_financiacion": str(estado.get("modalidad_financiacion", "HIPOTECARIO")).upper(),
-        "conectado_con_modulos_previos": "ingreso_neto_mensual_cop" in estado,
+        "conectado_con_modulos_previos": conectado,
     }
 
 
 def generar_resumen_ejecutivo_ciudadano(resultado: Dict[str, Any]) -> Dict[str, str]:
     """
-    Traduce el dictamen técnico del Módulo 4 a la voz cercana del 'Médico Financiero Amigo'
-    definida en el Manual de Marca OED, incluyendo diagnóstico claro y receta práctica mensual.
+    Traduce el dictamen técnico del Módulo 4 a la voz cercana del 'Asesor Financiero de Confianza'
+    definida en el Manual de Marca OED, incluyendo Diagnóstico Financiero claro y Plan de Acción mensual.
     """
     dictamen = resultado["dictamen_viabilidad_inmobiliaria"]
     cuota_pesos = resultado["primera_cuota_credito_cop"]
     tope_30 = resultado["tope_cuota_ley_546_30pct_cop"]
 
-    if dictamen == "VIABLE_COMPRA_EN_PESOS_OPTIMA":
-        return {
-            "nivel": "success",
-            "titulo": "Tus signos vitales están listos para comprar en Pesos (cumples la Ley 546)",
-            "mensaje": (
-                f"Mirando tus cuentas con calma, la primera cuota fija en Pesos ({formatear_cop_claro(cuota_pesos)}) "
-                f"respeta holgadamente el tope saludable del 30% de tu hogar ({formatear_cop_claro(tope_30)}) y el "
-                f"inmueble proyecta una TIR del {resultado['tir_inmobiliaria_ea_pct']}% EA, superando tu costo de oportunidad."
-            ),
-            "receta": (
-                "Programa desde este mes tu ahorro del encargo fiduciario a través de una Cuenta AFC para bajar "
-                "impuestos medidos en UVT y pide cotización en Pesos Cuota Fija."
-            ),
-        }
-    if dictamen == "VIABLE_VIVIENDA_PROPIA_PERO_FIC_SUPERA_RENTA":
+    if dictamen == "PENDIENTE_DATOS_INMUEBLE_E_INGRESOS":
+        plan = (
+            "Escribe el precio comercial de la vivienda que estás evaluando y tu ingreso neto mensual; "
+            "si es sobre planos, simularemos también tu ahorro en Cuenta AFC."
+        )
         return {
             "nivel": "info",
-            "titulo": "Saludable para vivir en familia (cumples Ley 546), aunque para renta pura un FIC rinde más",
+            "titulo": "Simulador listo: ingresa el valor del inmueble y tus ingresos para tu Diagnóstico Financiero",
             "mensaje": (
-                f"Tu corazón financiero respira tranquilo: la cuota en Pesos ({formatear_cop_claro(cuota_pesos)}) cabe "
-                f"dentro del tope legal ({formatear_cop_claro(tope_30)}). Si es para vivir tú, adelante con paz; si la "
-                "buscas solo como negocio de arriendo, hoy su Cap Rate neto rinde menos que un FIC o un CDT."
+                "Aún tienes el valor del apartamento o el ingreso mensual del hogar en $0 COP. "
+                "Anótalos arriba para evaluar el límite legal del 30% de la Ley 546 "
+                "y comparar con números claros entre Pesos, UVR o invertir en un FIC."
             ),
-            "receta": (
-                "Si tu meta es hogar propio, usa tu Cuenta AFC para ganar el alivio tributario; si solo buscas "
-                "rentabilidad financiera sin administrar arrendatarios, compara invertir ese capital en un FIC."
-            ),
+            "plan_accion": plan,
+            "receta": plan,
         }
-    if dictamen == "SOLO_CUMPLE_EN_UVR_CON_RIESGO_INFLACIONARIO":
+    if dictamen == "CUMPLE_LEY_546_PERO_EXCEDE_ENDEUDAMIENTO_BANCARIO_TOTAL":
+        otras_deudas = resultado.get("cuotas_otras_deudas_mensuales_cop", 0.0)
+        carga_pct = resultado.get("relacion_carga_financiera_total_pct", 0.0)
+        liberar = resultado.get("cupo_mensual_a_liberar_deudas_cop", 0.0)
+        plan = (
+            f"Antes de radicar el crédito hipotecario, aplica el método Avalancha del Módulo 3 para liberar al menos "
+            f"{formatear_cop_claro(liberar)}/mes de cuotas actuales mientras ahorras tu inicial en Cuenta AFC."
+        )
         return {
             "nivel": "warning",
-            "titulo": "Chequeo preventivo: hoy solo pasas en UVR y conviene vigilar la inflación",
+            "titulo": "Cumples el 30% de Ley 546 en vivienda, pero tus otras deudas superan el cupo bancario total (40%)",
             "mensaje": (
-                f"Sin afán ni sustos: en Pesos Fijos la cuota ({formatear_cop_claro(cuota_pesos)}) supera tu cinturón "
-                f"protector de la Ley 546 ({formatear_cop_claro(tope_30)}), y solo pasa en UVR "
-                f"({formatear_cop_claro(resultado['primera_cuota_uvr_cop'])}). Como en UVR la deuda sube con el IPC, "
-                "tomarlo así podría apretar tu flujo en unos años."
+                f"La cuota sola del apartamento ({formatear_cop_claro(cuota_pesos)}) sí respeta el tope de la Ley 546 "
+                f"({formatear_cop_claro(tope_30)}), pero al sumar tus otras deudas actuales "
+                f"({formatear_cop_claro(otras_deudas)}/mes) comprometes el {carga_pct:.1f}% de tus ingresos "
+                "(las entidades suelen aprobar hasta el 40% sumando todas las obligaciones)."
             ),
-            "receta": (
-                "Ampliemos unos meses el ahorro sobre planos en encargo fiduciario o sumemos aportes en Cuenta AFC "
-                "para bajar el monto del préstamo y pasarte tranquilo a Pesos."
-            ),
+            "plan_accion": plan,
+            "receta": plan,
         }
+
+    if dictamen == "VIABLE_COMPRA_EN_PESOS_OPTIMA":
+        plan = (
+            "Programa desde este mes tu ahorro del encargo fiduciario a través de una Cuenta AFC para optimizar "
+            "retención en la fuente medida en UVT y solicita cotización en Pesos Cuota Fija."
+        )
+        return {
+            "nivel": "success",
+            "titulo": "Indicadores clave favorables para comprar en Pesos (cumples la Ley 546)",
+            "mensaje": (
+                f"Con números claros, la primera cuota fija en Pesos ({formatear_cop_claro(cuota_pesos)}) "
+                f"respeta con holgura el tope legal del 30% de tu hogar ({formatear_cop_claro(tope_30)}) y el "
+                f"inmueble proyecta una TIR del {resultado['tir_inmobiliaria_ea_pct']}% EA, superando tu costo de oportunidad."
+            ),
+            "plan_accion": plan,
+            "receta": plan,
+        }
+    if dictamen == "VIABLE_VIVIENDA_PROPIA_PERO_FIC_SUPERA_RENTA":
+        plan = (
+            "Si tu meta es vivienda propia, usa tu Cuenta AFC para aprovechar el beneficio tributario; si solo buscas "
+            "rentabilidad financiera sin administrar arrendatarios, compara invertir ese capital en un FIC."
+        )
+        return {
+            "nivel": "info",
+            "titulo": "Viable para vivienda propia (cumples Ley 546), aunque para renta pura un FIC rinde más",
+            "mensaje": (
+                f"Tu flujo de caja responde bien: la cuota en Pesos ({formatear_cop_claro(cuota_pesos)}) cabe "
+                f"dentro del tope legal ({formatear_cop_claro(tope_30)}). Si es para habitarla en familia, es viable; si la "
+                "evalúas únicamente como inversión para arrendar, hoy su Cap Rate neto rinde menos que un FIC o un CDT."
+            ),
+            "plan_accion": plan,
+            "receta": plan,
+        }
+    if dictamen == "SOLO_CUMPLE_EN_UVR_CON_RIESGO_INFLACIONARIO":
+        plan = (
+            "Amplía unos meses el ahorro sobre planos en encargo fiduciario o incrementa tus aportes en Cuenta AFC "
+            "para disminuir el monto del préstamo y pasar con seguridad a Pesos Cuota Fija."
+        )
+        return {
+            "nivel": "warning",
+            "titulo": "Revisión preventiva: hoy solo cumples en UVR y conviene vigilar la inflación",
+            "mensaje": (
+                f"En Pesos Fijos la cuota ({formatear_cop_claro(cuota_pesos)}) supera el tope del 30% de la "
+                f"Ley 546 ({formatear_cop_claro(tope_30)}), y solo cumple en UVR "
+                f"({formatear_cop_claro(resultado['primera_cuota_uvr_cop'])}). Como en UVR el saldo sube con el IPC, "
+                "tomarlo así puede presionar tu flujo mensual en los próximos años."
+            ),
+            "plan_accion": plan,
+            "receta": plan,
+        }
+    plan = (
+        f"Tienes dos alternativas concretas en pesos: sumar ingresos familiares con co-deudor por "
+        f"{formatear_cop_claro(resultado['deficit_ingreso_familiar_cop'])}/mes, o reunir "
+        f"{formatear_cop_claro(resultado['cuota_inicial_extra_requerida_ley_546_cop'])} adicionales de cuota inicial en Cuenta AFC."
+    )
     return {
         "nivel": "error",
-        "titulo": "Hagamos una pausa protectora: hoy la cuota apretaría tu tranquilidad (Ley 546)",
+        "titulo": "Riesgo alto — Te recomendamos esperar: hoy la cuota supera el límite del 30% (Ley 546)",
         "mensaje": (
-            f"Qué bueno revisarlo juntos antes de firmar: la primera cuota ({formatear_cop_claro(cuota_pesos)}) supera "
-            f"el máximo saludable del 30% de los ingresos del hogar ({formatear_cop_claro(tope_30)}). Cuidar tu sueño "
-            "vale más que cualquier ladrillo, y tiene solución ajustando la dosis."
+            f"Evaluarlo antes de firmar protege tu patrimonio: la primera cuota ({formatear_cop_claro(cuota_pesos)}) supera "
+            f"el tope legal del 30% de los ingresos del hogar ({formatear_cop_claro(tope_30)}). Ajustando la cuota inicial "
+            "o el ingreso familiar puedes alcanzar la meta sin sobreendeudarte."
         ),
-        "receta": (
-            f"Tienes dos caminos claros para lograrlo sin ahogarte: sumar ingresos familiares con co-deudor por "
-            f"{formatear_cop_claro(resultado['deficit_ingreso_familiar_cop'])}/mes, o reunir "
-            f"{formatear_cop_claro(resultado['cuota_inicial_extra_requerida_ley_546_cop'])} extra de cuota inicial en Cuenta AFC."
-        ),
+        "plan_accion": plan,
+        "receta": plan,
     }
 
 
@@ -395,13 +527,20 @@ def render_modulo_4_finca_raiz(
     cfg = config or cargar_configuracion()
     macro = cfg["parametros_macro_colombia"]
     estado_previo = perfil_estado if perfil_estado is not None else dict(st.session_state.get("perfil_usuario", {}))
-    defaults = extraer_valores_iniciales_desde_estado(estado_previo, cfg)
+    defaults = extraer_valores_iniciales_desde_estado(
+        estado_previo,
+        cfg,
+        cargar_archivo_mod1_local=True,
+    )
 
     # BLOQUE 1: Encabezado del Consultorio + Barra de Progreso (Pasos 0 al 6)
     render_encabezado_modulo_oed(paso_actual=5)
 
     if defaults["conectado_con_modulos_previos"]:
-        st.info("🔗 Datos de ingresos y ahorro conectados automáticamente desde los módulos previos del equipo OED.")
+        st.info(
+            "🔗 Datos conectados automáticamente con los módulos previos del equipo OED "
+            f"(Modalidad: {defaults['modalidad_laboral_titular']} | COK: {defaults['costo_oportunidad_ea_pct']}% EA)."
+        )
     else:
         st.info(
             f"🌱 Modo Autónomo Activo: Usando valores iniciales del Usuario Semilla OED "
@@ -413,7 +552,19 @@ def render_modulo_4_finca_raiz(
         col_hogar, col_inmueble, col_credito = st.columns(3)
 
         with col_hogar:
-            st.subheader("👨‍👩‍👧 Ingresos y Ahorro")
+            st.subheader("👨‍👩‍👧 Ingresos, Empleo y Deudas")
+            opciones_laborales = ["Empleado", "Independiente", "Integral"]
+            idx_laboral = (
+                opciones_laborales.index(defaults["modalidad_laboral_titular"])
+                if defaults["modalidad_laboral_titular"] in opciones_laborales
+                else 0
+            )
+            modalidad_laboral = st.selectbox(
+                "Modalidad laboral titular (Módulo 1)",
+                options=opciones_laborales,
+                index=idx_laboral,
+                help="En Independiente/OPS o Salario Integral no recibes primas ni cesantías adicionales del empleador.",
+            )
             ingreso_titular = st.number_input(
                 "Tu ingreso neto mensual (COP)",
                 min_value=0.0,
@@ -430,6 +581,14 @@ def render_modulo_4_finca_raiz(
                 format="%.0f",
                 help="Pon 0 si compras de forma individual, o suma ingresos familiares para cumplir la Ley 546.",
             )
+            cuotas_otras_deudas = st.number_input(
+                "Cuotas mensuales de otras deudas actuales (COP)",
+                min_value=0.0,
+                value=defaults["cuotas_otras_deudas_mensuales_cop"],
+                step=100_000.0,
+                format="%.0f",
+                help="Tarjetas, libre inversión o vehículo (Módulo 3 de Catalina). Los bancos vigilan que todo junto no supere el 40%.",
+            )
             ahorro_previo_afc = st.number_input(
                 "Ahorro previo disponible / Cuenta AFC (COP)",
                 min_value=0.0,
@@ -440,9 +599,13 @@ def render_modulo_4_finca_raiz(
             cesantias_primas = st.number_input(
                 "Cesantías + Primas anuales para vivienda (COP)",
                 min_value=0.0,
-                value=defaults["cesantias_y_primas_anuales_cop"],
+                value=0.0 if modalidad_laboral in ("Independiente", "Integral") and not defaults["conectado_con_modulos_previos"] else defaults["cesantias_y_primas_anuales_cop"],
                 step=500_000.0,
                 format="%.0f",
+            )
+            fondo_emergencia_ok = st.checkbox(
+                "Mi fondo de emergencia ya está completo y separado de esta cuota inicial",
+                value=defaults["fondo_emergencia_completo"],
             )
             aplicar_subsidio_ccf = st.checkbox(
                 "Aplicar Subsidio Caja de Compensación (si ingreso <= 4 SMMLV y es VIS/VIP)",
@@ -453,7 +616,7 @@ def render_modulo_4_finca_raiz(
             st.subheader("🏢 El Inmueble")
             valor_inmueble = st.number_input(
                 "Valor comercial del inmueble (COP)",
-                min_value=50_000_000.0,
+                min_value=0.0,
                 value=defaults["valor_inmueble_cop"],
                 step=5_000_000.0,
                 format="%.0f",
@@ -466,14 +629,14 @@ def render_modulo_4_finca_raiz(
             )
             pct_cuota_inicial = st.slider(
                 "Porcentaje de Cuota Inicial (%)",
-                min_value=15,
-                max_value=70,
+                min_value=0,
+                max_value=80,
                 value=defaults["porcentaje_cuota_inicial_pct"],
                 step=1,
             )
             plazo_planos_meses = st.slider(
                 "Plazo entrega sobre planos (meses en fiducia)",
-                min_value=1,
+                min_value=0,
                 max_value=48,
                 value=defaults["plazo_entrega_planos_meses"],
                 step=1,
@@ -490,32 +653,33 @@ def render_modulo_4_finca_raiz(
             )
             tasa_ea_pesos_pct = st.number_input(
                 "Tasa crédito en Pesos (% EA)",
-                min_value=1.0,
+                min_value=0.0,
                 max_value=26.0,
                 value=defaults["tasa_ea_pesos_pct"],
                 step=0.25,
             )
             tasa_uvr_spread_pct = st.number_input(
                 "Tasa real en UVR + Spread (% EA sin IPC)",
-                min_value=0.5,
+                min_value=0.0,
                 max_value=18.0,
                 value=defaults["tasa_ea_uvr_spread_pct"],
                 step=0.25,
             )
             canon_estimado = st.number_input(
                 "Canon mensual de arriendo estimado (COP)",
-                min_value=200_000.0,
+                min_value=0.0,
                 value=defaults["canon_arriendo_estimado_cop"],
                 step=100_000.0,
                 format="%.0f",
                 help="La Ley 820 de 2003 limita el canon mensual máximo al 1% del valor comercial.",
             )
             cok_ea_pct = st.number_input(
-                "Rentabilidad alternativa FIC / CDT (% EA)",
-                min_value=1.0,
+                "Rentabilidad alternativa FIC / Portafolio (% EA)",
+                min_value=0.0,
                 max_value=25.0,
                 value=defaults["costo_oportunidad_ea_pct"],
                 step=0.25,
+                help="Se calibra automáticamente si vienes con perfil de riesgo del Módulo 6 (Salin) o portafolio del Módulo 2 (Camilo).",
             )
 
     ingreso_familiar_total = ingreso_titular + ingreso_pareja
@@ -523,7 +687,7 @@ def render_modulo_4_finca_raiz(
     # --- Ejecución en Vivo del Motor Matemático de Jesi ---
     resultado = evaluar_inversion_finca_raiz(
         valor_inmueble_cop=valor_inmueble,
-        ingreso_familiar_neto_cop=max(1.0, ingreso_familiar_total),
+        ingreso_familiar_neto_cop=ingreso_familiar_total,
         porcentaje_cuota_inicial=pct_cuota_inicial / 100.0,
         plazo_entrega_planos_meses=plazo_planos_meses,
         cesantias_y_primas_anuales_cop=cesantias_primas,
@@ -537,15 +701,18 @@ def render_modulo_4_finca_raiz(
         modalidad_financiacion=modalidad,
         incluir_tablas_detalle=True,
         config=cfg,
+        cuotas_otras_deudas_mensuales_cop=cuotas_otras_deudas,
+        fondo_emergencia_completo=fondo_emergencia_ok,
+        modalidad_laboral_titular=modalidad_laboral,
     )
 
-    # BLOQUE 3: Diagnóstico del Médico Financiero Amigo con burbujas (?) + Receta del Mes + 4 Signos Vitales
+    # BLOQUE 3: Diagnóstico Financiero con burbujas (?) + Plan de Acción + 4 Indicadores Clave
     semaforo = generar_resumen_ejecutivo_ciudadano(resultado)
     render_semaforo_ciudadano_oed(
         nivel=semaforo["nivel"],
         titulo_claro=semaforo["titulo"],
         explicacion_humana=semaforo["mensaje"],
-        siguiente_paso_accionable=semaforo["receta"],
+        siguiente_paso_accionable=semaforo["plan_accion"],
     )
 
     for alerta in resultado["alertas_regulatorias"]:
@@ -649,7 +816,7 @@ def render_modulo_4_finca_raiz(
             }
             st.json(resumen_contrato)
 
-    # BLOQUE 5: Diccionario desplegable del Médico Amigo (con foco en vivienda + acceso a las 5 familias)
+    # BLOQUE 5: Diccionario Financiero desplegable (con foco en vivienda + acceso a las 5 familias)
     render_glosario_interactivo_oed(
         [
             "LEY_546",
@@ -684,32 +851,56 @@ def _corriendo_dentro_de_streamlit() -> bool:
         return False
 
 
+def _a_float(valor: Any, defecto: float) -> float:
+    """Convierte entradas web (incluyendo cadenas vacías) a float seguro sin lanzar excepción."""
+    if valor in (None, ""):
+        return 0.0 if valor == "" else defecto
+    try:
+        return float(valor)
+    except (TypeError, ValueError):
+        return defecto
+
+
+def _a_int(valor: Any, defecto: int) -> int:
+    """Convierte entradas web (incluyendo cadenas vacías) a entero seguro."""
+    if valor in (None, ""):
+        return 0 if valor == "" else defecto
+    try:
+        return int(float(valor))
+    except (TypeError, ValueError):
+        return defecto
+
+
 def procesar_simulacion_api_local(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Ejecuta el motor de Jesi desde el servidor web local sin requerir librerías externas."""
     cfg = cargar_configuracion()
-    ingreso_titular = float(payload.get("ingreso_titular_cop", 5_915_000.0))
-    ingreso_pareja = float(payload.get("ingreso_pareja_cop", 3_500_000.0))
+    ingreso_titular = _a_float(payload.get("ingreso_titular_cop"), 5_915_000.0)
+    ingreso_pareja = _a_float(payload.get("ingreso_pareja_cop"), 3_500_000.0)
     resultado = evaluar_inversion_finca_raiz(
-        valor_inmueble_cop=float(payload.get("valor_inmueble_cop", 200_000_000.0)),
-        ingreso_familiar_neto_cop=max(1.0, ingreso_titular + ingreso_pareja),
-        porcentaje_cuota_inicial=float(payload.get("porcentaje_cuota_inicial_pct", 30.0)) / 100.0,
-        plazo_entrega_planos_meses=int(payload.get("plazo_planos_meses", 24)),
-        cesantias_y_primas_anuales_cop=float(payload.get("cesantias_primas_cop", 5_500_000.0)),
-        plazo_credito_anios=int(payload.get("plazo_credito_anios", 15)),
-        tasa_ea_pesos=float(payload.get("tasa_ea_pesos_pct", 11.5)) / 100.0,
-        tasa_ea_uvr_mas_spread=float(payload.get("tasa_uvr_spread_pct", 6.5)) / 100.0,
-        canon_arriendo_mensual_estimado_cop=float(payload.get("canon_estimado_cop", 1_400_000.0)),
-        costo_oportunidad_ea=float(payload.get("cok_ea_pct", 10.5)) / 100.0,
-        ahorro_previo_afc_cop=float(payload.get("ahorro_previo_afc_cop", 8_000_000.0)),
+        valor_inmueble_cop=_a_float(payload.get("valor_inmueble_cop"), 200_000_000.0),
+        ingreso_familiar_neto_cop=ingreso_titular + ingreso_pareja,
+        porcentaje_cuota_inicial=_a_float(payload.get("porcentaje_cuota_inicial_pct"), 30.0) / 100.0,
+        plazo_entrega_planos_meses=_a_int(payload.get("plazo_planos_meses"), 24),
+        cesantias_y_primas_anuales_cop=_a_float(payload.get("cesantias_primas_cop"), 5_500_000.0),
+        plazo_credito_anios=_a_int(payload.get("plazo_credito_anios"), 15),
+        tasa_ea_pesos=_a_float(payload.get("tasa_ea_pesos_pct"), 11.5) / 100.0,
+        tasa_ea_uvr_mas_spread=_a_float(payload.get("tasa_uvr_spread_pct"), 6.5) / 100.0,
+        canon_arriendo_mensual_estimado_cop=_a_float(payload.get("canon_estimado_cop"), 1_400_000.0),
+        costo_oportunidad_ea=_a_float(payload.get("cok_ea_pct"), 10.5) / 100.0,
+        ahorro_previo_afc_cop=_a_float(payload.get("ahorro_previo_afc_cop"), 8_000_000.0),
         aplicar_subsidio_ccf=bool(payload.get("aplicar_subsidio_ccf", True)),
         modalidad_financiacion=str(payload.get("modalidad_financiacion", "HIPOTECARIO")),
         incluir_tablas_detalle=True,
         config=cfg,
+        cuotas_otras_deudas_mensuales_cop=_a_float(payload.get("cuotas_otras_deudas_cop"), 0.0),
+        fondo_emergencia_completo=bool(payload.get("fondo_emergencia_completo", True)),
+        modalidad_laboral_titular=str(payload.get("modalidad_laboral_titular", "Empleado")),
     )
     semaforo = generar_resumen_ejecutivo_ciudadano(resultado)
     semaforo["titulo_html"] = enriquecer_texto_con_explicaciones(semaforo["titulo"])
     semaforo["mensaje_html"] = enriquecer_texto_con_explicaciones(semaforo["mensaje"])
-    semaforo["receta_html"] = enriquecer_texto_con_explicaciones(semaforo["receta"])
+    semaforo["plan_accion_html"] = enriquecer_texto_con_explicaciones(semaforo["plan_accion"])
+    semaforo["receta_html"] = semaforo["plan_accion_html"]
     return {
         "resultado": resultado,
         "semaforo": semaforo,
@@ -734,7 +925,7 @@ def _construir_html_dashboard_local() -> str:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Paso 5: Chequeo para Comprar Casa sin Ahogarte — Jesi (OED)</title>
+<title>Paso 5: Viabilidad para Comprar Vivienda o Invertir en Finca Raíz — Jesi (OED)</title>
 """
         + _CSS_MEDICO_AMIGO_OED
         + """
@@ -767,46 +958,55 @@ def _construir_html_dashboard_local() -> str:
 </head>
 <body>
 <div class="wrap">
-  <!-- BLOQUE 1: Barra de Pasos (0 al 6) + Saludo del Médico Financiero Amigo -->
+  <!-- BLOQUE 1: Barra de Pasos (0 al 6) + Encabezado del Asesor Financiero de Confianza -->
   <div class="oed-steps">"""
         + pills_html
         + """</div>
   <div class="oed-header">
-    <h1>🏡 Paso 5 — Chequeo para Comprar Casa sin Ahogarte</h1>
-    <p>🩺 <i>\""""
+    <h1>🏡 Paso 5 — Viabilidad para Comprar Vivienda o Invertir en Finca Raíz</h1>
+    <p>💼 <i>\""""
         + saludo_rico
         + """\"</i><br>
-    <small>Tu Médico Financiero en esta etapa: <b>Jesi</b> · Módulo 4: Inversión Patrimonial en Finca Raíz</small></p>
+    <small>Responsable OED en esta etapa: <b>Jesi</b> · Módulo 4: Inversión Patrimonial en Finca Raíz</small></p>
   </div>
 
   <!-- BLOQUE 2: Datos de tu Hogar, del Inmueble y del Crédito -->
   <div class="grid3">
     <div class="card">
-      <h3>👨‍👩‍👧 1. Hogar y Ahorros</h3>
+      <h3>👨‍👩‍👧 1. Hogar, Empleo y Deudas</h3>
+      <label>Modalidad laboral titular (Módulo 1)</label>
+      <select id="modalidad_laboral_titular" onchange="ajustarModalidadLaboral()">
+        <option value="Empleado">Empleado (con primas y cesantías)</option>
+        <option value="Independiente">Independiente / Contratista OPS</option>
+        <option value="Integral">Salario Integral</option>
+      </select>
       <label>Tu ingreso neto mensual (COP)</label>
-      <input type="number" id="ingreso_titular_cop" value="5915000" step="250000">
+      <input type="number" id="ingreso_titular_cop" value="5915000" min="0" step="250000">
       <label>Ingreso neto pareja / co-deudor (COP)</label>
-      <input type="number" id="ingreso_pareja_cop" value="3500000" step="250000">
+      <input type="number" id="ingreso_pareja_cop" value="3500000" min="0" step="250000">
+      <label>Cuotas mensuales de otras deudas actuales (COP)</label>
+      <input type="number" id="cuotas_otras_deudas_cop" value="0" min="0" step="100000">
       <label>Ahorro previo / Cuenta AFC (COP)</label>
-      <input type="number" id="ahorro_previo_afc_cop" value="8000000" step="1000000">
+      <input type="number" id="ahorro_previo_afc_cop" value="8000000" min="0" step="1000000">
       <label>Cesantías + Primas anuales (COP)</label>
-      <input type="number" id="cesantias_primas_cop" value="5500000" step="500000">
+      <input type="number" id="cesantias_primas_cop" value="5500000" min="0" step="500000">
+      <label class="chk"><input type="checkbox" id="fondo_emergencia_completo" checked> Mi fondo de emergencia ya está completo y protegido aparte</label>
       <label class="chk"><input type="checkbox" id="aplicar_subsidio_ccf" checked> Aplicar Subsidio Caja Compensación (si &lt;= 4 SMMLV y VIS)</label>
     </div>
 
     <div class="card">
       <h3>🏢 2. El Inmueble y Cuota Inicial</h3>
       <label>Valor comercial del inmueble (COP)</label>
-      <input type="number" id="valor_inmueble_cop" value="200000000" step="5000000">
+      <input type="number" id="valor_inmueble_cop" value="200000000" min="0" step="5000000">
       <label>Modalidad de financiación</label>
       <select id="modalidad_financiacion">
         <option value="HIPOTECARIO">Crédito Hipotecario Tradicional</option>
         <option value="LEASING">Leasing Habitacional</option>
       </select>
       <label>Porcentaje de Cuota Inicial (%): <span id="lbl_ci">30%</span></label>
-      <input type="range" id="porcentaje_cuota_inicial_pct" min="15" max="70" value="30" oninput="document.getElementById('lbl_ci').innerText=this.value+'%'; simular();">
+      <input type="range" id="porcentaje_cuota_inicial_pct" min="0" max="80" value="30" oninput="document.getElementById('lbl_ci').innerText=this.value+'%'; simular();">
       <label>Plazo sobre planos en fiducia (meses): <span id="lbl_pl">24</span></label>
-      <input type="range" id="plazo_planos_meses" min="1" max="48" value="24" oninput="document.getElementById('lbl_pl').innerText=this.value; simular();">
+      <input type="range" id="plazo_planos_meses" min="0" max="48" value="24" oninput="document.getElementById('lbl_pl').innerText=this.value; simular();">
     </div>
 
     <div class="card">
@@ -814,22 +1014,22 @@ def _construir_html_dashboard_local() -> str:
       <label>Plazo del crédito (años): <span id="lbl_an">15</span></label>
       <input type="range" id="plazo_credito_anios" min="5" max="30" value="15" oninput="document.getElementById('lbl_an').innerText=this.value; simular();">
       <label>Tasa Crédito en Pesos (% EA)</label>
-      <input type="number" id="tasa_ea_pesos_pct" value="11.5" step="0.25">
+      <input type="number" id="tasa_ea_pesos_pct" value="11.5" min="0" step="0.25">
       <label>Tasa Real UVR + Spread (% EA sin IPC)</label>
-      <input type="number" id="tasa_uvr_spread_pct" value="6.5" step="0.25">
+      <input type="number" id="tasa_uvr_spread_pct" value="6.5" min="0" step="0.25">
       <label>Canon mensual arriendo estimado (COP)</label>
-      <input type="number" id="canon_estimado_cop" value="1400000" step="100000">
-      <label>Rentabilidad alternativa FIC / CDT (% EA)</label>
-      <input type="number" id="cok_ea_pct" value="10.5" step="0.25">
+      <input type="number" id="canon_estimado_cop" value="1400000" min="0" step="100000">
+      <label>Rentabilidad alternativa FIC / Portafolio (% EA)</label>
+      <input type="number" id="cok_ea_pct" value="10.5" min="0" step="0.25">
     </div>
   </div>
 
   <div style="margin-bottom:14px; display:flex; gap:10px;">
-    <button class="btn" onclick="simular()">🔄 Actualizar Chequeo Financiero</button>
+    <button class="btn" onclick="simular()">🔄 Actualizar Diagnóstico Financiero</button>
     <button class="btn btn-sec" onclick="descargarCSV()">📥 Descargar Tabla Amortización Pesos (CSV Excel)</button>
   </div>
 
-  <!-- BLOQUE 3: Diagnóstico del Médico Amigo + Burbujas (?) + Receta + 4 Signos Vitales -->
+  <!-- BLOQUE 3: Diagnóstico Financiero + Burbujas (?) + Plan de Acción + 4 Indicadores Clave -->
   <div id="semaforo_box"></div>
   <div id="alertas_box"></div>
 
@@ -840,7 +1040,7 @@ def _construir_html_dashboard_local() -> str:
     <div class="card"><div class="kpi-title">TIR Inmobiliaria (10 años)</div><div class="kpi-val" id="k_tir">-</div><div class="kpi-sub" id="k_cap">-</div></div>
   </div>
 
-  <!-- BLOQUE 4: Gráficas Interactivas con la Paleta Oficial del Consultorio OED -->
+  <!-- BLOQUE 4: Gráficas Interactivas con la Paleta Oficial OED -->
   <div class="grid2">
     <div class="card">
       <h3>⚖️ Evolución de Cuota Mensual: Pesos Fija vs. Abono Capital vs. UVR</h3>
@@ -861,12 +1061,12 @@ def _construir_html_dashboard_local() -> str:
     <table id="tabla_sistemas"></table>
   </div>
 
-  <!-- BLOQUE 5: Diccionario Desplegable del Médico Amigo (5 Familias de Términos) -->
+  <!-- BLOQUE 5: Diccionario Financiero Desplegable (5 Familias de Términos) -->
   <div class="card">
     <details open>
-      <summary>🩺 ¿Alguna palabra te sonó a chino? Pregúntale aquí al Diccionario del Médico Amigo (5 Familias)</summary>
+      <summary>📘 ¿Tienes dudas con algún concepto? Consulta aquí el Diccionario Financiero OED (5 Familias)</summary>
       <div style="margin-top:12px;">
-        <label>Selecciona el término que quieres que te expliquemos en sencillo:</label>
+        <label>Selecciona el término que quieres consultar sin tecnicismos:</label>
         <select id="glosario_select" onchange="mostrarTerminoGlosario()"></select>
         <div id="glosario_detalle" style="margin-top:10px;"></div>
       </div>
@@ -896,7 +1096,7 @@ function mostrarTerminoGlosario() {
   if (!f) return;
   document.getElementById('glosario_detalle').innerHTML = `
     <div class="oed-doc-card oed-doc-azul" style="margin-bottom:8px;">
-      <b>🩺 Explicación de tu Médico Amigo (${f.termino_tecnico}):</b><br>${f.lenguaje_claro}
+      <b>💡 En palabras sencillas (${f.termino_tecnico}):</b><br>${f.lenguaje_claro}
     </div>
     <div class="oed-rx-box" style="margin:0;">
       <b>🇨🇴 Ejemplo cotidiano en pesos:</b> ${f.ejemplo_cotidiano}
@@ -948,13 +1148,26 @@ function dibujarBarras(svgId, etiquetas, valores, colores) {
   svg.innerHTML = html;
 }
 
+function ajustarModalidadLaboral() {
+  const mod = document.getElementById('modalidad_laboral_titular').value;
+  const ces = document.getElementById('cesantias_primas_cop');
+  if (mod === 'Independiente' || mod === 'Integral') {
+    ces.value = '0';
+  } else if (ces.value === '0') {
+    ces.value = '5500000';
+  }
+  simular();
+}
+
 async function simular() {
-  const ids = ['ingreso_titular_cop','ingreso_pareja_cop','ahorro_previo_afc_cop','cesantias_primas_cop',
-    'valor_inmueble_cop','modalidad_financiacion','porcentaje_cuota_inicial_pct','plazo_planos_meses',
-    'plazo_credito_anios','tasa_ea_pesos_pct','tasa_uvr_spread_pct','canon_estimado_cop','cok_ea_pct'];
+  const ids = ['modalidad_laboral_titular','ingreso_titular_cop','ingreso_pareja_cop','cuotas_otras_deudas_cop',
+    'ahorro_previo_afc_cop','cesantias_primas_cop','valor_inmueble_cop','modalidad_financiacion',
+    'porcentaje_cuota_inicial_pct','plazo_planos_meses','plazo_credito_anios','tasa_ea_pesos_pct',
+    'tasa_uvr_spread_pct','canon_estimado_cop','cok_ea_pct'];
   const payload = {};
   ids.forEach(id => payload[id] = document.getElementById(id).value);
   payload.aplicar_subsidio_ccf = document.getElementById('aplicar_subsidio_ccf').checked;
+  payload.fondo_emergencia_completo = document.getElementById('fondo_emergencia_completo').checked;
 
   const resp = await fetch('/api/evaluar', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
   const data = await resp.json();
@@ -962,10 +1175,10 @@ async function simular() {
   ultimoResultado = r;
 
   const mapaEstilos = {
-    success: {cls:'oed-doc-verde', ico:'🩺💚 Signos vitales saludables:'},
-    info:    {cls:'oed-doc-azul',  ico:'🩺💙 Lectura tranquila de tu médico financiero:'},
-    warning: {cls:'oed-doc-ambar', ico:'🩺🧡 Chequeo preventivo a tiempo:'},
-    error:   {cls:'oed-doc-rojo',  ico:'🩺❤️‍🩹 Pausa protectora para cuidar tu tranquilidad:'}
+    success: {cls:'oed-doc-verde', ico:'✅ Diagnóstico Financiero favorable:'},
+    info:    {cls:'oed-doc-azul',  ico:'ℹ️ Análisis de tu Asesor Financiero:'},
+    warning: {cls:'oed-doc-ambar', ico:'⚠️ Revisión preventiva:'},
+    error:   {cls:'oed-doc-rojo',  ico:'🛑 Riesgo alto — Te recomendamos esperar:'}
   };
   const est = mapaEstilos[sem.nivel] || mapaEstilos.error;
   document.getElementById('semaforo_box').innerHTML = `
@@ -974,7 +1187,7 @@ async function simular() {
       <div style="margin-top:4px;">${sem.mensaje_html || sem.mensaje}</div>
       <div style="margin-top:6px; font-size:12px; opacity:0.85;">💡 <i>Tip: Pasa el cursor sobre cualquier palabra subrayada con <b>?</b> para ver su explicación sencilla.</i></div>
     </div>
-    <div class="oed-rx-box"><b>💊 Tu Receta Práctica para este Mes:</b> ${sem.receta_html || sem.receta}</div>
+    <div class="oed-rx-box"><b>📌 Plan de Acción para este Mes:</b> ${sem.plan_accion_html || sem.receta_html || sem.plan_accion || sem.receta}</div>
   `;
   const alertasHtml = data.alertas_html || r.alertas_regulatorias;
   document.getElementById('alertas_box').innerHTML = alertasHtml.map(a => `<div class="oed-doc-card oed-doc-ambar">⚖️ ${a}</div>`).join('');
