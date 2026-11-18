@@ -1,12 +1,12 @@
 """
-SISTEMA DE DISEÑO, MANUAL DE MARCA Y VOZ DE "MÉDICO FINANCIERO AMIGO" — EQUIPO OED COLOMBIA.
+SISTEMA DE DISEÑO, MANUAL DE MARCA Y VOZ DE "ASESOR FINANCIERO DE CONFIANZA" — EQUIPO OED COLOMBIA.
 
 Filosofía central ("Cero Palabras Huérfanas"):
-1. Tono de Médico Financiero de Cabecera: cercano, cálido, empático y sin regaños.
-   - Signos vitales -> Diagnóstico tranquilo -> Receta práctica del mes.
+1. Tono de Asesor Financiero de Confianza: cercano, claro, empático y sin regaños.
+   - Indicadores Clave -> Diagnóstico Financiero -> 📌 Plan de Acción para este Mes.
 2. Ningún término financiero, legal, tributario, laboral o estadístico queda sin explicación:
    - `enriquecer_texto_con_explicaciones(texto)` detecta automáticamente siglas y tecnicismos dentro
-     de cualquier párrafo y les incrusta una burbuja explicativa interactiva al pasar el mouse o tocar.
+     de cualquier párrafo y les incrusta una burbuja explicativa interactiva al pasar el cursor o tocar.
    - `GLOSARIO_LENGUAJE_CLARO_OED` cubre las 5 familias de conceptos de los 6 módulos OED.
 
 Modos de uso:
@@ -40,130 +40,130 @@ if __package__ in (None, ""):
 
 
 # ==============================================================================
-# 1. PALETA OFICIAL DEL CONSULTORIO FINANCIERO AMIGO OED
+# 1. PALETA OFICIAL OED (ASESOR FINANCIERO DE CONFIANZA)
 # ==============================================================================
 
 PALETA_MARCA_OED: Dict[str, Dict[str, str]] = {
     "azul_confianza": {
-        "nombre": "Azul Bata Médica (Confianza OED)",
+        "nombre": "Azul Solidez OED",
         "hex": "#0F294A",
-        "uso": "Encabezados del consultorio, títulos principales y serenidad visual.",
+        "uso": "Encabezados principales, títulos institucionales y fondo de burbujas explicativas (?).",
     },
     "azul_impulso": {
-        "nombre": "Azul Cuidado Activo",
+        "nombre": "Azul Acción Financiera",
         "hex": "#1D4ED8",
-        "uso": "Botones principales, burbujas de explicación (?) y curva base en gráficas.",
+        "uso": "Botones principales, subrayado de términos con (?) y serie base en gráficas.",
     },
     "naranja_calidez": {
-        "nombre": "Naranja Receta Positiva",
+        "nombre": "Naranja Plan de Acción",
         "hex": "#EA580C",
-        "uso": "Paso activo de la consulta y tarjeta de 'Tu Receta Práctica del Mes'.",
+        "uso": "Indicador del paso activo y tarjeta de '📌 Plan de Acción para este Mes'.",
     },
     "verde_meta": {
-        "nombre": "Verde Signos Vitales Sanos",
+        "nombre": "Verde Viabilidad",
         "hex": "#15803D",
-        "uso": "Diagnóstico saludable: tus números cumplen la ley y cuidan tu tranquilidad.",
+        "uso": "Diagnóstico Financiero favorable: cumple reglas legales y capacidad de pago.",
     },
     "ambar_ajuste": {
-        "nombre": "Ámbar Chequeo Preventivo",
+        "nombre": "Ámbar Revisión Preventiva",
         "hex": "#B45309",
-        "uso": "Prevención amable: funciona hoy, pero vigilemos un síntoma (ej. inflación).",
+        "uso": "Revisión preventiva: viable hoy, pero requiere vigilar inflación, tasas o liquidez.",
     },
     "rojo_protector": {
-        "nombre": "Rojo Cuidado Intensivo (Sin Regaños)",
+        "nombre": "Rojo Riesgo Alto",
         "hex": "#B91C1C",
-        "uso": "Pausa protectora para evitar sobreendeudamiento o cobros ilegales.",
+        "uso": "Riesgo alto / Te recomendamos esperar para evitar sobreendeudamiento o usura.",
     },
     "fondo_claro": {
-        "nombre": "Blanco Consultorio Cálido",
+        "nombre": "Gris Claro Fondo OED",
         "hex": "#F4F7FB",
-        "uso": "Fondo limpio y descansado para leer sin estrés financiero.",
+        "uso": "Fondo limpio y descansado para analizar cifras con claridad.",
     },
 }
 
 COLORES_GRAFICAS_OED: List[str] = [
-    "#1D4ED8",  # Azul Cuidado Activo
-    "#EA580C",  # Naranja Receta Positiva
-    "#15803D",  # Verde Signos Vitales Sanos
+    "#1D4ED8",  # Azul Acción Financiera
+    "#EA580C",  # Naranja Plan de Acción
+    "#15803D",  # Verde Viabilidad
     "#7C3AED",  # Violeta Comparativo (FIC / Escenario alterno)
-    "#DC2626",  # Rojo Síntoma a Vigilar (Fugas / Inflación UVR / Usura)
-    "#475569",  # Gris Referencia Legal (Topes de ley)
+    "#DC2626",  # Rojo Alerta Financiera (Gastos hormiga / Inflación UVR / Usura)
+    "#475569",  # Gris Referencia Legal (Topes normativos)
 ]
 
 
 # ==============================================================================
-# 2. LOS 7 PASOS DE LA CONSULTA CON TU MÉDICO FINANCIERO AMIGO (PASOS 0 A 6)
+# 2. LOS 7 PASOS DE LA RUTA FINANCIERA OED (PASOS 0 A 6)
 # ==============================================================================
 
 RUTA_CLINICA_FINANCIERA_OED: List[Dict[str, Any]] = [
     {
         "paso": 0,
-        "icono": "🩺",
-        "titulo_ciudadano": "Bienvenida al Consultorio y Confidencialidad",
+        "icono": "🤝",
+        "titulo_ciudadano": "Bienvenida a OED y Protección de tus Datos",
         "modulo_tecnico": "Habeas Data Local y Reglas Base",
         "responsable": "Nelson + Camilo",
         "archivo": "src/data_governance.py · src/finance.py",
-        "saludo_medico": "Igual que en una historia clínica médica, tus datos son privados, se quedan cifrados en tu equipo y nadie más los ve.",
+        "saludo_medico": "Tus datos financieros son 100% privados, se procesan cifrados bajo Habeas Data en tu equipo y nadie más tiene acceso a ellos.",
     },
     {
         "paso": 1,
-        "icono": "🫀",
-        "titulo_ciudadano": "Pulso Emocional ante el Riesgo",
+        "icono": "🎯",
+        "titulo_ciudadano": "Tu Perfil de Riesgo y Criterio de Inversión",
         "modulo_tecnico": "Módulo 6: Educación Financiera y Probabilidad",
         "responsable": "Salin Avellaneda",
         "archivo": "src/mod6_educacion_financiera.py",
-        "saludo_medico": "Antes de recetarte cualquier inversión, miremos qué tanta variación aguanta tu corazón durmiendo tranquilo.",
+        "saludo_medico": "Antes de elegir en qué invertir, identifiquemos tu tolerancia real a las variaciones del mercado, el Valor Esperado y tu horizonte de tiempo.",
     },
     {
         "paso": 2,
-        "icono": "🩻",
-        "titulo_ciudadano": "Radiografía de tu Sueldo y Pequeñas Fugas",
+        "icono": "📊",
+        "titulo_ciudadano": "Análisis de tu Sueldo, Gastos y Flujo de Caja",
         "modulo_tecnico": "Módulo 1: Presupuesto y Flujo de Caja",
         "responsable": "Nidia Velásquez",
         "archivo": "src/mod1_presupuesto.py",
-        "saludo_medico": "Revisemos con lupa cuánto te llega libre después de descuentos de ley y por dónde se están escapando pesitos sin darte cuenta.",
+        "saludo_medico": "Calculemos cuánto recibes neto sobre tu IBC después de descuentos de ley e identifiquemos gastos hormiga para liberar ahorro mensual.",
     },
     {
         "paso": 3,
-        "icono": "🩹",
-        "titulo_ciudadano": "Alivio de Deudas que te Quitan Oxígeno",
+        "icono": "🔓",
+        "titulo_ciudadano": "Estrategia para Salir de Deudas y Pagar Menos Intereses",
         "modulo_tecnico": "Módulo 3: Optimización de Deudas",
         "responsable": "Catalina Moreno",
         "archivo": "src/mod3_gestion_deudas.py",
-        "saludo_medico": "Si tienes créditos caros, primero bajemos esa fiebre pagando menos intereses y liberando flujo mensual para ti.",
+        "saludo_medico": "Si tienes créditos con tasas altas cercanas a la Tasa de Usura, prioricemos su pago con Avalancha o Bola de Nieve para liberar flujo mensual.",
     },
     {
         "paso": 4,
         "icono": "🌱",
-        "titulo_ciudadano": "Vitaminas para Multiplicar tu Sueldo",
+        "titulo_ciudadano": "Plan de Inversión Mensual desde tu Sueldo",
         "modulo_tecnico": "Módulo 2: Micro-Inversiones Salariales",
         "responsable": "Camilo Matson",
         "archivo": "src/mod2_inversiones_salario.py",
-        "saludo_medico": "Con tus cuentas en orden, pongamos tus ahorros mensuales a crecer por encima del costo de vida desde montos pequeños.",
+        "saludo_medico": "Con tu flujo de caja ordenado, pongamos tus ahorros mensuales en CDT o FIC a crecer con interés compuesto por encima del IPC.",
     },
     {
         "paso": 5,
         "icono": "🏡",
-        "titulo_ciudadano": "Chequeo para Comprar Casa sin Ahogarte",
+        "titulo_ciudadano": "Viabilidad para Comprar Vivienda o Invertir en Finca Raíz",
         "modulo_tecnico": "Módulo 4: Inversión Patrimonial en Finca Raíz",
         "responsable": "Jesi",
         "archivo": "src/mod4_finca_raiz.py",
-        "saludo_medico": "Revisemos con calma si la cuota de esa vivienda cuida la tranquilidad de tu hogar y si te conviene más Pesos o UVR.",
+        "saludo_medico": "Evaluemos si la cuota cumple el tope del 30% de la Ley 546 y comparemos con números claros entre Pesos, UVR o invertir en un FIC.",
     },
     {
         "paso": 6,
         "icono": "🛡️",
-        "titulo_ciudadano": "Prueba de Esfuerzo para tus Grandes Planes",
+        "titulo_ciudadano": "Prueba de Estrés Financiero para tus Grandes Metas",
         "modulo_tecnico": "Módulo 5: Viabilidad Actuarial de Decisiones de Vida",
         "responsable": "Nelson",
         "archivo": "src/mod5_decisiones_vida.py",
-        "saludo_medico": "Hagamos una prueba de esfuerzo con 1.000 escenarios futuros para que casarte, tener hijos o estudiar te tome bien preparado.",
+        "saludo_medico": "Ejecutemos una Prueba de Estrés Financiero con 1.000 escenarios de Monte Carlo para evaluar tus metas de matrimonio, hijos o estudio.",
     },
 ]
 
 
 # ==============================================================================
-# 3. ENCICLOPEDIA DEL MÉDICO AMIGO: TODOS LOS TÉRMINOS EXPLICADOS FÁCIL
+# 3. DICCIONARIO FINANCIERO OED: TODOS LOS TÉRMINOS EXPLICADOS EN CLARO
 #    (Financieros · Leyes Colombianas · Nómina e Impuestos · Vivienda · Estadística)
 # ==============================================================================
 
@@ -173,7 +173,7 @@ GLOSARIO_LENGUAJE_CLARO_OED: Dict[str, Dict[str, Any]] = {
         "categoria": "Financiero e Inversión",
         "termino_tecnico": "Tasa Efectiva Anual (EA)",
         "como_no_decir": "Tasa compuesta anualizada bajo convención de capitalización SFC.",
-        "lenguaje_claro": "Piénsalo como la velocidad real a la que crece un ahorro (o una deuda) al cumplir 12 meses completos. En Colombia jamás se divide por 12.",
+        "lenguaje_claro": "Es la velocidad real a la que crece un ahorro (o una deuda) al cumplir 12 meses completos. En Colombia jamás se divide simplemente entre 12.",
         "ejemplo_cotidiano": "$1.000.000 guardados al 10% EA se convierten en $1.100.000 al cabo de un año antes de impuestos.",
         "alias": ["EA", "Efectivo Anual", "Efectiva Anual"],
     },
@@ -181,7 +181,7 @@ GLOSARIO_LENGUAJE_CLARO_OED: Dict[str, Dict[str, Any]] = {
         "categoria": "Financiero e Inversión",
         "termino_tecnico": "Tasa Efectiva Mensual (EM)",
         "como_no_decir": "Raíz duodécima del factor de capitalización efectivo anual menos uno.",
-        "lenguaje_claro": "Es el pedacito real de interés que te cobran o te pagan en un solo mes, calculado con interés sobre interés.",
+        "lenguaje_claro": "Es la fracción exacta de interés que te cobran o te pagan en un solo mes, calculada con interés sobre interés.",
         "ejemplo_cotidiano": "Un 12% EA equivale aproximadamente a 0,95% EM cada mes (no a 1%).",
         "alias": ["EM", "Efectiva Mensual", "Efectivo Mensual"],
     },
@@ -189,40 +189,40 @@ GLOSARIO_LENGUAJE_CLARO_OED: Dict[str, Dict[str, Any]] = {
         "categoria": "Financiero e Inversión",
         "termino_tecnico": "Inflación / IPC DANE",
         "como_no_decir": "Variación porcentual interanual del Índice de Precios al Consumidor.",
-        "lenguaje_claro": "Qué tanto subió el costo del mercado, el arriendo y la vida en Colombia durante el año según el DANE.",
-        "ejemplo_cotidiano": "Si el IPC es 5,2% y tu plata guardada debajo del colchón gana 0%, perdiste 5,2% de poder de compra.",
+        "lenguaje_claro": "Qué tanto subió el costo del mercado, el arriendo y los bienes básicos en Colombia durante el año según el DANE.",
+        "ejemplo_cotidiano": "Si el IPC es 5,2% y tu dinero guardado en efectivo rinde 0%, perdiste 5,2% de poder adquisitivo.",
         "alias": ["IPC", "IPC DANE", "inflación"],
     },
     "INTERES_COMPUESTO": {
         "categoria": "Financiero e Inversión",
         "termino_tecnico": "Interés Compuesto",
         "como_no_decir": "Capitalización exponencial por reinversión periódica de rendimientos.",
-        "lenguaje_claro": "El efecto 'bola de nieve buena': los intereses que ganas este mes se quedan adentro y empiezan a ganar sus propios intereses el mes siguiente.",
-        "ejemplo_cotidiano": "Ahorrar poquito pero constante durante 10 años termina sumando más por ganancias acumuladas que por tu propio bolsillo.",
+        "lenguaje_claro": "El efecto multiplicador del ahorro: los rendimientos que ganas este mes se reinvierten y empiezan a generar sus propios rendimientos el mes siguiente.",
+        "ejemplo_cotidiano": "Invertir de forma constante durante 10 años termina sumando más por rendimientos acumulados que por los aportes de tu bolsillo.",
         "alias": ["interés compuesto", "interes compuesto"],
     },
     "CDT": {
         "categoria": "Financiero e Inversión",
         "termino_tecnico": "CDT (Certificado de Depósito a Término)",
         "como_no_decir": "Título valor de renta fija a plazo emitido por establecimiento de crédito.",
-        "lenguaje_claro": "Un pacto tranquilo con un banco vigilado: le dejas tu dinero quieto por unos meses (ej. 90 o 360 días) a cambio de una ganancia fija asegurada desde el día uno.",
-        "ejemplo_cotidiano": "Ideal cuando sabes que no vas a necesitar esa plata antes de la fecha pactada.",
+        "lenguaje_claro": "Un acuerdo con un banco vigilado: dejas tu dinero a un plazo fijo (ej. 90, 180 o 360 días) a cambio de una tasa pactada y conocida desde el primer día.",
+        "ejemplo_cotidiano": "Ideal para metas con fecha definida cuando sabes que no necesitarás retirar ese dinero antes del vencimiento.",
         "alias": ["CDT", "CDTs"],
     },
     "FIC": {
         "categoria": "Financiero e Inversión",
         "termino_tecnico": "FIC (Fondo de Inversión Colectiva)",
         "como_no_decir": "Vehículo fiduciario colectivo administrado por sociedad vigilada SFC.",
-        "lenguaje_claro": "Una 'vaca' gigante y legal vigilada por el Estado donde expertos invierten el dinero de miles de personas juntas desde montos bajitos ($20.000 COP).",
-        "ejemplo_cotidiano": "Te permite invertir como los grandes capitales aunque empieces con una parte pequeña de tu sueldo.",
+        "lenguaje_claro": "Un fondo vigilado por la Superintendencia Financiera donde profesionales invierten el dinero de miles de personas juntas desde montos bajos ($20.000 COP).",
+        "ejemplo_cotidiano": "Te permite acceder a portafolios diversificados aunque empieces separando una fracción pequeña de tu sueldo.",
         "alias": ["FIC", "FICs", "Fondo de Inversión Colectiva"],
     },
     "VPN_TIR": {
         "categoria": "Financiero e Inversión",
         "termino_tecnico": "VPN y TIR",
         "como_no_decir": "Valor Presente Neto descontado al COK y Tasa Interna de Retorno.",
-        "lenguaje_claro": "Son los dos exámenes médicos de cualquier negocio: la TIR te dice qué porcentaje anual rinde, y el VPN te dice cuántos pesos ganas (o pierdes) frente a dejar esa plata tranquila en un fondo seguro.",
-        "ejemplo_cotidiano": "Si el VPN es mayor a $0, el negocio vale el esfuerzo; si es menor a $0, ganas más sin complicarte en un CDT o FIC.",
+        "lenguaje_claro": "Son los dos indicadores decisivos de cualquier inversión: la TIR mide el rendimiento porcentual anual y el VPN cuántos pesos netos genera hoy frente a tu mejor alternativa segura.",
+        "ejemplo_cotidiano": "Si el VPN es mayor a $0, el proyecto crea valor; si es menor a $0, obtienes mejor resultado invirtiendo ese capital en un CDT o FIC.",
         "alias": ["VPN", "TIR", "COK", "costo de oportunidad"],
     },
     # --- FAMILIA 2: VIVIENDA Y FINCA RAÍZ ---
@@ -230,56 +230,56 @@ GLOSARIO_LENGUAJE_CLARO_OED: Dict[str, Dict[str, Any]] = {
         "categoria": "Vivienda y Finca Raíz",
         "termino_tecnico": "Vivienda VIP, VIS y No VIS",
         "como_no_decir": "Segmentación regulatoria habitacional según topes en salarios mínimos CONPES.",
-        "lenguaje_claro": "Son las categorías de precio de vivienda en Colombia medidas en salarios mínimos: VIP (hasta 90 SMMLV), VIS (hasta 135 o 150 SMMLV, con acceso a subsidios) y No VIS (por encima de 150 SMMLV).",
-        "ejemplo_cotidiano": "Si el apartamento es VIS y ganas hasta 4 salarios mínimos, tu Caja de Compensación puede darte subsidio para la cuota inicial.",
+        "lenguaje_claro": "Son los segmentos de precio de vivienda en Colombia medidos en salarios mínimos: VIP (hasta 90 SMMLV), VIS (hasta 135 o 150 SMMLV, con acceso a subsidios) y No VIS (más de 150 SMMLV).",
+        "ejemplo_cotidiano": "Si el apartamento es VIS y tus ingresos son de hasta 4 SMMLV, puedes postularte al subsidio de tu Caja de Compensación para la cuota inicial.",
         "alias": ["VIS", "VIP", "No VIS"],
     },
     "UVR": {
         "categoria": "Vivienda y Finca Raíz",
         "termino_tecnico": "UVR (Unidad de Valor Real)",
         "como_no_decir": "Unidad de cuenta hipotecaria indexada al IPC certificada por el Banco de la República.",
-        "lenguaje_claro": "Una modalidad de crédito de vivienda donde la deuda y las cuotas se mueven al ritmo de la inflación. Arranca con cuota más suave que en pesos, pero sube si sube el costo de vida.",
-        "ejemplo_cotidiano": "Con inflación alta, durante los primeros años puedes sentir que pagas cumplidamente y aun así el saldo medido en pesos sube.",
+        "lenguaje_claro": "Modalidad de crédito hipotecario donde el saldo de la deuda y las cuotas se ajustan con la inflación. Inicia con una cuota más baja que en pesos, pero sube cuando sube el IPC.",
+        "ejemplo_cotidiano": "Si la inflación sube fuerte, durante los primeros años el saldo expresado en pesos puede crecer aunque pagues puntualmente cada mes.",
         "alias": ["UVR"],
     },
     "LEY_546": {
         "categoria": "Vivienda y Finca Raíz",
         "termino_tecnico": "Ley 546 de 1999 (Regla del 30%)",
         "como_no_decir": "Límite legal de relación primera cuota hipotecaria sobre ingreso familiar comprobado.",
-        "lenguaje_claro": "Nuestro cinturón de seguridad en vivienda: por ley colombiana, la primera cuota del crédito de tu casa (con seguros incluidos) jamás puede superar el 30% de los ingresos del hogar.",
-        "ejemplo_cotidiano": "Si en casa entran $8.000.000 netos, la primera cuota no puede pasar de $2.400.000.",
+        "lenguaje_claro": "Regla de protección hipotecaria en Colombia: la primera cuota del crédito de vivienda (incluyendo seguros) no puede superar el 30% de los ingresos mensuales del hogar.",
+        "ejemplo_cotidiano": "Si el ingreso familiar neto es $8.000.000, la primera cuota máxima permitida por ley es $2.400.000.",
         "alias": ["Ley 546", "Regla del 30%"],
     },
     "ENCARGO_FIDUCIARIO": {
         "categoria": "Vivienda y Finca Raíz",
         "termino_tecnico": "Encargo Fiduciario (Compra sobre Planos)",
         "como_no_decir": "Patrimonio autónomo de preventa inmobiliaria administrado por fiduciaria.",
-        "lenguaje_claro": "Una cuenta custodia vigilada donde vas pagando mes a mes la cuota inicial mientras construyen el edificio: la constructora no toca tu plata hasta cumplir las metas del proyecto.",
-        "ejemplo_cotidiano": "Te da entre 18 y 36 meses para reunir la cuota inicial sumando sueldo, primas y cesantías sin endeudarte antes de tiempo.",
+        "lenguaje_claro": "Cuenta administrada por una fiduciaria vigilada donde abonas mes a mes la cuota inicial mientras avanza el proyecto: la constructora solo recibe los recursos al cumplir el punto de equilibrio.",
+        "ejemplo_cotidiano": "Te permite reunir el 30% de cuota inicial entre 18 y 36 meses combinando ahorro mensual, primas y cesantías.",
         "alias": ["encargo fiduciario", "fiducia", "sobre planos"],
     },
     "LEASING": {
         "categoria": "Vivienda y Finca Raíz",
         "termino_tecnico": "Leasing Habitacional",
         "como_no_decir": "Contrato de arrendamiento financiero inmobiliario con opción de adquisición.",
-        "lenguaje_claro": "Una forma de financiar vivienda donde el banco figura como dueño mientras pagas un 'canon' mensual y, al final del plazo, pasas la escritura a tu nombre pagando una opción pactada.",
-        "ejemplo_cotidiano": "Suele pedir menos cuota inicial (15%–20%) y no te exige desembolsar gastos de escrituración el primer día.",
+        "lenguaje_claro": "Modalidad de financiación donde la entidad financiera conserva la titularidad mientras pagas un canon mensual y, al finalizar el plazo, ejerces la opción de compra a tu nombre.",
+        "ejemplo_cotidiano": "Permite financiar hasta el 80%–85% del inmueble y difiere los gastos de escrituración para el final del contrato.",
         "alias": ["Leasing Habitacional", "Leasing"],
     },
     "LEY_820": {
         "categoria": "Vivienda y Finca Raíz",
         "termino_tecnico": "Ley 820 de 2003 (Arrendamiento en Colombia)",
         "como_no_decir": "Tope normativo del canon mensual equivalente al 1% del valor comercial.",
-        "lenguaje_claro": "La ley de arriendos de vivienda en Colombia: dice que el arriendo mensual nunca puede superar el 1% del valor comercial del inmueble y cada año sube máximo el IPC.",
-        "ejemplo_cotidiano": "Por un apartamento de $200 millones, el arriendo legal máximo es $2.000.000 mensuales (en mercado suele rondar 0,55%–0,75%).",
+        "lenguaje_claro": "Ley de arrendamiento de vivienda urbana en Colombia: establece que el canon mensual no puede exceder el 1% del valor comercial del inmueble y su reajuste anual máximo es el IPC.",
+        "ejemplo_cotidiano": "Para un apartamento de $200.000.000 COP, el canon máximo legal es $2.000.000 COP al mes (en mercado suele ubicarse entre 0,55% y 0,75%).",
         "alias": ["Ley 820"],
     },
     "CAP_RATE": {
         "categoria": "Vivienda y Finca Raíz",
         "termino_tecnico": "Cap Rate Neto y Cash-on-Cash",
         "como_no_decir": "Ingreso Operativo Neto (NOI) sobre valor del activo y retorno efectivo sobre equity.",
-        "lenguaje_claro": "El Cap Rate Neto mide qué porcentaje libre al año te deja el arriendo (quitando predial, administración, vacancia y arreglos). El Cash-on-Cash mide cuánto te queda en caja frente a la plata que sacaste de tu bolsillo.",
-        "ejemplo_cotidiano": "Te evita la ilusión de mirar solo el arriendo bruto olvidando los gastos reales del inmueble.",
+        "lenguaje_claro": "El Cap Rate Neto mide qué rentabilidad anual libre deja el arriendo después de descontar predial, administración, vacancia y mantenimiento. El Cash-on-Cash mide el flujo anual frente al capital inicial aportado.",
+        "ejemplo_cotidiano": "Evita sobreestimar la rentabilidad mirando solo el arriendo bruto sin descontar los costos reales del inmueble.",
         "alias": ["Cap Rate", "NOI", "Cash-on-Cash"],
     },
     # --- FAMILIA 3: NÓMINA, TRABAJO E IMPUESTOS ---
@@ -287,40 +287,40 @@ GLOSARIO_LENGUAJE_CLARO_OED: Dict[str, Dict[str, Any]] = {
         "categoria": "Nómina e Impuestos",
         "termino_tecnico": "SMMLV (Salario Mínimo Mensual Legal Vigente)",
         "como_no_decir": "Remuneración mínima vital indexada por decreto anual en Colombia.",
-        "lenguaje_claro": "El salario mínimo oficial del año en Colombia. Además de sueldos, sirve como regla para medir precios de vivienda VIS y subsidios.",
-        "ejemplo_cotidiano": "Cuando decimos que una casa vale 140 SMMLV, multiplicamos 140 por el salario mínimo vigente.",
+        "lenguaje_claro": "El salario mínimo oficial del año en Colombia. Además de remuneraciones, define los topes legales de vivienda VIS/VIP y de subsidios familiares.",
+        "ejemplo_cotidiano": "Cuando un proyecto VIS cuesta 140 SMMLV, su precio se calcula multiplicando 140 por el salario mínimo del año de escrituración.",
         "alias": ["SMMLV", "salarios mínimos"],
     },
     "IBC": {
         "categoria": "Nómina e Impuestos",
         "termino_tecnico": "IBC (Ingreso Base de Cotización)",
         "como_no_decir": "Base salarial o proporción del 40% de honorarios para liquidación PILA.",
-        "lenguaje_claro": "La parte de tus ingresos sobre la cual se calculan tus aportes a Salud, Pensión y ARL. Si eres independiente por prestación de servicios, es el 40% de tus honorarios.",
-        "ejemplo_cotidiano": "Si cobras $5.000.000 por cuenta de cobro, cotizas seguridad social sobre $2.000.000 (el 40%).",
+        "lenguaje_claro": "La base sobre la cual se liquidan tus aportes a Salud, Pensión y ARL. Para trabajadores independientes por prestación de servicios corresponde al 40% de sus honorarios brutos.",
+        "ejemplo_cotidiano": "Si facturas $5.000.000 COP por honorarios, tu seguridad social se calcula sobre un IBC de $2.000.000 COP.",
         "alias": ["IBC"],
     },
     "UVT": {
         "categoria": "Nómina e Impuestos",
         "termino_tecnico": "UVT (Unidad de Valor Tributario)",
         "como_no_decir": "Unidad de medida tributaria reajustada anualmente por la DIAN.",
-        "lenguaje_claro": "La moneda interna con la que la DIAN calcula a partir de qué monto pagas retención en la fuente o 4x1000.",
-        "ejemplo_cotidiano": "Tu cuenta principal marcada está libre de 4x1000 hasta 350 UVT al mes.",
+        "lenguaje_claro": "La unidad con la que la DIAN expresa los topes de impuestos, retención en la fuente, beneficios tributarios y exención del 4x1000 en Colombia.",
+        "ejemplo_cotidiano": "Tu cuenta bancaria marcada como exenta no paga 4x1000 en retiros de hasta 350 UVT mensuales.",
         "alias": ["UVT"],
     },
     "CUENTA_AFC": {
         "categoria": "Nómina e Impuestos",
         "termino_tecnico": "Cuenta AFC (Art. 126-4 Estatuto Tributario)",
         "como_no_decir": "Beneficio de renta exenta por ahorro con destinación específica habitacional.",
-        "lenguaje_claro": "Una cuenta de ahorro para vivienda con premio tributario: lo que ahorras allí reduce la base sobre la que te descuentan retención en la fuente de tu salario.",
-        "ejemplo_cotidiano": "Transformas plata que se iba en impuestos en ladrillos propios para tu cuota inicial o tus cuotas del crédito.",
+        "lenguaje_claro": "Cuenta de Ahorro para el Fomento de la Construcción: los aportes destinados a cuota inicial o cuotas hipotecarias reducen tu base de retención en la fuente hasta los topes legales en UVT.",
+        "ejemplo_cotidiano": "Convierte parte de lo que pagarías en retención salarial en capital directo para comprar tu vivienda.",
         "alias": ["Cuenta AFC", "Cuentas AFC", "AFC"],
     },
     "GMF_4X1000": {
         "categoria": "Nómina e Impuestos",
         "termino_tecnico": "4x1000 (GMF — Gravamen a los Movimientos Financieros)",
         "como_no_decir": "Tributo indirecto de cuatro por mil sobre retiros y débitos bancarios.",
-        "lenguaje_claro": "El impuesto donde por cada $1.000 que sacas o transfieres de una cuenta no exenta te descuentan $4 pesos.",
-        "ejemplo_cotidiano": "En Colombia tienes derecho a marcar una cuenta bancaria exenta de 4x1000 hasta por 350 UVT mensuales.",
+        "lenguaje_claro": "Impuesto financiero en el que por cada $1.000 COP retirados o transferidos desde una cuenta no exenta se descuentan $4 COP.",
+        "ejemplo_cotidiano": "En Colombia tienes derecho a marcar una cuenta exenta de 4x1000 hasta por 350 UVT al mes.",
         "alias": ["4x1000", "GMF"],
     },
     # --- FAMILIA 4: DEUDAS Y PROTECCIÓN AL CONSUMIDOR ---
@@ -328,40 +328,40 @@ GLOSARIO_LENGUAJE_CLARO_OED: Dict[str, Dict[str, Any]] = {
         "categoria": "Deudas y Leyes Protectoras",
         "termino_tecnico": "Tasa de Usura SFC",
         "como_no_decir": "Tope legal equivalente a 1.5 veces el Interés Bancario Corriente certificado.",
-        "lenguaje_claro": "El límite máximo de intereses permitido por la ley en Colombia. Ninguna tarjeta ni prestamista puede cobrarte por encima de esa raya.",
-        "ejemplo_cotidiano": "Si alguien te presta 'gota a gota' al 10% mensual, supera varias veces la usura y está cometiendo un delito.",
+        "lenguaje_claro": "El interés máximo legal que puede cobrar un crédito o tarjeta en Colombia según certificación de la Superintendencia Financiera. Cobrar por encima es ilegal.",
+        "ejemplo_cotidiano": "Un préstamo informal al 10% mensual supera varias veces la Tasa de Usura y destruye tu flujo de caja.",
         "alias": ["Tasa de Usura", "Usura"],
     },
     "AVALANCHA_NIEVE": {
         "categoria": "Deudas y Leyes Protectoras",
         "termino_tecnico": "Método Avalancha vs. Bola de Nieve",
         "como_no_decir": "Heurísticas de amortización acelerada con reasignación de flujo liberado (roll-over).",
-        "lenguaje_claro": "Dos recetas médicas para salir de deudas: 'Avalancha' ataca primero la deuda con tasa más cara (te ahorra más dinero); 'Bola de Nieve' liquida primero la deuda más chiquita (te da alivio emocional rápido).",
-        "ejemplo_cotidiano": "En ambas recetas, apenas matas una deuda, usas esa cuota liberada para acelerar la siguiente.",
+        "lenguaje_claro": "Dos estrategias probadas para salir de deudas: 'Avalancha' prioriza la deuda con tasa más alta (ahorra más dinero en intereses) y 'Bola de Nieve' liquida primero el saldo más pequeño (libera cuotas rápido).",
+        "ejemplo_cotidiano": "En ambas estrategias, al terminar de pagar una obligación sumas esa cuota liberada para acelerar la siguiente.",
         "alias": ["Avalancha", "Bola de Nieve"],
     },
     "LEY_1328": {
         "categoria": "Deudas y Leyes Protectoras",
         "termino_tecnico": "Abono Extra a Capital (Ley 1328 de 2009)",
         "como_no_decir": "Derecho del consumidor financiero al prepago parcial o total sin sanción.",
-        "lenguaje_claro": "Tu derecho legal en Colombia a abonar plata extra directo al capital de tus créditos cuando quieras, sin multas, eligiendo si bajas el tiempo de deuda o bajas el valor de la cuota.",
-        "ejemplo_cotidiano": "Reducir plazo es el atajo que más millones de intereses te ahorra.",
+        "lenguaje_claro": "Derecho legal en Colombia a realizar pagos anticipados a capital en tus créditos en cualquier momento, sin penalidad, eligiendo entre reducir plazo o reducir cuota.",
+        "ejemplo_cotidiano": "Abonar extra reduciendo plazo disminuye de forma directa millones de pesos en intereses futuros.",
         "alias": ["Ley 1328", "abono a capital", "abonos a capital"],
     },
     "FOGAFIN": {
         "categoria": "Deudas y Leyes Protectoras",
         "termino_tecnico": "Seguro de Depósitos Fogafín",
         "como_no_decir": "Garantía pública de depósitos en establecimientos adscritos.",
-        "lenguaje_claro": "Un seguro automático y gratuito del Estado que responde por tus ahorros bancarios y CDTs hasta por $50.000.000 COP en cada banco inscrito.",
-        "ejemplo_cotidiano": "Siempre verifica que la entidad donde ahorras tenga el sello 'Protegido por Fogafín' o sea vigilada por la SFC.",
+        "lenguaje_claro": "Seguro estatal gratuito y automático que protege tus cuentas de ahorro y CDTs hasta por $50.000.000 COP por persona en cada entidad inscrita.",
+        "ejemplo_cotidiano": "Verifica siempre que el banco o entidad donde guardas tu fondo de emergencia cuente con respaldo Fogafín o vigilancia SFC.",
         "alias": ["Fogafín", "Fogafin"],
     },
     "HABEAS_DATA": {
         "categoria": "Deudas y Leyes Protectoras",
         "termino_tecnico": "Habeas Data (Ley 1581 de 2012 y Ley 1266 de 2008)",
         "como_no_decir": "Régimen estatutario de protección de datos personales y reporte crediticio.",
-        "lenguaje_claro": "Tu derecho dueño sobre tu información personal y tu historial en centrales de riesgo (Datacrédito / TransUnion): nadie puede usar tus datos sin tu permiso y los reportes negativos tras pagar caducan por ley.",
-        "ejemplo_cotidiano": "Después de ponerte al día en una mora, el reporte negativo dura máximo el doble del tiempo de mora (tope 4 años).",
+        "lenguaje_claro": "Derecho constitucional a conocer, actualizar y proteger tus datos personales y tu historial crediticio en centrales de riesgo (Datacrédito / TransUnion).",
+        "ejemplo_cotidiano": "Tras pagar una obligación en mora, la permanencia máxima del reporte negativo es el doble del tiempo de mora (con tope de 4 años).",
         "alias": ["Habeas Data", "Ley 1581", "Ley 1266"],
     },
     # --- FAMILIA 5: ESTADÍSTICA, PROBABILIDAD Y ACTUARÍA ---
@@ -369,23 +369,23 @@ GLOSARIO_LENGUAJE_CLARO_OED: Dict[str, Dict[str, Any]] = {
         "categoria": "Probabilidad y Futuro",
         "termino_tecnico": "Valor Esperado Matemático E[X]",
         "como_no_decir": "Esperanza matemática ponderada por distribución discreta de probabilidades.",
-        "lenguaje_claro": "El promedio real que ganarías o perderías si repitieras una apuesta o inversión miles de veces. En loterías, rifas y casinos siempre es negativo para tu bolsillo.",
-        "ejemplo_cotidiano": "Jugar por diversión ocasional está bien con presupuesto pequeño, pero nunca como plan para salir de deudas.",
+        "lenguaje_claro": "El resultado promedio real que obtendrías al repetir una apuesta o inversión miles de veces. En juegos de azar y loterías siempre es negativo para el jugador.",
+        "ejemplo_cotidiano": "Destinar dinero de forma constante a inversión regulada construye patrimonio; los juegos de azar tienen pérdida matemática esperada.",
         "alias": ["Valor Esperado", "esperanza matemática"],
     },
     "MONTE_CARLO": {
         "categoria": "Probabilidad y Futuro",
         "termino_tecnico": "Simulación Actuarial de Monte Carlo",
         "como_no_decir": "Modelación estocástica multiescenario de solvencia de ciclo de vida.",
-        "lenguaje_claro": "Una 'prueba de esfuerzo' igual a la que te hace el cardiólogo en banda caminadora: probamos las finanzas de tu familia en 1.000 futuros posibles (incluyendo inflación alta o meses sin trabajo) para ver qué tan firme resistes.",
-        "ejemplo_cotidiano": "Si superas más de 850 escenarios de 1.000, tu corazón financiero está listo para ese gran paso.",
+        "lenguaje_claro": "Una Prueba de Estrés Financiero que evalúa tu presupuesto familiar en 1.000 escenarios económicos posibles (incluyendo inflación alta o caída temporal de ingresos) para medir la solidez de tu plan.",
+        "ejemplo_cotidiano": "Si tu flujo de caja resiste más de 850 escenarios de 1.000, cuentas con margen financiero sólido para asumir esa meta.",
         "alias": ["Monte Carlo", "actuarial", "actuariales"],
     },
 }
 
 
 def explicar_termino_en_lenguaje_claro(clave_termino: str) -> Dict[str, Any]:
-    """Busca un concepto por clave o por alias y devuelve su explicación estilo Médico Amigo."""
+    """Busca un concepto por clave o por alias y devuelve su explicación financiera clara."""
     busqueda = clave_termino.strip().upper()
     if busqueda in GLOSARIO_LENGUAJE_CLARO_OED:
         return GLOSARIO_LENGUAJE_CLARO_OED[busqueda]
@@ -396,9 +396,9 @@ def explicar_termino_en_lenguaje_claro(clave_termino: str) -> Dict[str, Any]:
     return {
         "categoria": "Concepto General",
         "termino_tecnico": clave_termino,
-        "como_no_decir": "Explicación fría en jerga técnica.",
-        "lenguaje_claro": "En nuestro consultorio explicamos primero qué efecto real tiene en tu tranquilidad y en tu bolsillo mensual.",
-        "ejemplo_cotidiano": "Acompaña siempre el dato con un ejemplo aterrizado en pesos colombianos ($ COP).",
+        "como_no_decir": "Explicación en jerga técnica sin contexto práctico.",
+        "lenguaje_claro": "En OED explicamos cada concepto mostrando su impacto directo en tu flujo de caja y en tu patrimonio.",
+        "ejemplo_cotidiano": "Acompaña siempre el indicador con un ejemplo concreto en pesos colombianos ($ COP).",
         "alias": [clave_termino],
     }
 
@@ -422,9 +422,8 @@ def enriquecer_texto_con_explicaciones(texto: str) -> str:
     """
     Convierte un texto plano en HTML seguro donde la primera aparición de cada término
     financiero, legal, tributario o estadístico queda subrayada con una burbuja interactiva
-    del Médico Financiero Amigo al pasar el cursor o tocar en pantalla.
+    del Diccionario Financiero OED al pasar el cursor o tocar en pantalla.
     """
-    # Ordenamos alias del más largo al más corto para no partir frases compuestas (ej. 'Ley 546' antes que 'EA')
     pares_alias: List[tuple[str, str]] = []
     for clave, ficha in GLOSARIO_LENGUAJE_CLARO_OED.items():
         for alias in ficha.get("alias", []):
@@ -445,7 +444,7 @@ def enriquecer_texto_con_explicaciones(texto: str) -> str:
             token = f"__OEDTERM{idx}__"
             palabra_original = coincidencia.group(1)
             ficha = GLOSARIO_LENGUAJE_CLARO_OED[clave]
-            tooltip = html.escape(f"🩺 {ficha['termino_tecnico']}: {ficha['lenguaje_claro']}")
+            tooltip = html.escape(f"💡 {ficha['termino_tecnico']}: {ficha['lenguaje_claro']}")
             marcadores[token] = (
                 f'<span class="oed-term" tabindex="0" data-tip="{tooltip}">'
                 f"{html.escape(palabra_original)}<sup class=\"oed-q\">?</sup></span>"
@@ -466,7 +465,7 @@ def formatear_cop_claro(monto_cop: float) -> str:
 
 
 # ==============================================================================
-# 4. COMPONENTES REUTILIZABLES EN STREAMLIT (VOZ DE MÉDICO AMIGO + BURBUJAS)
+# 4. COMPONENTES REUTILIZABLES EN STREAMLIT (ASESOR FINANCIERO + BURBUJAS ?)
 # ==============================================================================
 
 _CSS_MEDICO_AMIGO_OED = """
@@ -516,14 +515,14 @@ _CSS_MEDICO_AMIGO_OED = """
 
 
 def aplicar_tema_visual_oed() -> None:
-    """Inyecta en Streamlit el diseño del Consultorio Financiero Amigo y las burbujas explicativas."""
+    """Inyecta en Streamlit el diseño institucional OED y las burbujas explicativas interactivas."""
     import streamlit as st
 
     st.markdown(_CSS_MEDICO_AMIGO_OED, unsafe_allow_html=True)
 
 
 def render_encabezado_modulo_oed(paso_actual: int, subtitulo_personalizado: str | None = None) -> None:
-    """Dibuja la barra de los 7 pasos de la consulta y el saludo cálido del especialista OED."""
+    """Dibuja la barra de los 7 pasos de OED y la introducción del Asesor Financiero de Confianza."""
     import streamlit as st
 
     aplicar_tema_visual_oed()
@@ -542,8 +541,8 @@ def render_encabezado_modulo_oed(paso_actual: int, subtitulo_personalizado: str 
         <div class="oed-steps">{pills_html}</div>
         <div class="oed-header">
             <h1>{info['icono']} Paso {info['paso']} — {html.escape(info['titulo_ciudadano'])}</h1>
-            <p>🩺 <i>"{saludo_con_ayudas}"</i><br>
-            <small>Tu Médico Financiero en esta etapa: <b>{html.escape(info['responsable'])}</b> · {html.escape(info['modulo_tecnico'])}</small></p>
+            <p>💼 <i>"{saludo_con_ayudas}"</i><br>
+            <small>Responsable OED en esta etapa: <b>{html.escape(info['responsable'])}</b> · {html.escape(info['modulo_tecnico'])}</small></p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -557,22 +556,22 @@ def render_semaforo_ciudadano_oed(
     siguiente_paso_accionable: str | None = None,
 ) -> None:
     """
-    Presenta el diagnóstico con voz de Médico Amigo, auto-explicando cualquier término
-    financiero, legal o estadístico dentro del texto mediante burbujas interactivas (`?`),
-    seguido de 'Tu Receta Práctica del Mes'.
+    Presenta el Diagnóstico Financiero con voz de Asesor Financiero de Confianza,
+    auto-explicando términos financieros, legales o estadísticos mediante burbujas (`?`),
+    seguido de '📌 Plan de Acción para este Mes'.
     """
     import streamlit as st
 
     aplicar_tema_visual_oed()
     norm = nivel.strip().lower()
     if norm in ("verde", "success"):
-        clase, icono, prefijo = "oed-doc-verde", "🩺💚", "Signos vitales saludables:"
+        clase, icono, prefijo = "oed-doc-verde", "✅", "Diagnóstico Financiero favorable:"
     elif norm in ("azul", "info"):
-        clase, icono, prefijo = "oed-doc-azul", "🩺💙", "Lectura tranquila de tu médico financiero:"
+        clase, icono, prefijo = "oed-doc-azul", "ℹ️", "Análisis de tu Asesor Financiero:"
     elif norm in ("ambar", "amarillo", "warning"):
-        clase, icono, prefijo = "oed-doc-ambar", "🩺🧡", "Chequeo preventivo a tiempo:"
+        clase, icono, prefijo = "oed-doc-ambar", "⚠️", "Revisión preventiva:"
     else:
-        clase, icono, prefijo = "oed-doc-rojo", "🩺❤️‍🩹", "Pausa protectora para cuidar tu tranquilidad:"
+        clase, icono, prefijo = "oed-doc-rojo", "🛑", "Riesgo alto — Te recomendamos esperar:"
 
     titulo_rico = enriquecer_texto_con_explicaciones(titulo_claro)
     explicacion_rica = enriquecer_texto_con_explicaciones(explicacion_humana)
@@ -583,7 +582,7 @@ def render_semaforo_ciudadano_oed(
             <div><b>{icono} {prefijo} {titulo_rico}</b></div>
             <div style="margin-top:4px;">{explicacion_rica}</div>
             <div style="margin-top:6px; font-size:0.78rem; opacity:0.85;">
-                💡 <i>Tip: Pasa el cursor sobre cualquier palabra subrayada con <b>?</b> para ver qué significa en sencillo.</i>
+                💡 <i>Tip: Pasa el cursor sobre cualquier palabra subrayada con <b>?</b> para ver su explicación en sencillo.</i>
             </div>
         </div>
         """,
@@ -591,11 +590,11 @@ def render_semaforo_ciudadano_oed(
     )
 
     if siguiente_paso_accionable:
-        receta_rica = enriquecer_texto_con_explicaciones(siguiente_paso_accionable)
+        accion_rica = enriquecer_texto_con_explicaciones(siguiente_paso_accionable)
         st.markdown(
             f"""
             <div class="oed-rx-box">
-                <b>💊 Tu Receta Práctica para este Mes:</b> {receta_rica}
+                <b>📌 Plan de Acción para este Mes:</b> {accion_rica}
             </div>
             """,
             unsafe_allow_html=True,
@@ -604,12 +603,12 @@ def render_semaforo_ciudadano_oed(
 
 def render_glosario_interactivo_oed(claves_terminos: List[str] | None = None) -> None:
     """
-    Renderiza el Consultorio de Términos Claros (filtrable por categoría o enfocado en los términos del módulo)
-    para que ningún término financiero, legal, laboral o estadístico quede sin explicación.
+    Renderiza el Diccionario Financiero OED (filtrable por categoría o enfocado en los términos del módulo)
+    para que ningún concepto financiero, legal, laboral o estadístico quede sin explicación.
     """
     import streamlit as st
 
-    with st.expander("🩺 ¿Alguna palabra te sonó a chino? Pregúntale aquí al Diccionario del Médico Amigo"):
+    with st.expander("📘 ¿Tienes dudas con algún concepto? Consulta aquí el Diccionario Financiero OED"):
         todas = list(GLOSARIO_LENGUAJE_CLARO_OED.keys())
         ver_todos = st.checkbox(
             "Ver las 5 familias completas de términos del proyecto (Finanzas, Vivienda, Nómina, Deudas y Probabilidad)",
@@ -620,13 +619,13 @@ def render_glosario_interactivo_oed(claves_terminos: List[str] | None = None) ->
             opciones = todas
 
         seleccion = st.selectbox(
-            "Selecciona el término que quieres que te expliquemos sin tecnicismos:",
+            "Selecciona el término que quieres consultar sin tecnicismos:",
             options=opciones,
             format_func=lambda k: f"[{GLOSARIO_LENGUAJE_CLARO_OED[k]['categoria']}] {GLOSARIO_LENGUAJE_CLARO_OED[k]['termino_tecnico']}",
         )
         ficha = explicar_termino_en_lenguaje_claro(seleccion)
-        st.markdown(f"**🩺 Explicación de tu Médico Amigo:** {ficha['lenguaje_claro']}")
-        st.info(f"🇨🇴 **Ejemplo en la vida real:** {ficha['ejemplo_cotidiano']}")
+        st.markdown(f"**💡 En palabras sencillas:** {ficha['lenguaje_claro']}")
+        st.info(f"🇨🇴 **Ejemplo en pesos colombianos:** {ficha['ejemplo_cotidiano']}")
 
 
 def aplicar_estilo_plotly_oed(fig: Any, titulo: str | None = None, altura: int = 420) -> Any:
@@ -652,9 +651,9 @@ def aplicar_estilo_plotly_oed(fig: Any, titulo: str | None = None, altura: int =
 
 def _generar_html_manual_marca_interactivo() -> str:
     frase_demo = (
-        "Revisando tus signos vitales con calma: tu crédito cumple la Ley 546 porque no supera el 30% "
+        "Revisando tus indicadores clave con claridad: tu crédito cumple la Ley 546 porque no supera el 30% "
         "de tus ingresos en SMMLV. Ahorrar tu cuota inicial en un encargo fiduciario usando tu Cuenta AFC "
-        "baja impuestos medidos en UVT, evita el riesgo de inflación del IPC en UVR y mejora tu VPN y TIR "
+        "reduce retención medida en UVT, evita el riesgo de inflación del IPC en UVR y mejora tu VPN y TIR "
         "con ahorros protegidos por Fogafín."
     )
     frase_enriquecida = enriquecer_texto_con_explicaciones(frase_demo)
@@ -671,7 +670,7 @@ def _generar_html_manual_marca_interactivo() -> str:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Manual de Marca: Tu Médico Financiero Amigo — Equipo OED</title>
+<title>Manual de Marca: Asesor Financiero de Confianza — Equipo OED</title>
 {_CSS_MEDICO_AMIGO_OED}
 <style>
   * {{ box-sizing:border-box; font-family:'Segoe UI',system-ui,-apple-system,sans-serif; }}
@@ -693,27 +692,27 @@ def _generar_html_manual_marca_interactivo() -> str:
 <body>
 <div class="wrap">
   <div class="oed-header">
-    <h1>🩺 Manual de Marca: "Tu Médico Financiero Amigo" — Equipo OED</h1>
-    <p>Tono cercano y cálido para <b>Camilo, Nidia, Nelson, Catalina, Jesi y Salin</b> con la regla de oro: <b>ninguna palabra financiera, legal o estadística se queda sin su explicación inmediata (?)</b>.</p>
+    <h1>💼 Manual de Marca: "Asesor Financiero de Confianza" — Equipo OED</h1>
+    <p>Identidad unificada para <b>Camilo, Nidia, Nelson, Catalina, Jesi y Salin</b> con la regla de oro: <b>ninguna palabra financiera, legal o estadística se queda sin su explicación inmediata (?)</b>.</p>
   </div>
 
   <div class="tabs">
-    <button class="tab active" onclick="verTab(0)">1. 🩺 Voz de Médico Amigo + Burbujas (?)</button>
-    <button class="tab" onclick="verTab(1)">2. 📚 Diccionario Total (25+ Términos)</button>
-    <button class="tab" onclick="verTab(2)">3. 🎨 Paleta del Consultorio</button>
+    <button class="tab active" onclick="verTab(0)">1. 💼 Voz de Asesor Financiero + Burbujas (?)</button>
+    <button class="tab" onclick="verTab(1)">2. 📘 Diccionario Financiero (25+ Términos)</button>
+    <button class="tab" onclick="verTab(2)">3. 🎨 Paleta Oficial OED</button>
     <button class="tab" onclick="verTab(3)">4. 👩‍💻 Plantilla por Integrante</button>
   </div>
 
   <div class="panel active" id="p0">
     <div class="card">
       <h3 style="margin-top:0;">Prueba en vivo las burbujas automáticas ("Cero Palabras Huérfanas")</h3>
-      <p style="font-size:13.5px; color:#475569;">Pasa el mouse por encima de cualquier término con <b>?</b> — el sistema lo detecta solo dentro del párrafo de cualquier integrante:</p>
+      <p style="font-size:13.5px; color:#475569;">Pasa el cursor por encima de cualquier término con <b>?</b> — el sistema lo detecta automáticamente dentro del párrafo de cualquier integrante:</p>
       <div class="oed-doc-card oed-doc-verde">
-        <b>🩺💚 Lectura de tu Médico Financiero Amigo:</b><br>
+        <b>✅ Diagnóstico Financiero favorable:</b><br>
         {frase_enriquecida}
       </div>
       <div class="oed-rx-box">
-        <b>💊 Tu Receta Práctica para este Mes:</b> Separa tu cuota mensual el mismo día que te pagan nómina para cuidar tu tranquilidad sin sentir apretón a fin de mes.
+        <b>📌 Plan de Acción para este Mes:</b> Programa una transferencia automática el mismo día que recibes tu ingreso mensual para consolidar tu ahorro sin afectar tu flujo de caja.
       </div>
     </div>
   </div>
@@ -733,7 +732,7 @@ def _generar_html_manual_marca_interactivo() -> str:
 
   <div class="panel" id="p3">
     <div class="card">
-      <h3 style="margin-top:0;">Haz clic en cualquier integrante para ver su saludo médico y copiar su código:</h3>
+      <h3 style="margin-top:0;">Haz clic en cualquier integrante para ver su encabezado OED y copiar su código:</h3>
       <div id="code_pills" style="margin-bottom:12px;"></div>
       <div id="step_banner" style="margin-bottom:12px;"></div>
       <pre id="code_box"></pre>
@@ -762,9 +761,9 @@ function verTermino(k) {{
   const f = DATA.glosario[k];
   document.getElementById('term_detail').innerHTML = `
     <div style="font-size:12px; color:#1D4ED8; font-weight:700;">FAMILIA: ${{f.categoria.toUpperCase()}}</div>
-    <h3 style="margin:4px 0 10px;">🩺 ${{f.termino_tecnico}}</h3>
-    <div class="oed-doc-card oed-doc-rojo"><b>❌ Tecnicismo frío que evitamos:</b> "${{f.como_no_decir}}"</div>
-    <div class="oed-doc-card oed-doc-verde"><b>✅ Cómo te lo explica tu Médico Amigo:</b> ${{f.lenguaje_claro}}</div>
+    <h3 style="margin:4px 0 10px;">📘 ${{f.termino_tecnico}}</h3>
+    <div class="oed-doc-card oed-doc-rojo"><b>❌ Jerga técnica fría que evitamos:</b> "${{f.como_no_decir}}"</div>
+    <div class="oed-doc-card oed-doc-verde"><b>✅ Cómo lo explica tu Asesor Financiero de Confianza:</b> ${{f.lenguaje_claro}}</div>
     <div class="oed-rx-box"><b>🇨🇴 Ejemplo cotidiano en pesos:</b> ${{f.ejemplo_cotidiano}}</div>
   `;
 }}
@@ -788,7 +787,7 @@ function verCodigo(num) {{
   document.getElementById('step_banner').innerHTML = `
     <div class="oed-header" style="margin-bottom:0;">
       <h1>${{s.icono}} Paso ${{s.paso}} — ${{s.titulo_ciudadano}}</h1>
-      <p>🩺 <i>"${{s.saludo_medico}}"</i> · Especialista: <b>${{s.responsable}}</b></p>
+      <p>💼 <i>"${{s.saludo_medico}}"</i> · Responsable OED: <b>${{s.responsable}}</b></p>
     </div>`;
   document.getElementById('code_box').textContent =
 `from src.oed_design_system import (
@@ -798,19 +797,19 @@ function verCodigo(num) {{
     aplicar_estilo_plotly_oed,
 )
 
-def render_consulta_paso_${{s.paso}}():
-    # 1. Saludo del Médico Amigo + Barra de progreso (Pasos 0 al 6)
+def render_modulo_paso_${{s.paso}}():
+    # 1. Encabezado OED + Barra de progreso (Pasos 0 al 6)
     render_encabezado_modulo_oed(paso_actual=${{s.paso}})
 
-    # 2. Diagnóstico cálido: auto-detecta términos (EA, UVR, IBC, Usura...) y les pone burbuja (?)
+    # 2. Diagnóstico Financiero: auto-detecta términos (EA, UVR, IBC, Usura...) y agrega burbuja (?)
     render_semaforo_ciudadano_oed(
         nivel="verde",
-        titulo_claro="Tus números cuidan tu tranquilidad",
+        titulo_claro="Tus indicadores clave muestran viabilidad financiera",
         explicacion_humana="${{s.saludo_medico}}",
-        siguiente_paso_accionable="Dosis práctica en $ COP para aplicar este mismo mes.",
+        siguiente_paso_accionable="Acción concreta en $ COP para ejecutar este mismo mes.",
     )
 
-    # 3. Diccionario completo de las 5 familias siempre a un clic
+    # 3. Diccionario Financiero de las 5 familias siempre disponible
     render_glosario_interactivo_oed()`;
 }}
 document.getElementById('code_pills').innerHTML = DATA.ruta.map(s =>
@@ -823,7 +822,7 @@ verCodigo(5);
 
 
 def iniciar_manual_marca_web_local(puerto: int = 8505, abrir_navegador: bool = True) -> None:
-    """Abre el Manual de Marca 'Tu Médico Financiero Amigo' en `http://127.0.0.1:8505`."""
+    """Abre el Manual de Marca 'Asesor Financiero de Confianza' en `http://127.0.0.1:8505`."""
     cuerpo = _generar_html_manual_marca_interactivo().encode("utf-8")
 
     class BrandHandler(BaseHTTPRequestHandler):
@@ -840,7 +839,7 @@ def iniciar_manual_marca_web_local(puerto: int = 8505, abrir_navegador: bool = T
     url = f"http://127.0.0.1:{puerto}"
     servidor = HTTPServer(("127.0.0.1", puerto), BrandHandler)
     print("=" * 72)
-    print(f"MANUAL DE MARCA 'TU MÉDICO FINANCIERO AMIGO' ACTIVO EN: {url}")
+    print(f"MANUAL DE MARCA 'ASESOR FINANCIERO DE CONFIANZA' ACTIVO EN: {url}")
     print("Presiona Ctrl + C en la terminal cuando quieras cerrarlo.")
     print("=" * 72)
     if abrir_navegador:
@@ -869,6 +868,6 @@ def verificar_sistema_diseno_oed() -> bool:
 if __name__ == "__main__":
     if "--check" in sys.argv:
         verificar_sistema_diseno_oed()
-        print("OK: Plantilla y Manual de Marca 'Medico Financiero Amigo' verificados correctamente.")
+        print("OK: Plantilla y Manual de Marca 'Asesor Financiero de Confianza' verificados correctamente.")
     else:
         iniciar_manual_marca_web_local()
