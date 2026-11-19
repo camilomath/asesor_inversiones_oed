@@ -815,13 +815,14 @@ HTML_CONTENT = """<!DOCTYPE html>
     function renderCuestionario(preguntas) {
       const cont = document.getElementById('cuestionarioContainer');
       cont.innerHTML = preguntas.map((p, idx) => `
-        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
-          <label class="block text-xs font-semibold text-slate-200">
-            <span class="text-blue-400 font-bold mr-1">#${idx + 1}</span> ${p.texto}
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2.5 hover:border-slate-700 transition">
+          <label class="block text-xs font-semibold text-slate-100 leading-snug">
+            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-900/60 text-blue-400 text-[11px] font-bold mr-1.5">${idx + 1}</span>
+            <span>${p.pregunta || p.texto || 'Pregunta de Idoneidad'}</span>
           </label>
-          <select id="p_${p.id}" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500">
+          <select id="p_${p.id}" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-normal">
             ${p.opciones.map((opt, i) => `
-              <option value="${i}" ${i === 2 ? 'selected' : ''}>${opt.texto} (${opt.puntos} pts)</option>
+              <option value="${i}" ${i === 2 ? 'selected' : ''}>${opt.texto} (${opt.puntaje !== undefined ? opt.puntaje : (opt.puntos !== undefined ? opt.puntos : '')} pts)</option>
             `).join('')}
           </select>
         </div>
