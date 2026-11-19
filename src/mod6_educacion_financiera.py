@@ -197,9 +197,9 @@ def perfilar_inversionista_decreto_2555(
     alerta_conductual = None
     if tolerancia_caida_pct < 5.0 and objetivo_alta_rentabilidad:
         alerta_conductual = (
-            "Inconsistencia Conductual Detectada (Decreto 2555 de 2010): Usted desea alta rentabilidad bursátil "
-            "pero declara no tolerar fluctuaciones temporales del 5%. Por protección al consumidor financiero, "
-            "su perfil se ajusta preventivamente."
+            "⚠️ Revisión preventiva de tu perfil (Decreto 2555 de 2010): Quieres buscar la mayor rentabilidad bursátil, "
+            "pero declaras que no toleras variaciones temporales del 5%. Como tu Asesor Financiero de Confianza, calibramos "
+            "preventivamente tu perfil a Moderado para cuidar tu tranquilidad y evitar que vendas con pérdidas ante cualquier ajuste de mercado."
         )
         puntaje = min(puntaje, 52.0)
 
@@ -638,12 +638,32 @@ def simular_portafolio_realista_segun_perfil(
         },
     ]
 
+    plan_de_accion_mes = (
+        f"Destina este mismo mes ${round(capacidad_inversion_mensual_cop * (pesos['renta_fija_total_pct'] / 100.0)):,.0f} COP "
+        f"a Renta Fija protegida por Fogafín (CDT digital o FIC de liquidez) y ${round(capacidad_inversion_mensual_cop * (pesos['renta_variable_total_pct'] / 100.0)):,.0f} COP "
+        f"a ETFs indexados globales (S&P 500 vía MGC) programando una transferencia automática el día que recibes tu sueldo. "
+        f"Mantén tu presupuesto de recreación/azar en un tope de ${round(gasto_recreativo_azar_cop):,.0f} COP/mes sin tocar tus ahorros."
+    )
+
+    diagnostico_asesor_confianza = {
+        "nivel": "verde" if pct_azar_sobre_ahorro <= 10.0 else "ambar",
+        "titulo_claro": f"Portafolio equilibrado para tu perfil {perfil_norm} ({pesos['renta_fija_total_pct']}% Renta Fija / {pesos['renta_variable_total_pct']}% Renta Variable)",
+        "explicacion_humana": (
+            f"Con tu capacidad de ahorro de ${capacidad_inversion_mensual_cop:,.0f} COP al mes y un capital inicial de ${capital_inicial_cop:,.0f} COP, "
+            f"tu portafolio proyecta alcanzar en {horizonte_anios} años un patrimonio estimado de ${proy_esperada['patrimonio_final_cop']:,.0f} COP "
+            f"(con ${proy_esperada['intereses_ganados_cop']:,.0f} COP generados puramente por interés compuesto a una tasa ponderada del {round(tasa_ponderada_ea*100, 2)}% EA)."
+        ),
+        "plan_accion_mes": plan_de_accion_mes,
+    }
+
     return {
         "perfil_riesgo": perfil_norm,
         "horizonte_anios": horizonte_anios,
         "capacidad_inversion_mensual_cop": capacidad_inversion_mensual_cop,
         "capital_inicial_cop": capital_inicial_cop,
         "gasto_recreativo_azar_cop": gasto_recreativo_azar_cop,
+        "diagnostico_asesor_confianza": diagnostico_asesor_confianza,
+        "plan_de_accion_mes": plan_de_accion_mes,
         "asignacion_macro": {
             "renta_fija_pct": pesos["renta_fija_total_pct"],
             "renta_variable_pct": pesos["renta_variable_total_pct"],

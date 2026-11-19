@@ -47,6 +47,7 @@ from src.mod6_educacion_financiera import (
     comparar_azar_vs_inversion_compuesta,
     detectar_esquema_piramidal_ponzi,
     perfilar_inversionista_decreto_2555,
+    simular_portafolio_realista_segun_perfil,
 )
 from src.oed_design_system import (
     COLORES_GRAFICAS_OED,
@@ -1053,7 +1054,14 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
 
     # 5. Flujo Integrado Caso Maestro OED (6 Módulos)
     mod6_perfil = perfilar_inversionista_decreto_2555(5, 12.0, 4, 3)
-    mod6_azar = comparar_azar_vs_inversion_compuesta(200_000.0, 10)
+    mod6_portafolio = simular_portafolio_realista_segun_perfil(
+        perfil_riesgo=mod6_perfil["perfil_riesgo"],
+        capacidad_inversion_mensual_cop=500_000.0,
+        capital_inicial_cop=2_000_000.0,
+        horizonte_anios=10,
+        gasto_recreativo_azar_cop=50_000.0,
+    )
+    mod6_azar = comparar_azar_vs_inversion_compuesta(50_000.0, 10)
     mod6_piramide = detectar_esquema_piramidal_ponzi(10.0, 3)
     mod1_pres = diagnosticar_presupuesto_y_flujo_caja(
         ingreso_bruto_mensual_cop=ingreso_neto_hogar if ingreso_neto_hogar > 0 else 6_500_000.0,
@@ -1202,6 +1210,10 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
             "mod6_salin": {
                 "perfil_riesgo": mod6_perfil["perfil_riesgo"],
                 "puntaje": mod6_perfil["puntaje_idoneidad_100"],
+                "renta_fija_pct": mod6_portafolio["asignacion_macro"]["renta_fija_pct"],
+                "renta_variable_pct": mod6_portafolio["asignacion_macro"]["renta_variable_pct"],
+                "patrimonio_10a_esperado_cop": mod6_portafolio["proyeccion_escenarios"]["esperado"]["patrimonio_final_cop"],
+                "plan_de_accion_mes": mod6_portafolio["plan_de_accion_mes"],
                 "patrimonio_10a_inversion_cop": mod6_azar["patrimonio_inversion_compuesta_cop"],
                 "valor_esperado_azar_cop": mod6_azar["valor_esperado_azar_cop"],
                 "ciclos_colapso_piramide": mod6_piramide["ciclos_para_agotar_poblacion_colombia"],
@@ -1524,7 +1536,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 <!-- BLOQUE 1 DEL MANUAL DE MARCA: BARRA DE PROGRESO DE LOS 7 PASOS (PASOS 0 AL 6) -->
 <div class="oed-steps-bar" id="barra-7-pasos-oed">
   <span class="oed-step-pill" id="pill-paso-0">Paso 0: 🩺 Bienvenida y Confidencialidad (Nelson + Camilo)</span>
-  <span class="oed-step-pill">Paso 1: 🫀 Pulso ante el Riesgo (Salin)</span>
+  <span class="oed-step-pill">Paso 1: 🎯 Tu Perfil de Riesgo y Criterio de Inversión (Salin)</span>
   <span class="oed-step-pill">Paso 2: 🩻 Radiografía de tu Sueldo (Nidia)</span>
   <span class="oed-step-pill">Paso 3: 🩹 Alivio de Deudas (Catalina)</span>
   <span class="oed-step-pill">Paso 4: 🌱 Vitaminas de Inversión (Camilo)</span>
@@ -2809,12 +2821,13 @@ function renderizarTodo(data, animar = false) {
   const m6 = data.caso_integrado_6_modulos;
   document.getElementById('kpis-6-modulos').innerHTML = `
     <div class="kpi-card">
-      <div class="kpi-title">🫀 Paso 1 — Módulo 6 (Salin Avellaneda)</div>
-      <div class="kpi-val">Perfil: ${m6.mod6_salin.perfil_riesgo}</div>
+      <div class="kpi-title">🎯 Paso 1 — Módulo 6 (Salin Avellaneda)</div>
+      <div class="kpi-val">Perfil: ${m6.mod6_salin.perfil_riesgo} (${m6.mod6_salin.renta_fija_pct}% RF / ${m6.mod6_salin.renta_variable_pct}% RV)</div>
       <div class="kpi-sub">
         Puntaje Suitability SFC: ${m6.mod6_salin.puntaje}/100<br>
-        Inversión Compuesta 10a ($200k/m): <strong>${fmtCOP(m6.mod6_salin.patrimonio_10a_inversion_cop)}</strong> vs. Azar: ${fmtCOP(m6.mod6_salin.valor_esperado_azar_cop)}<br>
-        Colapso Pirámide (r=3): Nivel ${m6.mod6_salin.ciclos_colapso_piramide}
+        Patrimonio Proyectado 10a (Esperado): <strong>${fmtCOP(m6.mod6_salin.patrimonio_10a_esperado_cop)}</strong><br>
+        Azar ($50k/m): E[X] ${fmtCOP(m6.mod6_salin.valor_esperado_azar_cop)} | Pirámide (r=3): Colapso Nivel ${m6.mod6_salin.ciclos_colapso_piramide}<br>
+        <span style="color:#EA580C;font-weight:600;">📌 Plan del Mes:</span> Asignar ${m6.mod6_salin.renta_fija_pct}% a CDTs/FICs y ${m6.mod6_salin.renta_variable_pct}% a ETFs vía MGC.
       </div>
     </div>
     <div class="kpi-card">
