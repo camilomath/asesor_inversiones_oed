@@ -4,12 +4,21 @@ Radiografía del Sueldo, Presupuesto Personal y Gastos Hormiga (Nidia Velásquez
 Compatible tanto con `pytest` como con ejecución directa en Python estándar.
 """
 
+import sys
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 from src.finance import cargar_configuracion
 from src.mod1_presupuesto import (
+    CATALOGO_MICROGASTOS_SUGERIDOS,
     calcular_fsp_porcentaje,
     cargar_simulacion_presupuesto,
     comparar_modalidades_laborales,
     cuantificar_gastos_hormiga_y_fugas,
+    culminar_asesoria_y_reiniciar,
     diagnosticar_presupuesto_y_flujo_caja,
     ejecutar_modulo_1_perfil_usuario,
     eliminar_simulacion_historial,
@@ -336,9 +345,149 @@ def test_interfaz_grafica_local_endpoints():
                 assert data["diagnostico"]["ingreso_neto_mensual_cop"] == 5_915_000.0
                 assert data["contrato_oed"]["excedente_mensual_cop"] == 1_845_000.0
                 assert len(data["comparativa_modalidades"]) == 3
+                assert "optimizacion_ingenieril" in data["diagnostico"]
+                assert "guia_asesoria" in data["diagnostico"]
+
+            # 6. Probar culminación de asesoría y reinicio en ceros vía POST /api/culminar_asesoria
+            req_fin = urllib.request.Request(
+                f"http://127.0.0.1:{port}/api/culminar_asesoria",
+                data=json.dumps(
+                    {
+                        "nombre_asesorado": "Cliente Prueba Cierre",
+                        "guardar_cierre_en_historial": True,
+                        "datos_cierre": {
+                            "modalidad_laboral": "Empleado",
+                            "ingreso_bruto_mensual_cop": 6_500_000.0,
+                            "gastos_fijos_vitales_cop": 2_800_000.0,
+                            "gastos_variables_estilo_vida_cop": 950_000.0,
+                            "detalle_gastos_hormiga": [
+                                {"concepto": "Café", "monto_unitario_cop": 6500, "frecuencia_mensual": 20}
+                            ],
+                        },
+                    }
+                ).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req_fin) as resp_fin:
+                cierre = json.loads(resp_fin.read().decode("utf-8"))
+                assert cierre["asesoria_culminada"] is True
+                assert cierre["reiniciado_en_ceros"] is True
+                assert cierre["parametros_ceros"]["ingreso_bruto_mensual_cop"] == 0.0
+                assert cierre["parametros_ceros"]["detalle_gastos_hormiga"] == []
+                assert len(cierre["historial"]) == 1
+                assert cierre["historial"][0]["nombre_escenario"] == "Cliente Prueba Cierre"
+
+            # 7. Verificar que al recargar la página después de culminar asesoría inicie en ceros ($0)
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/estado_guardado") as resp_ceros:
+                est_ceros = json.loads(resp_ceros.read().decode("utf-8"))
+                assert est_ceros["perfil_activo"]["parametros_entrada"]["ingreso_bruto_mensual_cop"] == 0.0
+                assert est_ceros["perfil_activo"]["parametros_entrada"]["detalle_gastos_hormiga"] == []
+                assert len(est_ceros["catalogo_microgastos"]) >= 15
         finally:
             server.shutdown()
             server.server_close()
+
+
+def test_optimizador_presupuesto_tributos_y_pareto():
+    """Verifica el motor de optimización tributaria AFC, Pareto 80/20 y simulador interactivo."""
+    diag = diagnosticar_presupuesto_y_flujo_caja(
+        ingreso_bruto_mensual_cop=14_000_000.0,
+        gastos_fijos_vitales_cop=4_200_000.0,
+        gastos_variables_estilo_vida_cop=1_800_000.0,
+        gastos_hormiga_mensual_cop=0.0,
+        detalle_gastos_hormiga=[
+            {"concepto": "Domicilios premium", "monto_unitario_cop": 35_000, "frecuencia_mensual": 10},
+            {"concepto": "Cafés", "monto_unitario_cop": 8_000, "frecuencia_mensual": 10},
+        ],
+        cuotas_manejo_mensual_cop=30_000.0,
+        monto_movimientos_gmf_mensual_cop=5_000_000.0,
+        cuenta_exenta_4x1000=False,
+        liquidez_actual_fondo_emergencia_cop=8_000_000.0,
+        tasa_oportunidad_ea=0.12,
+        recorte_hormiga_simulacion_pct=60.0,
+    )
+    opt = diag["optimizacion_ingenieril"]
+    assert opt["tributaria_afc"]["aplica_optimizacion_afc"] is True
+    assert opt["tributaria_afc"]["aporte_afc_optimo_mensual_cop"] > 0
+    assert opt["tributaria_afc"]["ahorro_tributario_mensual_cop"] > 0
+
+    pareto = opt["ranking_pareto_fugas"]
+    assert len(pareto) == 4
+    assert pareto[0]["origen"] == "Domicilios premium"
+    assert pareto[0]["impacto_pareto_80"] is True
+
+    sim = opt["simulacion_que_pasa_si"]
+    assert sim["recorte_hormiga_aplicado_pct"] == 60.0
+    assert sim["tasa_ea_simulada_pct"] == 12.0
+    assert sim["excedente_optimizado_cop"] > sim["excedente_actual_cop"]
+    assert sim["meses_aceleracion_fondo_emergencia"] > 0
+
+
+def test_culminar_asesoria_en_ceros_microgastos_y_guia_abstencion():
+    """
+    Verifica:
+    1. Catálogo desplegable de microgastos sugeridos.
+    2. Consejos personalizados de ahorro y sugerencias de en qué abstenerse.
+    3. Reinicio limpio en ceros ($0) al culminar una asesoría.
+    """
+    import tempfile
+    from pathlib import Path
+
+    from app_mod1_local import HTML_DASHBOARD
+
+    assert len(CATALOGO_MICROGASTOS_SUGERIDOS) >= 15
+    assert "select_microgasto" in HTML_DASHBOARD
+    assert "imprimirAsesoria()" in HTML_DASHBOARD
+    assert "guardarInformeHTML()" in HTML_DASHBOARD
+    assert "confirmarCulminarAsesoria()" in HTML_DASHBOARD
+    assert "contenedor_consejos_ahorro" in HTML_DASHBOARD
+    assert "contenedor_abstenciones" in HTML_DASHBOARD
+
+    # Caso con déficit, apuestas y domicilios -> debe emitir consejos de ahorro y abstenciones críticas
+    diag_riesgo = diagnosticar_presupuesto_y_flujo_caja(
+        ingreso_bruto_mensual_cop=4_000_000.0,
+        gastos_fijos_vitales_cop=2_500_000.0,
+        gastos_variables_estilo_vida_cop=1_100_000.0,
+        gastos_hormiga_mensual_cop=0.0,
+        cuotas_deuda_mensual_cop=500_000.0,
+        detalle_gastos_hormiga=[
+            {"concepto": "Apuestas deportivas online", "monto_unitario_cop": 25_000, "frecuencia_mensual": 8},
+            {"concepto": "Domicilios por apps", "monto_unitario_cop": 20_000, "frecuencia_mensual": 8},
+        ],
+    )
+    guia = diag_riesgo["guia_asesoria"]
+    assert guia["sesion_activa"] is True
+    assert len(guia["consejos_ahorro"]) >= 2
+    assert len(guia["en_que_abstenerse"]) >= 3
+    severidades = {a["severidad"] for a in guia["en_que_abstenerse"]}
+    assert "CRITICA" in severidades
+
+    # Diagnóstico totalmente en ceros -> estado SESION_EN_CEROS sin errores ni divisiones por cero
+    diag_ceros = diagnosticar_presupuesto_y_flujo_caja(
+        ingreso_bruto_mensual_cop=0.0,
+        gastos_fijos_vitales_cop=0.0,
+        gastos_variables_estilo_vida_cop=0.0,
+        gastos_hormiga_mensual_cop=0.0,
+        detalle_gastos_hormiga=[],
+    )
+    assert diag_ceros["estado_flujo_caja"] == "SESION_EN_CEROS"
+    assert diag_ceros["guia_asesoria"]["sesion_activa"] is False
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        r_act = Path(tmpdir) / "activo.json"
+        r_hist = Path(tmpdir) / "hist.json"
+        res_cierre = culminar_asesoria_y_reiniciar(
+            datos_cierre={"modalidad_laboral": "Independiente", "ingreso_bruto_mensual_cop": 8_000_000.0},
+            nombre_asesorado="Asesoría Carlos Ruiz",
+            guardar_cierre_en_historial=True,
+            ruta_activo=r_act,
+            ruta_historial=r_hist,
+        )
+        assert res_cierre["reiniciado_en_ceros"] is True
+        assert res_cierre["perfil_activo"]["parametros_entrada"]["ingreso_bruto_mensual_cop"] == 0.0
+        assert res_cierre["perfil_activo"]["resumen_resultados"]["estado_flujo_caja"] == "SESION_EN_CEROS"
+        assert len(res_cierre["historial"]) == 1
 
 
 if __name__ == "__main__":
@@ -353,6 +502,8 @@ if __name__ == "__main__":
         test_contrato_integracion_oed_y_comparador,
         test_persistencia_cambio_salario_y_modalidad,
         test_interfaz_grafica_local_endpoints,
+        test_optimizador_presupuesto_tributos_y_pareto,
+        test_culminar_asesoria_en_ceros_microgastos_y_guia_abstencion,
     ]
     for fn in pruebas:
         fn()

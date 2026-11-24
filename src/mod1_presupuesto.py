@@ -46,6 +46,166 @@ TARIFAS_ARL_COLOMBIA: Dict[int, float] = {
     5: 0.06960,  # Clase V: Riesgo máximo (minería, trabajo en alturas/pesado) - 6.960%
 }
 
+# Catálogo estandarizado de microgastos cotidianos en Colombia para lista desplegable de asesoría
+CATALOGO_MICROGASTOS_SUGERIDOS: List[Dict[str, Any]] = [
+    {
+        "id": "cafe_calle",
+        "categoria": "Bebidas y Antojos Diarios",
+        "concepto": "Café / tinto / capuchino en calle",
+        "monto_unitario_cop": 6500,
+        "frecuencia_mensual": 20,
+        "sustituto_ahorro": "Llevar termo de café preparado en casa y limitar compras a 1 vez por semana.",
+    },
+    {
+        "id": "empanada_panaderia",
+        "categoria": "Bebidas y Antojos Diarios",
+        "concepto": "Empanada / panadería / mecato media mañana",
+        "monto_unitario_cop": 5500,
+        "frecuencia_mensual": 20,
+        "sustituto_ahorro": "Comprar fruta o frutos secos al por mayor en el mercado mensual.",
+    },
+    {
+        "id": "postres_bebidas",
+        "categoria": "Bebidas y Antojos Diarios",
+        "concepto": "Postres, helados o bebidas azucaradas",
+        "monto_unitario_cop": 9500,
+        "frecuencia_mensual": 10,
+        "sustituto_ahorro": "Reemplazar bebidas individuales en tienda por botella reutilizable.",
+    },
+    {
+        "id": "agua_gaseosa",
+        "categoria": "Bebidas y Antojos Diarios",
+        "concepto": "Botellas de agua / gaseosas al detal",
+        "monto_unitario_cop": 4000,
+        "frecuencia_mensual": 15,
+        "sustituto_ahorro": "Portar termo personal recargable todos los días.",
+    },
+    {
+        "id": "cigarrillos_vapeo",
+        "categoria": "Bebidas y Antojos Diarios",
+        "concepto": "Cigarrillos / vapeadores / tabaco",
+        "monto_unitario_cop": 12000,
+        "frecuencia_mensual": 12,
+        "sustituto_ahorro": "Reducir progresivamente hasta eliminar por salud física y financiera.",
+    },
+    {
+        "id": "domicilios_apps",
+        "categoria": "Comidas Fuera y Domicilios",
+        "concepto": "Domicilios por apps (recargos + propinas)",
+        "monto_unitario_cop": 18000,
+        "frecuencia_mensual": 8,
+        "sustituto_ahorro": "Cocinar porciones extra (meal-prep) para evitar pedir por cansancio entre semana.",
+    },
+    {
+        "id": "almuerzo_fuera",
+        "categoria": "Comidas Fuera y Domicilios",
+        "concepto": "Almuerzos fuera en lugar de llevar de casa",
+        "monto_unitario_cop": 18500,
+        "frecuencia_mensual": 15,
+        "sustituto_ahorro": "Llevar almuerzo casero al menos 3 o 4 días hábiles por semana.",
+    },
+    {
+        "id": "comidas_rapidas_fds",
+        "categoria": "Comidas Fuera y Domicilios",
+        "concepto": "Comidas rápidas / salidas de fin de semana",
+        "monto_unitario_cop": 38000,
+        "frecuencia_mensual": 4,
+        "sustituto_ahorro": "Definir un tope mensual fijo de ocio gastronómico en efectivo.",
+    },
+    {
+        "id": "licores_rumbas",
+        "categoria": "Comidas Fuera y Domicilios",
+        "concepto": "Cervezas / licores / salidas nocturnas",
+        "monto_unitario_cop": 45000,
+        "frecuencia_mensual": 4,
+        "sustituto_ahorro": "Espaciar salidas nocturnas a máximo 1 o 2 veces al mes con presupuesto cerrado.",
+    },
+    {
+        "id": "streaming_extra",
+        "categoria": "Suscripciones, Apps y Juegos",
+        "concepto": "Plataforma de streaming sin uso frecuente",
+        "monto_unitario_cop": 38900,
+        "frecuencia_mensual": 1,
+        "sustituto_ahorro": "Cancelar suscripciones simultáneas y rotar máximo 1 plataforma por mes.",
+    },
+    {
+        "id": "apps_premium",
+        "categoria": "Suscripciones, Apps y Juegos",
+        "concepto": "Música / almacenamiento / apps premium duplicadas",
+        "monto_unitario_cop": 24900,
+        "frecuencia_mensual": 1,
+        "sustituto_ahorro": "Auditar cobros automáticos en tarjeta y usar planes familiares o gratuitos.",
+    },
+    {
+        "id": "videojuegos_micro",
+        "categoria": "Suscripciones, Apps y Juegos",
+        "concepto": "Videojuegos / microtransacciones en línea",
+        "monto_unitario_cop": 30000,
+        "frecuencia_mensual": 3,
+        "sustituto_ahorro": "Desvincular la tarjeta de crédito de tiendas de juegos y apps móviles.",
+    },
+    {
+        "id": "apuestas_azar",
+        "categoria": "Suscripciones, Apps y Juegos",
+        "concepto": "Apuestas deportivas / casino online / chance",
+        "monto_unitario_cop": 15000,
+        "frecuencia_mensual": 8,
+        "sustituto_ahorro": "Suspender totalmente apuestas de esperanza matemática negativa y redirigir a FIC.",
+    },
+    {
+        "id": "taxi_apps_prisa",
+        "categoria": "Transporte y Compras Impulsivas",
+        "concepto": "Taxi / app de transporte por salir tarde",
+        "monto_unitario_cop": 16500,
+        "frecuencia_mensual": 8,
+        "sustituto_ahorro": "Salir 15 minutos antes usando transporte público o ruta programada.",
+    },
+    {
+        "id": "parqueaderos_propinas",
+        "categoria": "Transporte y Compras Impulsivas",
+        "concepto": "Parqueaderos ocasionales / propinas varias",
+        "monto_unitario_cop": 8000,
+        "frecuencia_mensual": 10,
+        "sustituto_ahorro": "Planificar diligencias en una sola salida semanal.",
+    },
+    {
+        "id": "retiros_cajero_costo",
+        "categoria": "Transporte y Compras Impulsivas",
+        "concepto": "Retiros en cajeros no propios / transferencias con costo",
+        "monto_unitario_cop": 6500,
+        "frecuencia_mensual": 4,
+        "sustituto_ahorro": "Usar transferencias gratuitas (Transfiya / PSE) y cajeros de su propia red.",
+    },
+    {
+        "id": "compras_impulsivas",
+        "categoria": "Transporte y Compras Impulsivas",
+        "concepto": "Compras impulsivas / ofertas relámpago online",
+        "monto_unitario_cop": 55000,
+        "frecuencia_mensual": 2,
+        "sustituto_ahorro": "Aplicar la regla de espera de 72 horas antes de pagar cualquier oferta no vital.",
+    },
+    {
+        "id": "otro_personalizado",
+        "categoria": "Personalizado",
+        "concepto": "Otro microgasto personalizado",
+        "monto_unitario_cop": 10000,
+        "frecuencia_mensual": 1,
+        "sustituto_ahorro": "Registrar y fijar un tope mensual estricto para gastos varios.",
+    },
+]
+
+_CONFIG_CACHE: Dict[str, Any] | None = None
+
+
+def _obtener_config_rapida(config: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    """Retorna la configuración en memoria evitando lecturas repetitivas de disco en cada cálculo."""
+    global _CONFIG_CACHE
+    if config is not None:
+        return config
+    if _CONFIG_CACHE is None:
+        _CONFIG_CACHE = cargar_configuracion()
+    return _CONFIG_CACHE
+
 
 # ==============================================================================
 # 1. RADIOGRAFÍA DEL SUELDO Y MOTOR DE NÓMINA COLOMBIANA
@@ -146,7 +306,7 @@ def liquidar_ingreso_neto_colombia(
     if ingreso_bruto_mensual_cop < 0:
         raise ValueError("El ingreso bruto mensual no puede ser negativo.")
 
-    cfg = config or cargar_configuracion()
+    cfg = _obtener_config_rapida(config)
     macro = cfg["parametros_macro_colombia"]
     lab = cfg["parametros_laborales_y_tributarios"]
 
@@ -181,7 +341,7 @@ def liquidar_ingreso_neto_colombia(
         provision_intereses_cesantias_mensual_cop = 0.0
     elif modalidad == "Integral":
         min_integral_smmlv = float(lab.get("salario_integral_min_smmlv", 13.0))
-        if salarios_minimos < min_integral_smmlv:
+        if 0 < salarios_minimos < min_integral_smmlv:
             alerta_normativa = (
                 f"En Colombia el Salario Integral exige al menos {min_integral_smmlv:.0f} SMMLV "
                 f"(${min_integral_smmlv * smmlv:,.0f} COP vigentes)."
@@ -315,7 +475,7 @@ def cuantificar_gastos_hormiga_y_fugas(
     3. Costo de oportunidad capitalizado a 5 años (60 meses) y 10 años (120 meses) tanto en
        pesos corrientes (nominal) como en poder adquisitivo constante (real neto de IPC y retefuente).
     """
-    cfg = config or cargar_configuracion()
+    cfg = _obtener_config_rapida(config)
     macro = cfg["parametros_macro_colombia"]
     lab = cfg["parametros_laborales_y_tributarios"]
     uvt = float(macro["uvt_cop"])
@@ -583,6 +743,8 @@ def diagnosticar_presupuesto_y_flujo_caja(
     monto_movimientos_gmf_mensual_cop: float = 0.0,
     cuenta_exenta_4x1000: bool = True,
     detalle_gastos_hormiga: List[Dict[str, Any]] | None = None,
+    tasa_oportunidad_ea: float = 0.10,
+    recorte_hormiga_simulacion_pct: float = 50.0,
     config: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     """
@@ -590,12 +752,14 @@ def diagnosticar_presupuesto_y_flujo_caja(
     - Liquida la Radiografía del Sueldo Colombiano (Empleado, Integral o Independiente OPS).
     - Ejecuta el Balance Termodinámico de Caja y evalúa la Regla 50/30/20.
     - Cuantifica gastos hormiga + fugas financieras (4x1000, cuotas de manejo) y su costo de
-      oportunidad a 5 y 10 años al 10% EA.
+      oportunidad a 5 y 10 años a la tasa `tasa_oportunidad_ea` (por defecto 10% EA).
+    - Ejecuta el Optimizador Ingenieril de Tributos (AFC/FPV), Ranking Pareto 80/20 de Fugas
+      y Simulación Interactiva "¿Qué pasa si...?".
     - Evalúa el Termómetro de Fondo de Emergencia (3 meses empleados / 6 meses independientes)
       y aplica los flujos alternativos FA-01 (Déficit Crítico) y FA-02 (Asignación 80/20).
     - Respeta íntegramente el Contrato de Integración OED hacia los Módulos 2, 3, 4 y 5.
     """
-    cfg = config or cargar_configuracion()
+    cfg = _obtener_config_rapida(config)
     nomina = liquidar_ingreso_neto_colombia(
         ingreso_bruto_mensual_cop=ingreso_bruto_mensual_cop,
         modalidad_laboral=modalidad_laboral,
@@ -612,7 +776,7 @@ def diagnosticar_presupuesto_y_flujo_caja(
         monto_movimientos_gmf_mensual_cop=monto_movimientos_gmf_mensual_cop,
         cuenta_exenta_4x1000=cuenta_exenta_4x1000,
         ingreso_neto_mensual_cop=idn,
-        tasa_oportunidad_ea=0.10,
+        tasa_oportunidad_ea=tasa_oportunidad_ea,
         config=cfg,
     )
     fuga_total_mensual = radiografia_fugas["fuga_total_mensual_cop"]
@@ -645,8 +809,23 @@ def diagnosticar_presupuesto_y_flujo_caja(
         cuotas_deuda_mensual_cop=cuotas_deuda_mensual_cop,
     )
 
-    # Reglas de decisión CU-01 (Camino Feliz vs. FA-01 vs. FA-02)
-    if excedente_mensual_cop < 0:
+    # Reglas de decisión CU-01 (Sesión en Ceros vs. Camino Feliz vs. FA-01 vs. FA-02)
+    if idn <= 0 and egresos_totales <= 0 and liquidez_actual_fondo_emergencia_cop <= 0:
+        estado_flujo_caja = "SESION_EN_CEROS"
+        plan_accion = {
+            "codigo_flujo": "CU-01-INIT",
+            "bloquea_inversion_riesgo": False,
+            "aporte_recomendado_fondo_emergencia_cop": 0.0,
+            "aporte_disponible_portafolio_mod2_cop": 0.0,
+            "meses_estimados_completar_fondo": None,
+            "recorte_inmediato_fugas_cop": 0.0,
+            "recorte_adicional_variables_cop": 0.0,
+            "recomendacion_ejecutiva": (
+                "Sesión de asesoría iniciada en ceros ($0 COP). Ingrese el salario, la modalidad contractual "
+                "y los gastos mensuales del asesorado para generar su radiografía y plan de acción."
+            ),
+        }
+    elif excedente_mensual_cop < 0:
         estado_flujo_caja = "DEFICIT_CRITICO"
         deficit_abs = abs(excedente_mensual_cop)
         recorte_sugerido_fugas = min(fuga_total_mensual, deficit_abs)
@@ -674,6 +853,7 @@ def diagnosticar_presupuesto_y_flujo_caja(
             if aporte_emergencia_80 > 0
             else None
         )
+        plazo_txt = f"durante ~{meses_para_meta} meses " if meses_para_meta is not None else ""
         plan_accion = {
             "codigo_flujo": "FA-02",
             "bloquea_inversion_riesgo": False,
@@ -685,7 +865,7 @@ def diagnosticar_presupuesto_y_flujo_caja(
             "recomendacion_ejecutiva": (
                 f"Fondo de emergencia en construcción ({meses_cobertura_actual:.2f} de {meses_meta_emergencia:.0f} meses). "
                 f"Destine el 80% del excedente (${aporte_emergencia_80:,.0f} COP/mes) a liquidez inmediata "
-                f"(Bolsillo remunerado Fogafín / FIC a la vista) durante ~{meses_para_meta} meses y el 20% "
+                f"(Bolsillo remunerado Fogafín / FIC a la vista) {plazo_txt}y el 20% "
                 f"(${aporte_portafolio_20:,.0f} COP/mes) al Módulo 2."
             ),
         }
@@ -731,7 +911,573 @@ def diagnosticar_presupuesto_y_flujo_caja(
         "estado_flujo_caja": estado_flujo_caja,
     }
     resultado["flujo_sankey"] = construir_estructura_sankey(resultado)
+    resultado["optimizacion_ingenieril"] = optimizar_presupuesto_y_tributos(
+        diagnostico_actual=resultado,
+        monto_movimientos_gmf_mensual_cop=monto_movimientos_gmf_mensual_cop,
+        clase_riesgo_arl=clase_riesgo_arl,
+        recorte_hormiga_pct=recorte_hormiga_simulacion_pct,
+        tasa_oportunidad_ea=tasa_oportunidad_ea,
+        config=cfg,
+    )
+    resultado["guia_asesoria"] = generar_guia_ahorro_y_abstencion(
+        diagnostico_actual=resultado,
+        optimizacion=resultado["optimizacion_ingenieril"],
+        tasa_oportunidad_ea=tasa_oportunidad_ea,
+    )
     return resultado
+
+
+def generar_guia_ahorro_y_abstencion(
+    diagnostico_actual: Dict[str, Any],
+    optimizacion: Dict[str, Any],
+    tasa_oportunidad_ea: float = 0.10,
+) -> Dict[str, Any]:
+    """
+    Genera recomendaciones accionables de asesoría financiera personalizada:
+    1. `consejos_ahorro`: Estrategias cuantificadas en COP para incrementar ahorro, blindar liquidez
+       y optimizar impuestos/costos bancarios según la modalidad laboral del asesorado.
+    2. `en_que_abstenerse`: Lista priorizada de hábitos, productos y compromisos financieros de los
+       cuales el asesorado debe abstenerse de inmediato según su flujo de caja y microgastos reales.
+    """
+    idn = float(diagnostico_actual["ingreso_neto_mensual_cop"])
+    egresos = float(diagnostico_actual["egresos_totales_mensuales_cop"])
+    excedente = float(diagnostico_actual["excedente_mensual_cop"])
+    estado = str(diagnostico_actual["estado_flujo_caja"])
+
+    if estado == "SESION_EN_CEROS" or (idn <= 0 and egresos <= 0):
+        return {
+            "sesion_activa": False,
+            "meta_ahorro_mensual_sugerida_cop": 0.0,
+            "resumen_orientacion": (
+                "Sesión limpia en ceros ($0 COP). Complete los datos del asesorado para obtener "
+                "los consejos personalizados de ahorro y la guía de abstención financiera."
+            ),
+            "consejos_ahorro": [],
+            "en_que_abstenerse": [],
+        }
+
+    nom = diagnostico_actual["liquidacion_nomina"]
+    modalidad = str(nom["modalidad_laboral"])
+    fugas = diagnostico_actual["radiografia_fugas"]
+    bal = diagnostico_actual["balance_50_30_20"]
+    afc_opt = optimizacion["tributaria_afc"]
+    pareto = optimizacion["ranking_pareto_fugas"]
+
+    meta_20_cop = round(max(0.0, idn * 0.20), 2)
+    consejos: List[Dict[str, Any]] = []
+    abstenciones: List[Dict[str, Any]] = []
+
+    # --- A. CONSEJOS PERSONALIZADOS DE AHORRO ---
+    monto_auto = round(max(0.0, min(excedente, meta_20_cop) if excedente > 0 else meta_20_cop * 0.5), 2)
+    vf_auto_10a = valor_futuro_aportes_periodicos(monto_auto, tasa_ea=tasa_oportunidad_ea, meses=120)[
+        "valor_futuro_nominal_cop"
+    ]
+    if excedente > 0:
+        consejos.append(
+            {
+                "titulo": "Automatizar el 'Páguese Primero' el mismo día de nómina",
+                "accion": (
+                    f"Programe un débito automático mensual de ${monto_auto:,.0f} COP hacia un bolsillo remunerado "
+                    f"o FIC a la vista apenas reciba su ingreso, antes de iniciar gastos corrientes."
+                ),
+                "impacto_mensual_cop": monto_auto,
+                "impacto_10a_cop": vf_auto_10a,
+                "prioridad": "ALTA",
+            }
+        )
+    else:
+        brecha = abs(excedente)
+        consejos.append(
+            {
+                "titulo": "Plan de Choque de Caja (Presupuesto Base Cero por 60 días)",
+                "accion": (
+                    f"Congele gastos no vitales para cerrar el déficit de ${brecha:,.0f} COP/mes y liberar "
+                    f"gradualmente su meta saludable de ahorro del 20% (${meta_20_cop:,.0f} COP/mes)."
+                ),
+                "impacto_mensual_cop": round(brecha, 2),
+                "impacto_10a_cop": 0.0,
+                "prioridad": "CRITICA",
+            }
+        )
+
+    # Consejo de Fondo de Emergencia
+    faltante_em = float(diagnostico_actual["faltante_fondo_emergencia_cop"])
+    meta_meses = float(diagnostico_actual["meta_meses_fondo_emergencia"])
+    if not diagnostico_actual["fondo_emergencia_completo"] and faltante_em > 0:
+        aporte_80 = round(max(0.0, excedente * 0.80), 2)
+        consejos.append(
+            {
+                "titulo": f"Blindar Fondo de Emergencia ({meta_meses:.0f} meses — {modalidad})",
+                "accion": (
+                    f"Le faltan ${faltante_em:,.0f} COP para cubrir {meta_meses:.0f} meses de costos fijos vitales. "
+                    "Alójelo en cuenta de alto rendimiento con seguro Fogafín o FIC líquido sin pacto de permanencia."
+                ),
+                "impacto_mensual_cop": aporte_80,
+                "impacto_10a_cop": 0.0,
+                "prioridad": "ALTA",
+            }
+        )
+    elif diagnostico_actual["fondo_emergencia_completo"] and idn > 0:
+        consejos.append(
+            {
+                "titulo": "Fondo de Emergencia Completo: migrar excedentes a inversión productiva",
+                "accion": (
+                    "Su colchón de liquidez ya cumple la meta. Evite dejar dinero ocioso perdiendo poder adquisitivo "
+                    f"frente al IPC y direccione sus ${max(0.0, excedente):,.0f} COP/mes hacia portafolios del Módulo 2."
+                ),
+                "impacto_mensual_cop": round(max(0.0, excedente), 2),
+                "impacto_10a_cop": valor_futuro_aportes_periodicos(
+                    max(0.0, excedente), tasa_ea=tasa_oportunidad_ea, meses=120
+                )["valor_futuro_nominal_cop"],
+                "prioridad": "MEDIA",
+            }
+        )
+
+    # Consejo de rescate del 50% de microgastos
+    hormiga_mes = float(fugas["gastos_hormiga_mensual_cop"])
+    if hormiga_mes > 0:
+        rescate_50 = round(hormiga_mes * 0.50, 2)
+        vf_50 = valor_futuro_aportes_periodicos(rescate_50, tasa_ea=tasa_oportunidad_ea, meses=120)[
+            "valor_futuro_nominal_cop"
+        ]
+        consejos.append(
+            {
+                "titulo": "Regla 50/50 sobre Microgastos Cotidianos",
+                "accion": (
+                    f"Sin eliminar todos sus gustos, reducir a la mitad sus microgastos libera ${rescate_50:,.0f} COP/mes "
+                    f"que invertidos al {tasa_oportunidad_ea * 100:.1f}% EA construyen ${vf_50:,.0f} COP en 10 años."
+                ),
+                "impacto_mensual_cop": rescate_50,
+                "impacto_10a_cop": vf_50,
+                "prioridad": "ALTA" if fugas["alerta_fuga_presion"] else "MEDIA",
+            }
+        )
+
+    # Consejo tributario AFC / FPV
+    if afc_opt["aplica_optimizacion_afc"] and float(afc_opt["ahorro_tributario_mensual_cop"]) > 0:
+        ahorro_trib = float(afc_opt["ahorro_tributario_mensual_cop"])
+        consejos.append(
+            {
+                "titulo": "Capturar subsidio tributario legal vía cuenta AFC o FPV",
+                "accion": (
+                    f"Canalizar ${afc_opt['aporte_afc_optimo_mensual_cop']:,.0f} COP/mes de su ahorro hacia AFC (vivienda) "
+                    f"o Pensión Voluntaria reduce su Retefuente en ${ahorro_trib:,.0f} COP cada mes (Ley 2277/2022)."
+                ),
+                "impacto_mensual_cop": round(ahorro_trib, 2),
+                "impacto_10a_cop": valor_futuro_aportes_periodicos(
+                    ahorro_trib, tasa_ea=tasa_oportunidad_ea, meses=120
+                )["valor_futuro_nominal_cop"],
+                "prioridad": "ALTA",
+            }
+        )
+
+    # Consejo bancario (4x1000 + cuotas manejo)
+    friccion_bancos = float(fugas["friccion_bancaria_mensual_cop"])
+    if friccion_bancos > 0:
+        consejos.append(
+            {
+                "titulo": "Eliminar costos bancarios invisibles (Cuotas de Manejo y 4x1000)",
+                "accion": (
+                    f"Marque su cuenta principal como exenta del 4x1000 (hasta 350 UVT/mes) y migre a cuentas/tarjetas "
+                    f"con $0 cuota de manejo para recuperar ${friccion_bancos:,.0f} COP mensuales."
+                ),
+                "impacto_mensual_cop": round(friccion_bancos, 2),
+                "impacto_10a_cop": valor_futuro_aportes_periodicos(
+                    friccion_bancos, tasa_ea=tasa_oportunidad_ea, meses=120
+                )["valor_futuro_nominal_cop"],
+                "prioridad": "MEDIA",
+            }
+        )
+
+    # Consejo según modalidad laboral
+    prov = nom["provisiones_prestacionales_informativas"]
+    if modalidad == "Empleado" and float(prov["prima_servicios_mensualizada_cop"]) > 0:
+        prima_anual = round(float(prov["prima_servicios_mensualizada_cop"]) * 12.0, 2)
+        consejos.append(
+            {
+                "titulo": "Blindar el 100% de las Primas de Junio y Diciembre",
+                "accion": (
+                    f"Como empleado ordinario, usted acumula ~${prima_anual:,.0f} COP/año en primas legales. "
+                    "Comprométase a invertirlas o abonarlas a capital de deuda en lugar de gastarlas en temporada."
+                ),
+                "impacto_mensual_cop": round(float(prov["prima_servicios_mensualizada_cop"]), 2),
+                "impacto_10a_cop": 0.0,
+                "prioridad": "MEDIA",
+            }
+        )
+    elif modalidad == "Independiente":
+        ss_ops = round(
+            float(nom["salud_obligatoria_cop"]) + float(nom["pension_obligatoria_cop"]) + float(nom["arl_cop"]), 2
+        )
+        consejos.append(
+            {
+                "titulo": "Separar provisión intocable de Seguridad Social PILA e Impuestos",
+                "accion": (
+                    f"Como contratista OPS, aparte inmediatamente ${ss_ops:,.0f} COP/mes para PILA apenas cobre cada "
+                    "cuenta de cobro; nunca mezcle el dinero de seguridad social con la caja de gastos personales."
+                ),
+                "impacto_mensual_cop": ss_ops,
+                "impacto_10a_cop": 0.0,
+                "prioridad": "ALTA",
+            }
+        )
+
+    # --- B. EN QUÉ DEBE ABSTENERSE EL ASESORADO ---
+    if excedente < 0:
+        abstenciones.append(
+            {
+                "habito_o_rubro": "Endeudamiento con tarjeta de crédito, avances y compras a cuotas",
+                "motivo": f"Su flujo actual presenta un déficit de -${abs(excedente):,.0f} COP/mes.",
+                "accion_inmediata": (
+                    "Abstenerse por completo de diferir compras corrientes (mercado, ropa, restaurantes) con tasas "
+                    "cercanas a la usura (~28%-32% EA) y de tomar créditos rotativos para cubrir el mes."
+                ),
+                "ahorro_estimado_mensual_cop": round(abs(excedente), 2),
+                "severidad": "CRITICA",
+            }
+        )
+
+    if not diagnostico_actual["fondo_emergencia_completo"]:
+        abstenciones.append(
+            {
+                "habito_o_rubro": "Inversiones ilíquidas, criptoactivos volátiles o préstamos a familiares/terceros",
+                "motivo": (
+                    f"Su fondo de emergencia cubre solo {diagnostico_actual['meses_fondo_emergencia']:.2f} "
+                    f"de los {meta_meses:.0f} meses requeridos."
+                ),
+                "accion_inmediata": (
+                    "Abstenerse de inmovilizar capital a largo plazo o asumir riesgos sin colchón de liquidez, "
+                    "así como de adquirir nuevos compromisos fijos mensuales."
+                ),
+                "ahorro_estimado_mensual_cop": 0.0,
+                "severidad": "ALTA",
+            }
+        )
+
+    deuda_pct = float(bal.get("servicio_deuda_pct", 0.0))
+    if deuda_pct > 25.0:
+        abstenciones.append(
+            {
+                "habito_o_rubro": "Nuevos créditos, leasing vehicular o ser codeudor/fiador",
+                "motivo": f"El servicio de deuda ya absorbe el {deuda_pct:.1f}% de su ingreso disponible neto.",
+                "accion_inmediata": (
+                    "Abstenerse de adquirir cualquier obligación financiera adicional hasta bajar la carga de deuda "
+                    "por debajo del 20% del ingreso neto (apóyese en bola de nieve/avalancha del Módulo 3)."
+                ),
+                "ahorro_estimado_mensual_cop": round(float(diagnostico_actual["cuotas_deuda_mensual_cop"]) * 0.25, 2),
+                "severidad": "ALTA",
+            }
+        )
+
+    if idn > 0 and not bal["necesidades_50"]["cumple"]:
+        exceso_fijos = max(0.0, float(bal["necesidades_50"].get("desviacion_cop", 0.0)))
+        abstenciones.append(
+            {
+                "habito_o_rubro": "Incrementar costos fijos (mudarse a arriendo más caro o subir planes fijos)",
+                "motivo": f"Sus costos vitales ocupan el {bal['necesidades_50']['real_pct']:.1f}% del sueldo neto (tope sano: 50%).",
+                "accion_inmediata": (
+                    "Abstenerse de asumir contratos fijos más altos y renegociar planes de internet, telefonía, "
+                    "seguros o vivienda."
+                ),
+                "ahorro_estimado_mensual_cop": round(exceso_fijos, 2),
+                "severidad": "MEDIA",
+            }
+        )
+
+    if idn > 0 and not bal["estilo_vida_30"]["cumple"]:
+        exceso_est = max(0.0, float(bal["estilo_vida_30"].get("desviacion_cop", 0.0)))
+        abstenciones.append(
+            {
+                "habito_o_rubro": "Gastos emocionales de quincena y salidas sociales fuera de presupuesto",
+                "motivo": f"Estilo de vida + fugas alcanzan el {bal['estilo_vida_30']['real_pct']:.1f}% del IDN (límite: 30%).",
+                "accion_inmediata": (
+                    "Abstenerse de gastar sin tope semanal; asigne un monto cerrado para ocio y deténgase al agotarlo."
+                ),
+                "ahorro_estimado_mensual_cop": round(exceso_est, 2),
+                "severidad": "MEDIA",
+            }
+        )
+
+    # Abstenciones específicas según los microgastos reales registrados por el usuario
+    for item_p in pareto[:4]:
+        nombre_low = item_p["origen"].lower()
+        monto_m = float(item_p["monto_mensual_cop"])
+        if monto_m <= 0:
+            continue
+
+        if any(k in nombre_low for k in ("apuesta", "casino", "chance", "loter", "juego", "azar")):
+            abstenciones.append(
+                {
+                    "habito_o_rubro": f"Apuestas y juegos de azar ({item_p['origen']})",
+                    "motivo": f"Drena ${monto_m:,.0f} COP/mes con esperanza matemática negativa.",
+                    "accion_inmediata": "Abstenerse al 100% de apuestas deportivas, casinos en línea y juegos de azar.",
+                    "ahorro_estimado_mensual_cop": round(monto_m, 2),
+                    "severidad": "CRITICA",
+                }
+            )
+        elif any(k in nombre_low for k in ("cigarr", "vape", "tabaco", "licor", "cervez", "rumba")):
+            abstenciones.append(
+                {
+                    "habito_o_rubro": f"Consumo recurrente de tabaco/vapeo o licor ({item_p['origen']})",
+                    "motivo": f"Consume ${monto_m:,.0f} COP/mes (${monto_m * 12:,.0f} COP/año) deteriorando salud y caja.",
+                    "accion_inmediata": "Abstenerse de compras habituales y restringir salidas nocturnas a presupuesto fijo.",
+                    "ahorro_estimado_mensual_cop": round(monto_m * 0.75, 2),
+                    "severidad": "ALTA",
+                }
+            )
+        elif any(k in nombre_low for k in ("domicili", "rappi", "almuerz", "restauran", "comida")):
+            abstenciones.append(
+                {
+                    "habito_o_rubro": f"Domicilios y comidas fuera por falta de planeación ({item_p['origen']})",
+                    "motivo": f"Representa ${monto_m:,.0f} COP/mes ({item_p['participacion_pct']}% de sus fugas).",
+                    "accion_inmediata": "Abstenerse de pedir domicilios entre semana; los recargos y propinas encarecen hasta 40% cada plato.",
+                    "ahorro_estimado_mensual_cop": round(monto_m * 0.60, 2),
+                    "severidad": "ALTA" if item_p["impacto_pareto_80"] else "MEDIA",
+                }
+            )
+        elif any(k in nombre_low for k in ("stream", "suscrip", "premium", "app", "musica", "videojueg")):
+            abstenciones.append(
+                {
+                    "habito_o_rubro": f"Suscripciones pasivas y microtransacciones ({item_p['origen']})",
+                    "motivo": f"Cargo automático recurrente de ${monto_m:,.0f} COP/mes.",
+                    "accion_inmediata": "Abstenerse de pagar plataformas simultáneas que no use cada semana; cancele cobros automáticos hoy.",
+                    "ahorro_estimado_mensual_cop": round(monto_m * 0.70, 2),
+                    "severidad": "MEDIA",
+                }
+            )
+        elif any(k in nombre_low for k in ("impuls", "promo", "oferta", "compra")):
+            abstenciones.append(
+                {
+                    "habito_o_rubro": f"Compras impulsivas y 'descuentos relámpago' ({item_p['origen']})",
+                    "motivo": f"Fuga mensual de ${monto_m:,.0f} COP en artículos no presupuestados.",
+                    "accion_inmediata": "Abstenerse de comprar en caliente: aplique la Regla de las 72 Horas y borre tarjetas guardadas en navegadores.",
+                    "ahorro_estimado_mensual_cop": round(monto_m * 0.80, 2),
+                    "severidad": "ALTA",
+                }
+            )
+        elif any(k in nombre_low for k in ("taxi", "movilidad", "uber", "didi", "parquead")):
+            abstenciones.append(
+                {
+                    "habito_o_rubro": f"Transporte individual por urgencia ({item_p['origen']})",
+                    "motivo": f"Gasto evitable de ${monto_m:,.0f} COP/mes.",
+                    "accion_inmediata": "Abstenerse de pedir apps de transporte en tarifa dinámica por salir sobre el tiempo.",
+                    "ahorro_estimado_mensual_cop": round(monto_m * 0.50, 2),
+                    "severidad": "MEDIA",
+                }
+            )
+        elif item_p["impacto_pareto_80"]:
+            abstenciones.append(
+                {
+                    "habito_o_rubro": f"Microgasto reiterativo en «{item_p['origen']}»",
+                    "motivo": f"Concentra ${monto_m:,.0f} COP/mes ({item_p['participacion_pct']}% del drenaje hormiga).",
+                    "accion_inmediata": "Abstenerse del consumo diario automático al detal y sustituirlo por planeación mensual.",
+                    "ahorro_estimado_mensual_cop": round(monto_m * 0.50, 2),
+                    "severidad": "MEDIA",
+                }
+            )
+
+    if not abstenciones:
+        abstenciones.append(
+            {
+                "habito_o_rubro": "Inflación de estilo de vida (Lifestyle Creep) e inversiones no reguladas",
+                "motivo": "Su presupuesto actual está sano y equilibrado.",
+                "accion_inmediata": (
+                    "Abstenerse de elevar sus gastos fijos cuando reciba aumentos salariales y de invertir en "
+                    "esquemas no vigilados por la Superfinanciera de Colombia."
+                ),
+                "ahorro_estimado_mensual_cop": 0.0,
+                "severidad": "PREVENTIVA",
+            }
+        )
+
+    return {
+        "sesion_activa": True,
+        "meta_ahorro_mensual_sugerida_cop": meta_20_cop,
+        "resumen_orientacion": (
+            f"Meta saludable de ahorro (20% IDN): ${meta_20_cop:,.0f} COP/mes · "
+            f"Se identificaron {len(consejos)} acciones de ahorro y {len(abstenciones)} alertas de abstención."
+        ),
+        "consejos_ahorro": consejos,
+        "en_que_abstenerse": abstenciones,
+    }
+
+
+def optimizar_presupuesto_y_tributos(
+    diagnostico_actual: Dict[str, Any],
+    monto_movimientos_gmf_mensual_cop: float = 0.0,
+    clase_riesgo_arl: int = 1,
+    recorte_hormiga_pct: float = 50.0,
+    tasa_oportunidad_ea: float = 0.10,
+    config: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """
+    Motor de Optimización Presupuestal y Tributaria (Sello Ingenieril Mód. 1):
+    1. Búsqueda del punto óptimo (knee-point) de Aporte AFC / FPV bajo Ley 2277 de 2022
+       que maximiza el ahorro mensual en Retención en la Fuente sin aportar pesos ociosos
+       por encima del tope global del 40% / 1340 UVT ni comprometer la liquidez disponible.
+    2. Análisis de Pareto (80/20) sobre todas las fugas presupuestales y bancarias.
+    3. Simulación interactiva "¿Qué pasa si...?" recortando `recorte_hormiga_pct`% de gastos
+       hormiga y eliminando costos bancarios evitables (cuotas de manejo y marcación 4x1000).
+    """
+    cfg = _obtener_config_rapida(config)
+    macro = cfg["parametros_macro_colombia"]
+    lab = cfg["parametros_laborales_y_tributarios"]
+    uvt = float(macro["uvt_cop"])
+
+    nom = diagnostico_actual["liquidacion_nomina"]
+    bruto = float(nom["ingreso_bruto_mensual_cop"])
+    modalidad = str(nom["modalidad_laboral"])
+
+    # 1. Optimización Tributaria AFC / FPV (comparada contra escenario base con $0 AFC)
+    nom_base = liquidar_ingreso_neto_colombia(
+        ingreso_bruto_mensual_cop=bruto,
+        modalidad_laboral=modalidad,
+        aporte_voluntario_afc_fpv_cop=0.0,
+        clase_riesgo_arl=clase_riesgo_arl,
+        config=cfg,
+    )
+    rete_base = float(nom_base["retencion_fuente_cop"])
+    egresos_sin_afc = float(diagnostico_actual["egresos_totales_mensuales_cop"])
+    idn_base = float(nom_base["ingreso_neto_mensual_cop"]) + float(
+        diagnostico_actual.get("otros_ingresos_mensuales_cop", 0.0)
+    )
+    capacidad_caja = max(0.0, idn_base - egresos_sin_afc)
+    tope_legal_afc = bruto * float(lab["beneficio_max_afc_fpv_pct"])
+    limite_busqueda = min(tope_legal_afc, max(capacidad_caja, bruto * 0.15))
+
+    aporte_afc_optimo = 0.0
+    max_ahorro_rete = 0.0
+    if rete_base > 0 and limite_busqueda >= 25_000.0:
+        paso = 25_000.0
+        candidato = paso
+        while candidato <= limite_busqueda + 1.0:
+            nom_cand = liquidar_ingreso_neto_colombia(
+                ingreso_bruto_mensual_cop=bruto,
+                modalidad_laboral=modalidad,
+                aporte_voluntario_afc_fpv_cop=candidato,
+                clase_riesgo_arl=clase_riesgo_arl,
+                config=cfg,
+            )
+            ahorro = max(0.0, rete_base - float(nom_cand["retencion_fuente_cop"]))
+            # Solo avanzar si el incremento sigue produciendo ahorro marginal real (> $500 COP)
+            if ahorro > max_ahorro_rete + 500.0:
+                max_ahorro_rete = ahorro
+                aporte_afc_optimo = candidato
+            if float(nom_cand["retencion_fuente_cop"]) <= 0.01:
+                break
+            candidato += paso
+
+    retorno_fiscal_pct = (max_ahorro_rete / aporte_afc_optimo * 100.0) if aporte_afc_optimo > 0 else 0.0
+
+    # 2. Ranking de Pareto (80/20) de Fugas
+    fugas = diagnostico_actual["radiografia_fugas"]
+    fuentes_fuga: List[Dict[str, Any]] = []
+    for item in fugas.get("detalle_items", []):
+        if float(item["gasto_mensual_cop"]) > 0:
+            fuentes_fuga.append(
+                {
+                    "origen": item["concepto"],
+                    "categoria": "Gasto Hormiga",
+                    "monto_mensual_cop": float(item["gasto_mensual_cop"]),
+                }
+            )
+    if not fuentes_fuga and float(fugas["gastos_hormiga_mensual_cop"]) > 0:
+        fuentes_fuga.append(
+            {
+                "origen": "Gastos hormiga consolidados",
+                "categoria": "Gasto Hormiga",
+                "monto_mensual_cop": float(fugas["gastos_hormiga_mensual_cop"]),
+            }
+        )
+    if float(fugas["cuotas_manejo_mensual_cop"]) > 0:
+        fuentes_fuga.append(
+            {
+                "origen": "Cuotas de manejo y comisiones bancarias",
+                "categoria": "Fricción Bancaria",
+                "monto_mensual_cop": float(fugas["cuotas_manejo_mensual_cop"]),
+            }
+        )
+    gmf_con_exencion = calcular_gmf_4x1000(
+        monto_retiro_mensual_cop=max(0.0, monto_movimientos_gmf_mensual_cop),
+        cuenta_exenta_marcada=True,
+        valor_uvt_cop=uvt,
+    )
+    gmf_evitable = max(0.0, float(fugas["gmf_4x1000_mensual_cop"]) - gmf_con_exencion)
+    if float(fugas["gmf_4x1000_mensual_cop"]) > 0:
+        fuentes_fuga.append(
+            {
+                "origen": "GMF 4x1000",
+                "categoria": "Impuesto Financiero",
+                "monto_mensual_cop": float(fugas["gmf_4x1000_mensual_cop"]),
+            }
+        )
+
+    fuentes_fuga.sort(key=lambda x: x["monto_mensual_cop"], reverse=True)
+    total_fugas_pareto = sum(x["monto_mensual_cop"] for x in fuentes_fuga) or 1.0
+    acum_pct = 0.0
+    ranking_pareto: List[Dict[str, Any]] = []
+    for idx, f_item in enumerate(fuentes_fuga):
+        peso = (f_item["monto_mensual_cop"] / total_fugas_pareto) * 100.0
+        es_vital_80 = acum_pct < 80.0 or idx == 0
+        acum_pct += peso
+        ranking_pareto.append(
+            {
+                "origen": f_item["origen"],
+                "categoria": f_item["categoria"],
+                "monto_mensual_cop": round(f_item["monto_mensual_cop"], 2),
+                "participacion_pct": round(peso, 1),
+                "acumulado_pct": round(min(100.0, acum_pct), 1),
+                "impacto_pareto_80": es_vital_80,
+            }
+        )
+
+    # 3. Simulación Interactiva "¿Qué pasa si...?"
+    pct_recorte = min(100.0, max(0.0, float(recorte_hormiga_pct))) / 100.0
+    ahorro_hormiga_mes = float(fugas["gastos_hormiga_mensual_cop"]) * pct_recorte
+    ahorro_bancos_mes = float(fugas["cuotas_manejo_mensual_cop"]) + gmf_evitable
+    flujo_rescatado_mes = ahorro_hormiga_mes + ahorro_bancos_mes
+
+    excedente_actual = float(diagnostico_actual["excedente_mensual_cop"])
+    excedente_optimizado = excedente_actual + flujo_rescatado_mes + max_ahorro_rete
+    idn_actual = float(diagnostico_actual["ingreso_neto_mensual_cop"])
+    eficiencia_opt_pct = max(0.0, (excedente_optimizado / (idn_actual + max_ahorro_rete)) * 100.0) if idn_actual > 0 else 0.0
+
+    vf_rescatado_5a = valor_futuro_aportes_periodicos(flujo_rescatado_mes, tasa_ea=tasa_oportunidad_ea, meses=60)
+    vf_rescatado_10a = valor_futuro_aportes_periodicos(flujo_rescatado_mes, tasa_ea=tasa_oportunidad_ea, meses=120)
+
+    faltante_em = float(diagnostico_actual["faltante_fondo_emergencia_cop"])
+    meses_actual_em = (
+        faltante_em / (excedente_actual * 0.80) if (faltante_em > 0 and excedente_actual > 0) else 0.0
+    )
+    meses_opt_em = (
+        faltante_em / (excedente_optimizado * 0.80) if (faltante_em > 0 and excedente_optimizado > 0) else 0.0
+    )
+    meses_ganados_emergencia = max(0.0, meses_actual_em - meses_opt_em)
+
+    return {
+        "tributaria_afc": {
+            "aplica_optimizacion_afc": aporte_afc_optimo > 0,
+            "retefuente_sin_afc_cop": round(rete_base, 2),
+            "aporte_afc_optimo_mensual_cop": round(aporte_afc_optimo, 2),
+            "ahorro_tributario_mensual_cop": round(max_ahorro_rete, 2),
+            "ahorro_tributario_anual_cop": round(max_ahorro_rete * 12.0, 2),
+            "retorno_fiscal_inmediato_pct": round(retorno_fiscal_pct, 2),
+        },
+        "simulacion_que_pasa_si": {
+            "recorte_hormiga_aplicado_pct": round(pct_recorte * 100.0, 1),
+            "tasa_ea_simulada_pct": round(tasa_oportunidad_ea * 100.0, 2),
+            "ahorro_recorte_hormiga_mensual_cop": round(ahorro_hormiga_mes, 2),
+            "ahorro_eliminar_friccion_bancaria_cop": round(ahorro_bancos_mes, 2),
+            "flujo_mensual_rescatado_total_cop": round(flujo_rescatado_mes, 2),
+            "excedente_actual_cop": round(excedente_actual, 2),
+            "excedente_optimizado_cop": round(excedente_optimizado, 2),
+            "eficiencia_optimizada_pct": round(eficiencia_opt_pct, 2),
+            "patrimonio_rescatado_5a_cop": vf_rescatado_5a["valor_futuro_nominal_cop"],
+            "patrimonio_rescatado_10a_cop": vf_rescatado_10a["valor_futuro_nominal_cop"],
+            "meses_aceleracion_fondo_emergencia": round(meses_ganados_emergencia, 1),
+        },
+        "ranking_pareto_fugas": ranking_pareto,
+    }
 
 
 def ejecutar_modulo_1_perfil_usuario(
@@ -743,7 +1489,7 @@ def ejecutar_modulo_1_perfil_usuario(
     Toma un diccionario `perfil_usuario` (o carga `perfil_semilla_taller` de `config.yaml`)
     y retorna el perfil enriquecido con las llaves oficiales del Módulo 1.
     """
-    cfg = config or cargar_configuracion()
+    cfg = _obtener_config_rapida(config)
     semilla = dict(cfg.get("perfil_semilla_taller", {}))
     if perfil_usuario:
         semilla.update(perfil_usuario)
@@ -804,7 +1550,7 @@ def guardar_simulacion_presupuesto(
     - Si `guardar_en_historial=True`, registra además una instantánea identificable en
       `historial_simulaciones_mod1.json` para consultar o restaurar distintos salarios/modalidades.
     """
-    cfg = config or cargar_configuracion()
+    cfg = _obtener_config_rapida(config)
     contrato_full = ejecutar_modulo_1_perfil_usuario(datos_entrada, config=cfg)
     diag = contrato_full["diagnostico_mod1"]
     nom = diag["liquidacion_nomina"]
@@ -832,8 +1578,11 @@ def guardar_simulacion_presupuesto(
             datos_entrada.get("monto_movimientos_gmf_mensual_cop", 0.0)
         ),
         "cuenta_exenta_4x1000": bool(datos_entrada.get("cuenta_exenta_4x1000", True)),
-        "detalle_gastos_hormiga": datos_entrada.get("detalle_gastos_hormiga")
-        or diag["radiografia_fugas"]["detalle_items"],
+        "detalle_gastos_hormiga": (
+            datos_entrada["detalle_gastos_hormiga"]
+            if "detalle_gastos_hormiga" in datos_entrada and datos_entrada["detalle_gastos_hormiga"] is not None
+            else diag["radiografia_fugas"]["detalle_items"]
+        ),
     }
 
     registro_activo = {
@@ -915,6 +1664,7 @@ def cargar_simulacion_presupuesto(
         "existe_perfil_guardado": perfil_activo is not None,
         "perfil_activo": perfil_activo,
         "historial": listar_historial_simulaciones(ruta_historial),
+        "catalogo_microgastos": CATALOGO_MICROGASTOS_SUGERIDOS,
     }
 
 
@@ -930,6 +1680,85 @@ def eliminar_simulacion_historial(
     with open(target_hist, "w", encoding="utf-8") as f:
         json.dump(filtrados, f, ensure_ascii=False, indent=2)
     return filtrados
+
+
+def obtener_plantilla_ceros_mod1() -> Dict[str, Any]:
+    """Retorna un formulario limpio en ceros ($0 COP) para iniciar una nueva sesión de asesoría."""
+    return {
+        "modalidad_laboral": "Empleado",
+        "clase_riesgo_arl": 1,
+        "ingreso_bruto_mensual_cop": 0.0,
+        "otros_ingresos_mensuales_cop": 0.0,
+        "aporte_voluntario_afc_fpv_cop": 0.0,
+        "gastos_fijos_vitales_cop": 0.0,
+        "gastos_variables_estilo_vida_cop": 0.0,
+        "gastos_hormiga_mensual_cop": 0.0,
+        "cuotas_deuda_mensual_cop": 0.0,
+        "liquidez_actual_fondo_emergencia_cop": 0.0,
+        "cuotas_manejo_mensual_cop": 0.0,
+        "monto_movimientos_gmf_mensual_cop": 0.0,
+        "cuenta_exenta_4x1000": True,
+        "detalle_gastos_hormiga": [],
+    }
+
+
+def culminar_asesoria_y_reiniciar(
+    datos_cierre: Dict[str, Any] | None = None,
+    nombre_asesorado: str | None = None,
+    guardar_cierre_en_historial: bool = True,
+    ruta_activo: str | Path | None = None,
+    ruta_historial: str | Path | None = None,
+    config: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """
+    Culmina la sesión de asesoría actual y deja la herramienta iniciada en ceros ($0 COP):
+    1. Si `guardar_cierre_en_historial=True` y la asesoría tiene valores mayores a cero,
+       archiva el expediente culminado en `historial_simulaciones_mod1.json`.
+    2. Sobrescribe `perfil_mod1_activo.json` con la plantilla en ceros para que la siguiente
+       atención inicie completamente limpia (incluso tras recargar o reiniciar el navegador).
+    """
+    cfg = _obtener_config_rapida(config)
+    item_archivado: Dict[str, Any] | None = None
+
+    if guardar_cierre_en_historial and datos_cierre:
+        bruto_cierre = float(datos_cierre.get("ingreso_bruto_mensual_cop", 0.0))
+        fijos_cierre = float(datos_cierre.get("gastos_fijos_vitales_cop", 0.0))
+        vars_cierre = float(datos_cierre.get("gastos_variables_estilo_vida_cop", 0.0))
+        items_cierre = datos_cierre.get("detalle_gastos_hormiga") or []
+        tiene_datos = (bruto_cierre > 0) or (fijos_cierre > 0) or (vars_cierre > 0) or (len(items_cierre) > 0)
+        if tiene_datos:
+            etiqueta_cierre = (nombre_asesorado or "").strip()
+            if not etiqueta_cierre:
+                mod_txt = str(datos_cierre.get("modalidad_laboral", "Empleado"))
+                etiqueta_cierre = f"Asesoría culminada — {mod_txt} (${bruto_cierre:,.0f} COP)"
+            guardado_cierre = guardar_simulacion_presupuesto(
+                datos_entrada=datos_cierre,
+                nombre_escenario=etiqueta_cierre,
+                guardar_en_historial=True,
+                ruta_activo=ruta_activo,
+                ruta_historial=ruta_historial,
+                config=cfg,
+            )
+            item_archivado = guardado_cierre.get("item_historial_creado")
+
+    plantilla_ceros = obtener_plantilla_ceros_mod1()
+    reinicio = guardar_simulacion_presupuesto(
+        datos_entrada=plantilla_ceros,
+        nombre_escenario="Nueva Asesoría (En Ceros)",
+        guardar_en_historial=False,
+        ruta_activo=ruta_activo,
+        ruta_historial=ruta_historial,
+        config=cfg,
+    )
+
+    return {
+        "asesoria_culminada": True,
+        "reiniciado_en_ceros": True,
+        "parametros_ceros": plantilla_ceros,
+        "asesoria_archivada": item_archivado,
+        "perfil_activo": reinicio["perfil_activo"],
+        "historial": reinicio["historial"],
+    }
 
 
 # ==============================================================================
