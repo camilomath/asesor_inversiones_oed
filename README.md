@@ -13,20 +13,14 @@ recomendaciones y reportes accionables para apoyar la toma de decisiones.
 
 ## Visión general de la arquitectura
 
-La arquitectura es **notebook-céntrica**: los notebooks de Jupyter actúan como un *pipeline* de
-etapas (ingesta → limpieza → análisis → recomendaciones → reporte), mientras que la lógica
-reutilizable y testeable vive en módulos Python dentro de `src/`. Los datos fluyen de forma
-unidireccional desde fuentes crudas hasta salidas/reportes, pasando por carpetas intermedias.
+La arquitectura del proyecto se orquesta a través del archivo principal `app.py`, el cual actúa como el consultorio médico financiero, ejecutando los módulos paso a paso. La lógica reutilizable y testeable vive en módulos Python dentro de `src/`. Los datos fluyen de forma unidireccional desde fuentes crudas hasta salidas/reportes.
 
 Principios clave:
 
-- **Notebooks = exploración y orquestación.** Cuentan la "historia" del análisis paso a paso.
-- **`src/` = código reutilizable.** Funciones de carga, cálculos financieros y utilidades, fáciles
-  de importar, versionar y probar. Evita duplicar lógica entre notebooks.
-- **Datos fuera del control de versiones.** Los datos crudos y procesados no se versionan (ver
-  `.gitignore`); solo el código y la configuración.
-- **Flujo unidireccional.** Cada etapa consume la salida de la anterior, lo que hace el proceso
-  reproducible y fácil de depurar.
+- **`app.py` = Orquestador principal.** Cuenta la "historia" del análisis paso a paso, desde el Paso 0 al Paso 6.
+- **`src/` = Código reutilizable.** Funciones de carga, cálculos financieros y utilidades, fáciles de importar, versionar y probar. Cada integrante del equipo es dueño de un módulo.
+- **Datos fuera del control de versiones.** Los datos crudos y procesados no se versionan (ver `.gitignore`); solo el código y la configuración.
+- **Flujo unidireccional.** Cada etapa consume la salida de la anterior, lo que hace el proceso reproducible y fácil de depurar.
 
 ---
 
@@ -183,6 +177,7 @@ en `data/raw/` antes de correr `00_ingesta`.
 
 ## Documentación del Taller Antigravity OED
 
+- **[Guía Paso a Paso 'Para Dummies' (`GUIA_PARA_DUMMIES_OED.md`)](./GUIA_PARA_DUMMIES_OED.md)**: Manual introductorio para el equipo con el orden de ejecución de `app.py` y conceptos básicos.
 - **[Especificación Funcional y Casos de Uso (`ESPECIFICACION_FUNCIONAL_OED.md`)](./ESPECIFICACION_FUNCIONAL_OED.md)**: Arquitectura local en Python, marco normativo/financiero colombiano (SFC, Ley 1581/2012, Ley 1266/2008, Ley 546/1999, Ley 1328/2009, Estatuto Tributario) y casos de uso detallados `CU-01` a `CU-06`.
 - **[Plan de Ejecución y Guía por Participante (`PLAN_EJECUCION_TALLER_OED.md`)](./PLAN_EJECUCION_TALLER_OED.md)**: Hoja de ruta paso a paso, contrato de entradas/salidas entre módulos, checklists individuales y comandos sugeridos para el taller.
 
