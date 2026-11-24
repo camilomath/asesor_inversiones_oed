@@ -9,7 +9,9 @@ Implementa:
   Comparativa exacta entre Método Avalancha (óptimo matemático: mayor tasa EA primero)
   y Método Bola de Nieve (óptimo conductual: menor saldo primero).
 - Simulador de Abonos Extraordinarios a Capital bajo la Ley 1328 de 2009 (Derecho a prepago sin sanción
-  eligiendo entre Reducción de Plazo vs. Reducción de Cuota).
+  eligiendo entre Reducción de Plazo vs. Reducción de Cuota) y Compra de Cartera.
+- Interfaz Gráfica Oficial (`render_interfaz_modulo_3_catalina`) alineada 100% con el
+  Manual de Marca OED (`src/oed_design_system.py` — `paso_actual=3`).
 """
 
 from __future__ import annotations
@@ -153,6 +155,7 @@ def simular_abono_extraordinario_ley_1328(
     # Opción A: Reducción de plazo manteniendo cuota_actual
     if cuota_actual <= nuevo_saldo * tasa_em:
         nuevo_plazo_meses = plazo_restante_meses
+        n_exacto = float(plazo_restante_meses)
     else:
         n_exacto = -math.log(1.0 - (nuevo_saldo * tasa_em) / cuota_actual) / math.log(1.0 + tasa_em)
         nuevo_plazo_meses = max(1, math.ceil(n_exacto))
@@ -250,6 +253,11 @@ def optimizar_portafolio_deudas(
     ahorro_avalancha = max(
         0.0, sim_base["costo_financiero_total_cop"] - sim_avalancha["costo_financiero_total_cop"]
     )
+    deuda_prioritaria_avalancha = (
+        sim_avalancha["cronograma_extincion"][0]["obligacion"]
+        if sim_avalancha["cronograma_extincion"]
+        else "Ninguna"
+    )
 
     return {
         "saldo_total_deudas_cop": round(saldo_total_deuda, 2),
@@ -267,9 +275,117 @@ def optimizar_portafolio_deudas(
             "metodo_bola_de_nieve_conductual": sim_bola_nieve,
         },
         "estrategia_optima": "AVALANCHA",
+        "deuda_prioritaria_a_pagar_primero": deuda_prioritaria_avalancha,
         "ahorro_intereses_cop": round(ahorro_avalancha, 2),
         "meses_ahorrados_con_avalancha": max(
             0, sim_base["meses_totales_para_cero_deuda"] - sim_avalancha["meses_totales_para_cero_deuda"]
         ),
         "flujo_caja_liberado_cop": round(cuotas_totales, 2),
     }
+
+
+def render_interfaz_modulo_3_catalina() -> None:
+    """
+    Interfaz Streamlit del Módulo 3 (Catalina Moreno) estructurada en los 5 bloques oficiales
+    del Manual de Marca OED (`src/oed_design_system.py` — `paso_actual=3`).
+    """
+    import pandas as pd
+    import plotly.graph_objects as go
+    import streamlit as st
+
+    from src.oed_design_system import (
+        aplicar_estilo_plotly_oed,
+        formatear_cop_claro,
+        render_encabezado_modulo_oed,
+        render_glosario_interactivo_oed,
+        render_semaforo_ciudadano_oed,
+    )
+
+    # BLOQUE 1: Encabezado OED + Barra de 7 Pasos (`paso_actual=3`)
+    render_encabezado_modulo_oed(paso_actual=3)
+
+    # BLOQUE 2: Datos de la Persona (Caso Semilla o Personalizado)
+    with st.expander("⚙️ 1. Cuéntanos tus datos principales y tus obligaciones actuales", expanded=True):
+        col1, col2 = st.columns(2)
+        ingreso = col1.number_input(
+            "Tu ingreso neto mensual en pesos ($ COP)",
+            min_value=0.0,
+            value=5_915_000.0,
+            step=200_000.0,
+            help="Lo que recibes cada mes después de aportes obligatorios sobre tu IBC.",
+        )
+        abono_extra = col2.number_input(
+            "Cuánto abono extra puedes destinar al mes para salir de deudas ($ COP)",
+            min_value=0.0,
+            value=350_000.0,
+            step=50_000.0,
+            help="Monto adicional por encima de tus cuotas mínimas para acelerar tu plan Avalancha o Bola de Nieve.",
+        )
+
+        deudas_base = [
+            {"nombre": "1. Tarjeta de Crédito Gold", "saldo_cop": 4_800_000.0, "tasa_ea": 0.258, "cuota_mensual_cop": 320_000.0, "seguro_cuota_manejo_cop": 28_000.0},
+            {"nombre": "2. Crédito Rotativo Tienda", "saldo_cop": 1_900_000.0, "tasa_ea": 0.225, "cuota_mensual_cop": 160_000.0, "seguro_cuota_manejo_cop": 14_500.0},
+            {"nombre": "3. Libre Inversión Bancario", "saldo_cop": 9_500_000.0, "tasa_ea": 0.168, "cuota_mensual_cop": 380_000.0, "seguro_cuota_manejo_cop": 18_000.0},
+            {"nombre": "4. Crédito Educativo Libranza", "saldo_cop": 6_200_000.0, "tasa_ea": 0.124, "cuota_mensual_cop": 240_000.0, "seguro_cuota_manejo_cop": 9_500.0},
+        ]
+        df_edit = st.data_editor(pd.DataFrame(deudas_base), num_rows="dynamic", use_container_width=True)
+        lista_deudas = df_edit.to_dict(orient="records")
+
+    res = optimizar_portafolio_deudas(
+        ingreso_neto_mensual_cop=ingreso,
+        abono_extra_mensual_cop=abono_extra,
+        lista_deudas=lista_deudas,
+    )
+
+    ie = res["indice_endeudamiento_pct"]
+    nivel = "verde" if ie <= 30.0 else ("ambar" if ie <= 40.0 else "rojo")
+    primera = res["deuda_prioritaria_a_pagar_primero"]
+
+    # BLOQUE 3: Diagnóstico Financiero (?) + 📌 Plan de Acción + 4 Indicadores Clave
+    render_semaforo_ciudadano_oed(
+        nivel=nivel,
+        titulo_claro=f"Tu estrategia óptima es el método Avalancha empezando por {primera}",
+        explicacion_humana=(
+            f"Con un índice de endeudamiento del {ie:.1f}% y verificando que ninguna obligación supere la "
+            f"Tasa de Usura, aplicar el método Avalancha con Roll-Over te ahorra "
+            f"{formatear_cop_claro(res['ahorro_intereses_cop'])} en intereses EA y seguros, reduciendo tu plazo en "
+            f"{res['meses_ahorrados_con_avalancha']} meses frente a pagar solo el mínimo."
+        ),
+        siguiente_paso_accionable=(
+            f"Destina este mismo mes tu abono extra de {formatear_cop_claro(abono_extra)} como abono a capital con "
+            f"reducción de plazo en '{primera}' amparado en la Ley 1328."
+        ),
+    )
+
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Saldo Total Deudas", formatear_cop_claro(res["saldo_total_deudas_cop"]))
+    k2.metric("Índice Endeudamiento", f"{ie:.1f}%")
+    k3.metric("Ahorro Total Avalancha", formatear_cop_claro(res["ahorro_intereses_cop"]))
+    k4.metric("Pagar Primero", primera)
+
+    # BLOQUE 4: Gráficas Interactivas con la Paleta Oficial OED
+    comp = res["comparativa_estrategias"]
+    fig = go.Figure()
+    for nombre_est, clave_est, color in [
+        ("Pago Mínimo Actual", "pago_minimo_actual", "#DC2626"),
+        ("Bola de Nieve (Menor Saldo)", "metodo_bola_de_nieve_conductual", "#EA580C"),
+        ("Avalancha (Óptimo Matemático)", "metodo_avalancha_optimo_matematico", "#15803D"),
+    ]:
+        hist = comp[clave_est]["historial_mensual"]
+        fig.add_trace(
+            go.Scatter(
+                x=[h["mes"] for h in hist],
+                y=[h["saldo_total_cop"] for h in hist],
+                mode="lines",
+                name=nombre_est,
+                line=dict(color=color, width=3),
+            )
+        )
+    fig = aplicar_estilo_plotly_oed(
+        fig,
+        titulo="Curva de Extinción de tus Deudas en Pesos ($ COP): Avalancha vs. Bola de Nieve",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    # BLOQUE 5: Diccionario Financiero Desplegable
+    render_glosario_interactivo_oed(["EA", "EM", "USURA", "AVALANCHA_NIEVE", "LEY_1328"])

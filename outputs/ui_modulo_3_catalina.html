@@ -3,426 +3,743 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Módulo 3 OED — Gestión y Optimización de Deudas (Catalina Moreno)</title>
+  <title>Paso 3 — Estrategia para Salir de Deudas y Pagar Menos Intereses | OED</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
     :root {
-      --lilac-50: #faf5ff;
-      --lilac-100: #f3e8ff;
-      --lilac-200: #e9d5ff;
-      --lilac-300: #d8b4fe;
-      --lilac-400: #c084fc;
-      --lilac-500: #a855f7;
-      --lilac-600: #9333ea;
-      --lilac-700: #7e22ce;
-      --lilac-800: #6b21a8;
-      --lilac-900: #581c87;
-      --lilac-950: #2e1065;
+      --oed-navy: #0F294A;
+      --oed-blue: #1D4ED8;
+      --oed-orange: #EA580C;
+      --oed-green: #15803D;
+      --oed-amber: #B45309;
+      --oed-red: #B91C1C;
+      --oed-violet: #7C3AED;
+      --oed-bg: #F4F7FB;
+    }
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     }
     body {
-      background: linear-gradient(135deg, #1e0b36 0%, #2e1065 50%, #1a0933 100%);
-      color: #f3e8ff;
+      background-color: var(--oed-bg);
+      color: var(--oed-navy);
+      margin: 0;
+      padding: 18px 22px;
       min-height: 100vh;
     }
-    .lilac-card {
-      background: rgba(59, 7, 100, 0.55);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(216, 180, 254, 0.25);
-      box-shadow: 0 8px 28px rgba(18, 4, 36, 0.45);
+    /* Estilos Oficiales del Manual de Marca OED (src/oed_design_system.py) */
+    .oed-steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 0.85rem;
     }
-    .lilac-input {
-      background: rgba(30, 11, 54, 0.85);
-      border: 1px solid rgba(192, 132, 252, 0.4);
-      color: #faf5ff;
-      transition: all 0.2s ease;
+    .oed-step-pill {
+      font-size: 0.76rem;
+      padding: 5px 11px;
+      border-radius: 999px;
+      border: 1px solid #CBD5E1;
+      background: #FFFFFF;
+      color: #475569;
     }
-    .lilac-input:focus {
+    .oed-step-active {
+      background: #EA580C;
+      color: #FFFFFF;
+      border-color: #EA580C;
+      font-weight: 700;
+      box-shadow: 0 3px 10px rgba(234, 88, 12, 0.25);
+    }
+    .oed-header {
+      background: linear-gradient(135deg, #0F294A 0%, #1D4ED8 100%);
+      color: #FFFFFF;
+      padding: 1.3rem 1.5rem;
+      border-radius: 14px;
+      margin-bottom: 1rem;
+      box-shadow: 0 8px 24px rgba(15, 41, 74, 0.16);
+    }
+    .oed-header h1 {
+      color: #FFFFFF !important;
+      font-size: 1.45rem !important;
+      font-weight: 800;
+      margin: 0 0 0.35rem 0 !important;
+    }
+    .oed-header p {
+      color: #E2E8F0 !important;
+      font-size: 0.92rem !important;
+      margin: 0 !important;
+      line-height: 1.5;
+    }
+    .oed-header .oed-term {
+      border-bottom-color: #93C5FD;
+      background: rgba(255, 255, 255, 0.14);
+      color: #FFFFFF;
+    }
+    .oed-card {
+      background: #FFFFFF;
+      border: 1px solid #DDE4EE;
+      border-radius: 14px;
+      padding: 1.15rem 1.35rem;
+      box-shadow: 0 2px 8px rgba(15, 41, 74, 0.05);
+    }
+    .oed-doc-card {
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin: 0.5rem 0;
+      border-left: 6px solid;
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+    .oed-doc-verde { background: #F0FDF4; border-color: #15803D; color: #14532D; }
+    .oed-doc-azul  { background: #EFF6FF; border-color: #1D4ED8; color: #1E3A8A; }
+    .oed-doc-ambar { background: #FFFBEB; border-color: #B45309; color: #78350F; }
+    .oed-doc-rojo  { background: #FEF2F2; border-color: #B91C1C; color: #7F1D1D; }
+    .oed-rx-box {
+      background: #FFF7ED;
+      border: 1px solid #FED7AA;
+      border-left: 6px solid #EA580C;
+      padding: 0.95rem 1.25rem;
+      border-radius: 12px;
+      margin: 0.6rem 0 0.8rem 0;
+      color: #431407;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+    /* Regla Cero Palabras Huérfanas: Burbujas interactivas (?) */
+    .oed-term {
+      position: relative;
+      border-bottom: 2px dotted #1D4ED8;
+      cursor: help;
+      font-weight: 600;
+      padding: 0 3px;
+      border-radius: 4px;
+      background: rgba(29, 78, 216, 0.07);
+      display: inline-block;
+    }
+    .oed-q {
+      font-size: 0.66em;
+      color: #FFFFFF;
+      background: #1D4ED8;
+      border-radius: 999px;
+      padding: 0 4px;
+      margin-left: 2px;
+      font-weight: 700;
+    }
+    .oed-term:hover::after, .oed-term:focus::after {
+      content: attr(data-tip);
+      position: absolute;
+      left: 0;
+      bottom: 125%;
+      min-width: 270px;
+      max-width: 350px;
+      background: #0F294A;
+      color: #FFFFFF;
+      padding: 9px 12px;
+      border-radius: 9px;
+      font-size: 0.78rem;
+      font-weight: 400;
+      line-height: 1.42;
+      z-index: 9999;
+      box-shadow: 0 10px 24px rgba(15, 41, 74, 0.32);
+      white-space: normal;
+    }
+    .oed-input {
+      background: #F8FAFC;
+      border: 1px solid #CBD5E1;
+      color: #0F294A;
+      border-radius: 8px;
+      transition: all 0.18s ease;
+    }
+    .oed-input:focus {
       outline: none;
-      border-color: #d8b4fe;
-      box-shadow: 0 0 0 2px rgba(192, 132, 252, 0.35);
+      background: #FFFFFF;
+      border-color: #1D4ED8;
+      box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.16);
     }
-    .btn-mode-active {
-      background: linear-gradient(90deg, #9333ea, #c084fc);
-      color: #ffffff;
-      box-shadow: 0 4px 14px rgba(168, 85, 247, 0.45);
-      border: 1px solid #e9d5ff;
+    .btn-oed-primary {
+      background: #1D4ED8;
+      color: #FFFFFF;
+      border: 1px solid #1D4ED8;
+      font-weight: 700;
     }
-    .btn-mode-inactive {
-      background: rgba(88, 28, 135, 0.5);
-      color: #e9d5ff;
-      border: 1px solid rgba(192, 132, 252, 0.3);
+    .btn-oed-primary:hover { background: #1E40AF; }
+    .btn-oed-action {
+      background: #EA580C;
+      color: #FFFFFF;
+      border: 1px solid #EA580C;
+      font-weight: 700;
     }
-    .btn-mode-inactive:hover {
-      background: rgba(126, 34, 206, 0.65);
+    .btn-oed-action:hover { background: #C2410C; }
+    .btn-oed-secondary {
+      background: #FFFFFF;
+      color: #0F294A;
+      border: 1px solid #CBD5E1;
+      font-weight: 600;
+    }
+    .btn-oed-secondary:hover {
+      background: #EFF6FF;
+      border-color: #1D4ED8;
+      color: #1D4ED8;
+    }
+    .metric-card {
+      background: #FFFFFF;
+      border: 1px solid #DDE4EE;
+      border-top: 4px solid #1D4ED8;
+      border-radius: 12px;
+      padding: 0.9rem 1.1rem;
     }
   </style>
 </head>
-<body class="antialiased p-4 md:p-6 m-0">
-  <div class="max-w-6xl mx-auto space-y-5">
+<body>
+  <div class="max-w-6xl mx-auto space-y-4">
 
-    <!-- ENCABEZADO Y SELECTOR DE MODO (PERSONALIZADO vs CASO SEMILLA vs ESCENARIOS TEST) -->
-    <div class="lilac-card rounded-2xl p-5 space-y-4">
+    <!-- =================================================================== -->
+    <!-- BLOQUE 1: BARRA DE PROGRESO (PASOS 0 AL 6) + ENCABEZADO ASESOR OED  -->
+    <!-- =================================================================== -->
+    <div class="oed-steps">
+      <span class="oed-step-pill">Paso 0: 🤝 Bienvenida a OED y Protección de tus Datos</span>
+      <span class="oed-step-pill">Paso 1: 🎯 Tu Perfil de Riesgo y Criterio de Inversión</span>
+      <span class="oed-step-pill">Paso 2: 📊 Análisis de tu Sueldo, Gastos y Flujo de Caja</span>
+      <span class="oed-step-pill oed-step-active">Paso 3: 🔓 Estrategia para Salir de Deudas y Pagar Menos Intereses</span>
+      <span class="oed-step-pill">Paso 4: 🌱 Plan de Inversión Mensual desde tu Sueldo</span>
+      <span class="oed-step-pill">Paso 5: 🏡 Viabilidad para Comprar Vivienda o Invertir en Finca Raíz</span>
+      <span class="oed-step-pill">Paso 6: 🛡️ Prueba de Estrés Financiero para tus Grandes Metas</span>
+    </div>
+
+    <div class="oed-header">
       <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/25 text-purple-200 border border-purple-300/30 mb-1.5">
-            <span>🌸 Sistema Local Asesor Financiero OED • Módulo 3</span>
+          <div class="inline-flex items-center gap-2 px-3 py-0.5 rounded-full text-xs font-bold bg-white/15 text-white mb-2">
+            <span>💼 Manual de Marca OED: "Asesor Financiero de Confianza"</span>
             <span>•</span>
-            <span id="indicadorModoActivo" class="text-fuchsia-200 font-bold">Modo: Caso Semilla OED</span>
+            <span id="indicadorModoActivo" class="text-orange-300">Modo: Caso Semilla OED</span>
           </div>
-          <h1 class="text-xl md:text-2xl font-bold text-white tracking-tight">
-            Gestión, Administración y Optimización Analítica de Deudas — Catalina Moreno
-          </h1>
-          <p class="text-xs text-purple-200/80 mt-0.5">
-            Normativa SFC Colombia: Tasas compuestas (EA ↔ EM), Límite de Usura SFC (26.50% EA), Avalancha vs. Bola de Nieve con Roll-Over y Ley 1328 de 2009.
+          <h1>🔓 Paso 3 — Estrategia para Salir de Deudas y Pagar Menos Intereses</h1>
+          <p id="headerSaludoEnriquecido">
+            💼 <i>"Si tienes créditos con tasas altas cercanas a la Tasa de Usura, prioricemos su pago con Avalancha o Bola de Nieve y aprovechemos la Ley 1328 para liberar flujo mensual."</i><br>
+            <small>Responsable OED en esta etapa: <b>Catalina Moreno</b> · Módulo 3: Optimización Analítica de Deudas (`src/mod3_gestion_deudas.py`)</small>
           </p>
         </div>
-
-        <!-- Botones Principales: Modo Personalizado vs Caso Semilla -->
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
           <button id="btnModoPersonalizado" onclick="activarModoPersonalizado()"
-            class="btn-mode-inactive px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+            class="btn-oed-secondary px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5">
             ✍️ Diligenciar Mis Propios Datos (En Blanco)
           </button>
           <button id="btnModoSemilla" onclick="cargarEscenario('base')"
-            class="btn-mode-active px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+            class="btn-oed-action px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5">
             🌱 Cargar Caso Semilla OED
           </button>
         </div>
       </div>
-
-      <!-- Barra de Escenarios de Test (Test Módulo 3 + Test de Usabilidad) -->
-      <div class="pt-3 border-t border-purple-300/20 flex flex-wrap items-center justify-between gap-2">
-        <div class="flex flex-wrap items-center gap-1.5">
-          <span class="text-xs text-purple-200/90 font-semibold mr-1">🧪 Escenarios Test Módulo 3:</span>
-          <button onclick="cargarEscenario('tc01_rojo')" id="btn_tc01_rojo" class="btn-mode-inactive px-2.5 py-1 rounded-lg text-xs font-medium transition">
-            TC-01: Sobreendeudamiento (45%)
-          </button>
-          <button onclick="cargarEscenario('tc02_usura')" id="btn_tc02_usura" class="btn-mode-inactive px-2.5 py-1 rounded-lg text-xs font-medium transition">
-            TC-02: Alerta Usura SFC (42% EA)
-          </button>
-          <button onclick="cargarEscenario('tc03_io')" id="btn_tc03_io" class="btn-mode-inactive px-2.5 py-1 rounded-lg text-xs font-medium transition">
-            TC-03: Avalancha vs. Nieve
-          </button>
-        </div>
-        <button onclick="toggleModalUsabilidad()" class="px-3 py-1 rounded-lg text-xs font-semibold bg-fuchsia-500/25 text-fuchsia-200 border border-fuchsia-300/40 hover:bg-fuchsia-500/40 transition">
-          📋 Ver Reporte Test de Usabilidad (3 Iteraciones)
-        </button>
-      </div>
     </div>
 
-    <!-- PANEL COLAPSABLE: REPORTE DEL TEST DE USABILIDAD (3 ITERACIONES) -->
-    <div id="panelUsabilidad" class="hidden lilac-card rounded-2xl p-5 space-y-3 border-2 border-fuchsia-400/50">
-      <div class="flex items-center justify-between">
-        <h2 class="text-sm font-bold text-fuchsia-200">
-          ✨ Auditoría y Test de Usabilidad (3 Iteraciones Aplicadas en esta Interfaz Lila)
-        </h2>
-        <button onclick="toggleModalUsabilidad()" class="text-xs text-purple-200 hover:text-white">✕ Cerrar</button>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-        <div class="p-3 rounded-xl bg-purple-950/60 border border-purple-400/30 space-y-1">
-          <div class="font-bold text-purple-200">Iteración 1: Libertad de Entrada y Control del Usuario</div>
-          <p class="text-purple-100/80"><b>Hallazgo:</b> El usuario quedaba atado a los datos precargados del Caso Semilla y era tedioso borrar fila por fila.</p>
-          <p class="text-fuchsia-300"><b>Mejora Aplicada:</b> Se creó el modo <b>"✍️ Diligenciar Mis Propios Datos"</b> + un formulario guiado para agregar cualquier obligación personalizada y el botón <b>"🌱 Cargar Caso Semilla OED"</b> para restaurar el ejemplo con un clic.</p>
-        </div>
-        <div class="p-3 rounded-xl bg-purple-950/60 border border-purple-400/30 space-y-1">
-          <div class="font-bold text-purple-200">Iteración 2: Claridad Financiera, Cuota Mínima y Formato COP</div>
-          <p class="text-purple-100/80"><b>Hallazgo:</b> Al digitar saldos grandes sin separadores o cuotas menores a los intereses mensuales, el usuario no sabía por qué una deuda no bajaba.</p>
-          <p class="text-fuchsia-300"><b>Mejora Aplicada:</b> Se añadieron etiquetas en vivo en pesos colombianos (<code>$ COP</code>), el botón <b>"Auto-calcular Cuota (36m)"</b> y alerta automática si la cuota digitada no cubre los intereses del mes.</p>
-        </div>
-        <div class="p-3 rounded-xl bg-purple-950/60 border border-purple-400/30 space-y-1">
-          <div class="font-bold text-purple-200">Iteración 3: Jerarquía Visual Lila y Sincronización 1-Clic</div>
-          <p class="text-purple-100/80"><b>Hallazgo:</b> Para probar el Simulador Ley 1328 con una deuda de la tabla superior había que copiar los datos a mano.</p>
-          <p class="text-fuchsia-300"><b>Mejora Aplicada:</b> Paleta armónica en tonos lilas/violetas de alto contraste WCAG AA y botón <b>"📥 Enviar a Ley 1328"</b> en cada fila de la tabla para simular prepagos con un solo clic.</p>
-        </div>
-      </div>
-    </div>
+    <!-- =================================================================== -->
+    <!-- BLOQUE 2: DATOS DE LA PERSONA (EXPANDER LIMPIO + ESCENARIOS TEST)   -->
+    <!-- =================================================================== -->
+    <details open class="oed-card group">
+      <summary class="cursor-pointer font-bold text-sm md:text-base text-[#0F294A] flex items-center justify-between select-none">
+        <span>⚙️ 1. Cuéntanos tus datos principales y tus obligaciones actuales (Bloque 2 OED)</span>
+        <span class="text-xs font-normal text-slate-500">Haz clic para plegar/desplegar · Incluye ayudas (?)</span>
+      </summary>
 
-    <!-- PARÁMETROS FINANCIEROS DEL HOGAR Y SEMÁFORO -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-      <div class="lilac-card rounded-xl p-3.5">
-        <div class="flex justify-between items-center mb-1">
-          <label class="text-xs text-purple-200 font-medium">Ingreso Neto Mensual</label>
-          <span id="lblIngresoFmt" class="text-xs font-mono text-fuchsia-300 font-semibold">$5.915.000</span>
-        </div>
-        <input id="ingresoNeto" type="number" min="0" step="100000" value="5915000" oninput="recalcularTodo()"
-          placeholder="Ej: 4500000"
-          class="lilac-input w-full px-3 py-1.5 rounded-lg text-sm font-mono" />
-      </div>
-
-      <div class="lilac-card rounded-xl p-3.5">
-        <div class="flex justify-between items-center mb-1">
-          <label class="text-xs text-purple-200 font-medium">Abono Extra Mensual</label>
-          <span id="lblAbonoFmt" class="text-xs font-mono text-fuchsia-300 font-semibold">$350.000</span>
-        </div>
-        <input id="abonoExtra" type="number" min="0" step="50000" value="350000" oninput="recalcularTodo()"
-          placeholder="Ej: 200000"
-          class="lilac-input w-full px-3 py-1.5 rounded-lg text-sm font-mono" />
-      </div>
-
-      <div class="lilac-card rounded-xl p-3.5">
-        <div class="flex justify-between items-center mb-1">
-          <label class="text-xs text-purple-200 font-medium">Tope Usura SFC (% EA)</label>
-          <span class="text-xs font-mono text-purple-300">Art. 884 C.Co.</span>
-        </div>
-        <input id="usuraSfc" type="number" min="1" max="100" step="0.1" value="26.50" oninput="recalcularTodo()"
-          class="lilac-input w-full px-3 py-1.5 rounded-lg text-sm font-mono" />
-      </div>
-
-      <div class="lilac-card rounded-xl p-3.5 flex flex-col justify-between">
-        <span class="text-xs text-purple-200 font-medium">Semáforo Índice Endeudamiento</span>
-        <div id="badgeSemaforo" class="text-xs font-bold font-mono py-1.5 px-2.5 rounded-lg text-center mt-1">
-          Calculando...
-        </div>
-      </div>
-    </div>
-
-    <!-- KPIS PRINCIPALES -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <div class="lilac-card rounded-xl p-3.5">
-        <div class="text-xs text-purple-200/80">Saldo Total Pasivos</div>
-        <div id="kpiSaldoTotal" class="text-lg font-bold font-mono text-white mt-1">$0</div>
-        <div id="kpiCuotaTotal" class="text-xs text-purple-200/80 mt-0.5">Cuota mensual: $0</div>
-      </div>
-      <div class="lilac-card rounded-xl p-3.5">
-        <div class="text-xs text-purple-200/80">Estrategia Óptima Recomendada</div>
-        <div id="kpiEstrategia" class="text-lg font-bold text-fuchsia-300 mt-1">AVALANCHA</div>
-        <div id="kpiMesesAvalancha" class="text-xs text-purple-200/80 mt-0.5">0 meses hasta Cero Deuda</div>
-      </div>
-      <div class="lilac-card rounded-xl p-3.5">
-        <div class="text-xs text-purple-200/80">Ahorro Total con Avalancha</div>
-        <div id="kpiAhorro" class="text-lg font-bold font-mono text-emerald-300 mt-1">$0</div>
-        <div id="kpiMesesAhorrados" class="text-xs text-purple-200/80 mt-0.5">0 meses ahorrados vs. mínimo</div>
-      </div>
-      <div class="lilac-card rounded-xl p-3.5">
-        <div class="text-xs text-purple-200/80">Estado Legal Usura SFC</div>
-        <div id="kpiUsuraEstado" class="text-sm font-bold mt-1">En regla</div>
-        <div id="kpiUsuraDetalle" class="text-xs text-purple-200/80 mt-0.5">Todas las tasas bajo el límite</div>
-      </div>
-    </div>
-
-    <!-- SECCIÓN 1: FORMULARIO RÁPIDO PARA DILIGENCIAR NUEVA DEUDA + TABLA EDITABLE -->
-    <div class="lilac-card rounded-2xl p-4 md:p-5 space-y-4">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-        <div>
-          <h2 class="text-sm font-bold text-white">1. Inventario de Pasivos y Diligenciamiento Libre de Obligaciones</h2>
-          <p class="text-xs text-purple-200/80">
-            Edita directamente cualquier celda de la tabla o usa el formulario rápido inferior para agregar tus propias deudas.
-          </p>
-        </div>
-        <div class="flex gap-2">
-          <button onclick="activarModoPersonalizado()" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-purple-800/70 text-purple-100 border border-purple-400/30 hover:bg-purple-700/70">
-            🗑️ Vaciar y Empezar de Cero
-          </button>
-          <button onclick="cargarEscenario('base')" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-fuchsia-600/80 text-white hover:bg-fuchsia-500">
-            🌱 Restaurar Caso Semilla
+      <div class="mt-4 space-y-4 border-t border-slate-200 pt-4">
+        <!-- Botones de Escenarios de Prueba ("Test Modulo 3") y Test Usabilidad -->
+        <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-xs font-bold text-[#0F294A] mr-1">🧪 Escenarios Test Módulo 3:</span>
+            <button onclick="cargarEscenario('tc01_rojo')" class="btn-oed-secondary px-2.5 py-1 rounded-lg text-xs">
+              TC-01: Sobreendeudamiento (45%)
+            </button>
+            <button onclick="cargarEscenario('tc02_usura')" class="btn-oed-secondary px-2.5 py-1 rounded-lg text-xs">
+              TC-02: Alerta Usura SFC (42% EA)
+            </button>
+            <button onclick="cargarEscenario('tc03_io')" class="btn-oed-secondary px-2.5 py-1 rounded-lg text-xs">
+              TC-03: Avalancha vs. Bola de Nieve
+            </button>
+          </div>
+          <button onclick="toggleModalUsabilidad()" class="px-3 py-1 rounded-lg text-xs font-semibold bg-violet-100 text-violet-800 border border-violet-300 hover:bg-violet-200 transition">
+            📋 Ver Test de Usabilidad (3 Iteraciones)
           </button>
         </div>
-      </div>
 
-      <!-- Formulario Guiado (Iteración 1 y 2 de Usabilidad) -->
-      <div class="p-3.5 rounded-xl bg-purple-950/65 border border-purple-400/30 space-y-2.5">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold text-fuchsia-200">➕ Diligenciar Nueva Obligación Personalizada:</span>
-          <button onclick="sugerirCuotaFormulario()" class="text-xs text-fuchsia-300 underline hover:text-white">
-            ✨ Auto-calcular cuota sugerida (36 meses)
-          </button>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-6 gap-2 text-xs">
-          <div class="md:col-span-2">
-            <label class="block text-purple-200/90 mb-0.5">Nombre de la Deuda / Entidad</label>
-            <input id="nuevoNombre" type="text" placeholder="Ej: Tarjeta Bancolombia / ICETEX"
-              class="lilac-input w-full px-2.5 py-1.5 rounded-lg text-xs" />
+        <!-- Panel colapsable del Test de Usabilidad -->
+        <div id="panelUsabilidad" class="hidden p-4 rounded-xl bg-violet-50 border border-violet-300 text-xs space-y-2">
+          <div class="flex justify-between items-center">
+            <b class="text-violet-900">✨ Evolución de Usabilidad Aplicada (3 Iteraciones + Manual de Marca OED)</b>
+            <button onclick="toggleModalUsabilidad()" class="text-violet-700 font-bold">✕ Cerrar</button>
           </div>
-          <div>
-            <label class="block text-purple-200/90 mb-0.5">Saldo Actual (COP)</label>
-            <input id="nuevoSaldo" type="number" step="100000" placeholder="Ej: 5000000"
-              class="lilac-input w-full px-2.5 py-1.5 rounded-lg text-xs font-mono" />
-          </div>
-          <div>
-            <label class="block text-purple-200/90 mb-0.5">Tasa Efectiva (% EA)</label>
-            <input id="nuevaTasa" type="number" step="0.1" placeholder="Ej: 24.5"
-              class="lilac-input w-full px-2.5 py-1.5 rounded-lg text-xs font-mono" />
-          </div>
-          <div>
-            <label class="block text-purple-200/90 mb-0.5">Cuota Fija Mes (COP)</label>
-            <input id="nuevaCuota" type="number" step="10000" placeholder="Ej: 250000"
-              class="lilac-input w-full px-2.5 py-1.5 rounded-lg text-xs font-mono" />
-          </div>
-          <div>
-            <label class="block text-purple-200/90 mb-0.5">Seguro/Manejo (COP)</label>
-            <div class="flex gap-1">
-              <input id="nuevoSeguro" type="number" step="5000" placeholder="Ej: 18000"
-                class="lilac-input w-full px-2 py-1.5 rounded-lg text-xs font-mono" />
-              <button onclick="agregarDesdeFormulario()"
-                class="px-3 py-1.5 rounded-lg font-bold bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:opacity-95 whitespace-nowrap">
-                Agregar
-              </button>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="bg-white p-2.5 rounded-lg border border-violet-200">
+              <b class="text-[#0F294A]">Iteración 1 (Libertad de Datos):</b> Selector 1-clic entre <i>"✍️ Diligenciar Mis Propios Datos"</i> y <i>"🌱 Cargar Caso Semilla OED"</i> + formulario rápido.
+            </div>
+            <div class="bg-white p-2.5 rounded-lg border border-violet-200">
+              <b class="text-[#0F294A]">Iteración 2 (Prevención de Errores):</b> Etiquetas en vivo en <code>$ COP</code>, botón de auto-cálculo de cuota francesa a 36m y alerta si la cuota no cubre intereses.
+            </div>
+            <div class="bg-white p-2.5 rounded-lg border border-violet-200">
+              <b class="text-[#0F294A]">Iteración 3 (Manual de Marca OED):</b> Estructura de 5 bloques, paleta Azul Solidez (<code>#0F294A</code>) + Naranja Plan de Acción (<code>#EA580C</code>) y regla <i>"Cero Palabras Huérfanas"</i> con burbujas <b>?</b>.
             </div>
           </div>
         </div>
-        <div id="msgFormulario" class="text-xs text-fuchsia-300 hidden"></div>
+
+        <!-- 3 Columnas de Parámetros Principales del Hogar -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-xs font-semibold text-[#0F294A]" id="lblHelpIngreso">
+                Tu ingreso neto mensual ($ COP)
+              </label>
+              <span id="lblIngresoFmt" class="text-xs font-mono font-bold text-[#1D4ED8]">$5.915.000 COP</span>
+            </div>
+            <input id="ingresoNeto" type="number" min="0" step="100000" value="5915000" oninput="recalcularTodo()"
+              class="oed-input w-full px-3 py-1.5 text-sm font-mono" />
+            <div class="text-[11px] text-slate-500 mt-1">Lo que recibes libre después de aportes sobre tu IBC.</div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-xs font-semibold text-[#0F294A]">
+                Cuánto abono extra puedes destinar al mes ($ COP)
+              </label>
+              <span id="lblAbonoFmt" class="text-xs font-mono font-bold text-[#EA580C]">$350.000 COP</span>
+            </div>
+            <input id="abonoExtra" type="number" min="0" step="50000" value="350000" oninput="recalcularTodo()"
+              class="oed-input w-full px-3 py-1.5 text-sm font-mono" />
+            <div class="text-[11px] text-slate-500 mt-1">Dinero adicional a tus cuotas fijas para acelerar tu salida de deudas.</div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-xs font-semibold text-[#0F294A]" id="lblHelpUsura">
+                Tasa de Usura SFC vigente (% EA)
+              </label>
+              <span class="text-xs font-mono font-semibold text-slate-600">Tope Legal Colombia</span>
+            </div>
+            <input id="usuraSfc" type="number" min="1" max="100" step="0.1" value="26.50" oninput="recalcularTodo()"
+              class="oed-input w-full px-3 py-1.5 text-sm font-mono" />
+            <div class="text-[11px] text-slate-500 mt-1">Certificada por la Superintendencia Financiera (1.5 × IBC).</div>
+          </div>
+        </div>
+
+        <!-- Formulario Guiado para Agregar Obligación Personalizada -->
+        <div class="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-xs font-bold text-[#0F294A]">➕ Agregar una obligación financiera personalizada a tu inventario:</span>
+            <button onclick="sugerirCuotaFormulario()" class="text-xs font-semibold text-[#1D4ED8] underline hover:text-blue-900">
+              ✨ Auto-calcular cuota fija sugerida (36 meses)
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-6 gap-2 text-xs">
+            <div class="md:col-span-2">
+              <label class="block text-slate-700 font-medium mb-0.5">Nombre de la Deuda / Entidad</label>
+              <input id="nuevoNombre" type="text" placeholder="Ej: Tarjeta Bancolombia / ICETEX"
+                class="oed-input w-full px-2.5 py-1.5 text-xs" />
+            </div>
+            <div>
+              <label class="block text-slate-700 font-medium mb-0.5">Saldo Actual ($ COP)</label>
+              <input id="nuevoSaldo" type="number" step="100000" placeholder="Ej: 5000000"
+                class="oed-input w-full px-2.5 py-1.5 text-xs font-mono" />
+            </div>
+            <div>
+              <label class="block text-slate-700 font-medium mb-0.5">Tasa Efectiva (% EA)</label>
+              <input id="nuevaTasa" type="number" step="0.1" placeholder="Ej: 24.5"
+                class="oed-input w-full px-2.5 py-1.5 text-xs font-mono" />
+            </div>
+            <div>
+              <label class="block text-slate-700 font-medium mb-0.5">Cuota Fija Mes ($ COP)</label>
+              <input id="nuevaCuota" type="number" step="10000" placeholder="Ej: 250000"
+                class="oed-input w-full px-2.5 py-1.5 text-xs font-mono" />
+            </div>
+            <div>
+              <label class="block text-slate-700 font-medium mb-0.5">Seguro/Manejo ($ COP)</label>
+              <div class="flex gap-1">
+                <input id="nuevoSeguro" type="number" step="5000" placeholder="Ej: 18000"
+                  class="oed-input w-full px-2 py-1.5 text-xs font-mono" />
+                <button onclick="agregarDesdeFormulario()" class="btn-oed-primary px-3 py-1.5 rounded-lg text-xs whitespace-nowrap">
+                  Agregar
+                </button>
+              </div>
+            </div>
+          </div>
+          <div id="msgFormulario" class="text-xs text-[#1D4ED8] font-medium hidden"></div>
+        </div>
+
+        <!-- Tabla Editable de Obligaciones -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs border-collapse">
+            <thead>
+              <tr class="border-b-2 border-slate-200 text-left text-[#0F294A] bg-slate-50">
+                <th class="py-2.5 px-2">Obligación Financiera</th>
+                <th class="py-2.5 px-2">Saldo Actual ($ COP)</th>
+                <th class="py-2.5 px-2">Tasa (% EA)</th>
+                <th class="py-2.5 px-2">Equivalente (% EM)</th>
+                <th class="py-2.5 px-2">Cuota Fija ($ COP)</th>
+                <th class="py-2.5 px-2">Seguro/Manejo ($ COP)</th>
+                <th class="py-2.5 px-2">Validador Tasa de Usura SFC</th>
+                <th class="py-2.5 px-2 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tablaDeudasBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+
+    <!-- =================================================================== -->
+    <!-- BLOQUE 3: DIAGNÓSTICO FINANCIERO (?) + 📌 PLAN DE ACCIÓN + 4 KPIS   -->
+    <!-- =================================================================== -->
+    <div class="oed-card space-y-3">
+      <div class="text-xs uppercase tracking-wider font-bold text-[#1D4ED8]">
+        Bloque 3 OED • Diagnóstico de tu Asesor Financiero de Confianza ("Cero Palabras Huérfanas")
       </div>
 
-      <!-- Tabla Editable -->
-      <div class="overflow-x-auto">
-        <table class="w-full text-xs border-collapse">
-          <thead>
-            <tr class="border-b border-purple-300/25 text-left text-purple-200">
-              <th class="py-2 pr-2">Obligación Financiera</th>
-              <th class="py-2 px-2">Saldo Actual (COP)</th>
-              <th class="py-2 px-2">Tasa (% EA)</th>
-              <th class="py-2 px-2">Tasa (% EM)</th>
-              <th class="py-2 px-2">Cuota Fija (COP)</th>
-              <th class="py-2 px-2">Seguro/Manejo (COP)</th>
-              <th class="py-2 px-2">Control Usura SFC</th>
-              <th class="py-2 pl-2 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tablaDeudasBody"></tbody>
-        </table>
+      <!-- Semáforo Ciudadano OED con burbujas (?) automáticas -->
+      <div id="semaforoCiudadanoContainer"></div>
+
+      <!-- 📌 Plan de Acción para este Mes -->
+      <div id="planAccionContainer"></div>
+
+      <!-- 4 Tarjetas de Indicadores Clave (st.metric style) -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
+        <div class="metric-card">
+          <div class="text-xs text-slate-500 font-medium">Saldo Total Pasivos</div>
+          <div id="kpiSaldoTotal" class="text-lg font-extrabold font-mono text-[#0F294A] mt-1">$0 COP</div>
+          <div id="kpiCuotaTotal" class="text-xs text-slate-600 mt-0.5">Cuota mensual: $0 COP</div>
+        </div>
+        <div class="metric-card" style="border-top-color:#EA580C">
+          <div class="text-xs text-slate-500 font-medium">Índice de Endeudamiento</div>
+          <div id="kpiIndiceEndeudamiento" class="text-lg font-extrabold font-mono text-[#0F294A] mt-1">0.0%</div>
+          <div id="kpiEstadoSemaforo" class="text-xs font-semibold mt-0.5">Evaluando capacidad...</div>
+        </div>
+        <div class="metric-card" style="border-top-color:#15803D">
+          <div class="text-xs text-slate-500 font-medium">Ahorro con Método Avalancha</div>
+          <div id="kpiAhorro" class="text-lg font-extrabold font-mono text-[#15803D] mt-1">$0 COP</div>
+          <div id="kpiMesesAhorrados" class="text-xs text-slate-600 mt-0.5">0 meses ahorrados vs. mínimo</div>
+        </div>
+        <div class="metric-card" style="border-top-color:#7C3AED">
+          <div class="text-xs text-slate-500 font-medium">Deuda Prioritaria #1 a Pagar</div>
+          <div id="kpiDeudaPrioritaria" class="text-sm font-extrabold text-[#0F294A] mt-1 truncate">-</div>
+          <div id="kpiDeudaPrioritariaDetalle" class="text-xs text-violet-700 font-semibold mt-0.5">-</div>
+        </div>
+      </div>
+
+      <!-- Análisis Detallado de Estrategia Óptima, Cuál Deuda Pagar Primero y Ahorro en Intereses -->
+      <div class="pt-3 border-t border-slate-200 space-y-3">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+          <h3 class="text-sm font-bold text-[#0F294A]">
+            🔎 Análisis Detallado de Resultados: Estrategia Óptima, Prioridad de Pago y Ahorro en Intereses
+          </h3>
+          <span id="badgeAhorroDictamen" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+            Ahorro Estimado: $0 COP
+          </span>
+        </div>
+        <div id="analisisEjecutivoContainer" class="grid grid-cols-1 lg:grid-cols-3 gap-3 text-xs"></div>
+
+        <!-- Orden Paso a Paso con Roll-Over -->
+        <div class="pt-2">
+          <div class="text-xs font-bold text-[#0F294A] mb-2">
+            📌 Orden Exacto de Liquidación Paso a Paso (Efecto Roll-Over de Cuotas Liberadas):
+          </div>
+          <div id="pasoAPasoAtaqueContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs"></div>
+        </div>
       </div>
     </div>
 
-    <!-- SECCIÓN 2: COMPARATIVA DE ESTRATEGIAS, GANTT Y CURVAS -->
+    <!-- =================================================================== -->
+    <!-- BLOQUE 4: GRÁFICAS INTERACTIVAS Y SIMULADORES CON PALETA OFICIAL OED-->
+    <!-- =================================================================== -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="lilac-card rounded-2xl p-4 md:p-5 space-y-3">
-        <h2 class="text-sm font-bold text-white">2. Comparativa: Pago Mínimo vs. Bola de Nieve vs. Avalancha</h2>
+      <div class="oed-card space-y-3">
+        <div class="text-xs uppercase tracking-wider font-bold text-[#1D4ED8]">Bloque 4 OED • Comparativa Matemática</div>
+        <h2 class="text-sm font-bold text-[#0F294A]">
+          Comparativa de Desendeudamiento: Pago Mínimo vs. Bola de Nieve vs. Avalancha
+        </h2>
         <table class="w-full text-xs border-collapse">
           <thead>
-            <tr class="border-b border-purple-300/25 text-left text-purple-200">
-              <th class="py-2">Estrategia</th>
-              <th class="py-2 text-right">Meses</th>
-              <th class="py-2 text-right">Intereses</th>
-              <th class="py-2 text-right">Costo Total</th>
-              <th class="py-2 text-right">Ahorro</th>
+            <tr class="border-b-2 border-slate-200 text-left text-[#0F294A] bg-slate-50">
+              <th class="py-2 px-2">Estrategia</th>
+              <th class="py-2 px-2 text-right">Meses</th>
+              <th class="py-2 px-2 text-right">Intereses</th>
+              <th class="py-2 px-2 text-right">Costo Total</th>
+              <th class="py-2 px-2 text-right">Ahorro</th>
             </tr>
           </thead>
           <tbody id="tablaComparativaBody"></tbody>
         </table>
-        <div class="pt-2 border-t border-purple-300/20">
-          <div class="text-xs font-semibold text-purple-100 mb-2">
-            Diagrama de Gantt — Proyecto Cero Deudas (Mes de Extinción con Avalancha)
+
+        <div class="pt-3 border-t border-slate-200">
+          <div class="text-xs font-bold text-[#0F294A] mb-2">
+            Diagrama de Gantt — Proyecto Cero Deudas (Mes Exacto de Extinción con Avalancha)
           </div>
           <div id="ganttContainer" class="space-y-2"></div>
         </div>
       </div>
 
-      <div class="lilac-card rounded-2xl p-4 md:p-5 flex flex-col justify-between">
+      <div class="oed-card flex flex-col justify-between">
         <div>
-          <h2 class="text-sm font-bold text-white mb-1">Curva de Extinción del Saldo Total (COP)</h2>
-          <p class="text-xs text-purple-200/80 mb-2">
-            Evolución mensual aplicando efecto Roll-Over de cuotas liberadas.
+          <div class="text-xs uppercase tracking-wider font-bold text-[#1D4ED8]">Bloque 4 OED • Visualización Paleta Oficial</div>
+          <h2 class="text-sm font-bold text-[#0F294A] mb-1">
+            Curva de Extinción del Saldo Total en Pesos ($ COP)
+          </h2>
+          <p class="text-xs text-slate-600 mb-2">
+            Colores Oficiales OED: <b style="color:#DC2626">Rojo Alerta</b> (Pago Mínimo), <b style="color:#EA580C">Naranja Plan</b> (Bola de Nieve) y <b style="color:#15803D">Verde Viabilidad</b> (Avalancha Óptima).
           </p>
         </div>
-        <canvas id="canvasCurvas" width="520" height="250" class="w-full rounded-xl border border-purple-300/25 bg-purple-950/60"></canvas>
-        <div class="flex items-center justify-center gap-4 text-xs mt-2 text-purple-100">
-          <span class="flex items-center gap-1.5"><span class="w-3.5 h-1.5 rounded inline-block" style="background:#f43f5e"></span> Pago Mínimo</span>
-          <span class="flex items-center gap-1.5"><span class="w-3.5 h-1.5 rounded inline-block" style="background:#f59e0b"></span> Bola de Nieve</span>
-          <span class="flex items-center gap-1.5"><span class="w-3.5 h-1.5 rounded inline-block" style="background:#c084fc"></span> Avalancha (Óptimo Lila)</span>
+        <canvas id="canvasCurvas" width="520" height="255" class="w-full rounded-xl border border-slate-200 bg-white"></canvas>
+        <div class="flex flex-wrap items-center justify-center gap-4 text-xs mt-2 font-semibold text-[#0F294A]">
+          <span class="flex items-center gap-1.5"><span class="w-3.5 h-1.5 rounded inline-block" style="background:#DC2626"></span> Pago Mínimo (#DC2626)</span>
+          <span class="flex items-center gap-1.5"><span class="w-3.5 h-1.5 rounded inline-block" style="background:#EA580C"></span> Bola de Nieve (#EA580C)</span>
+          <span class="flex items-center gap-1.5"><span class="w-3.5 h-1.5 rounded inline-block" style="background:#15803D"></span> Avalancha Óptima (#15803D)</span>
         </div>
       </div>
     </div>
 
-    <!-- NUEVA SECCIÓN: DICTAMEN ANALÍTICO Y RECOMENDACIÓN PRESCRIPTIVA DE CATALINA -->
-    <div class="lilac-card rounded-2xl p-5 space-y-4 border-2 border-purple-400/40">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border-b border-purple-300/20 pb-3">
-        <div>
-          <span class="text-xs uppercase tracking-wider font-bold text-fuchsia-300">
-            🧠 Analítica Prescriptiva e Investigación de Operaciones • Dictamen de Catalina
-          </span>
-          <h2 class="text-base md:text-lg font-bold text-white">
-            Análisis de Resultados, Estrategia Óptima y Ruta Crítica de Pago Prioritario
-          </h2>
-        </div>
-        <span id="badgeAhorroDictamen" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/25 text-emerald-200 border border-emerald-400/40">
-          Ahorro Estimado: $0 COP
-        </span>
-      </div>
-
-      <div id="analisisEjecutivoContainer" class="grid grid-cols-1 lg:grid-cols-3 gap-4 text-xs">
-        <!-- Se llena dinámicamente en recalcularTodo() -->
-      </div>
-
-      <div class="pt-3 border-t border-purple-300/20">
-        <div class="text-xs font-bold text-purple-200 mb-2">
-          📌 Orden Exacto de Ataque Recomendado (Efecto Roll-Over Paso a Paso):
-        </div>
-        <div id="pasoAPasoAtaqueContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
-          <!-- Se llena dinámicamente con el orden 1°, 2°, 3°... -->
-        </div>
-      </div>
-    </div>
-
-    <!-- SECCIÓN 3 Y 4: LEY 1328 Y COMPRA DE CARTERA -->
+    <!-- Simuladores Ley 1328 de 2009 y Compra de Cartera -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <!-- Ley 1328 -->
-      <div class="lilac-card rounded-2xl p-4 md:p-5 space-y-3">
+      <div class="oed-card space-y-3">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-sm font-bold text-white">3. Simulador Ley 1328 de 2009 (Abono Extra a Capital)</h2>
-            <p class="text-xs text-purple-200/75">Puedes digitar cualquier crédito o pulsar "📥 Ley 1328" en la tabla superior.</p>
+            <h2 class="text-sm font-bold text-[#0F294A]" id="tituloLey1328">
+              Simulador de Abonos Extra a Capital (Ley 1328 de 2009)
+            </h2>
+            <p class="text-xs text-slate-600">Compara Reducción de Plazo vs. Reducción de Cuota sin penalidades.</p>
           </div>
-          <button onclick="cargarTestLey1328()" class="px-2.5 py-1 rounded-lg text-xs font-medium btn-mode-inactive">
+          <button onclick="cargarTestLey1328()" class="btn-oed-secondary px-2.5 py-1 rounded-lg text-xs">
             Cargar TC-04 ($2.5M Prima)
           </button>
         </div>
         <div class="grid grid-cols-2 gap-2.5 text-xs">
           <div>
-            <label class="text-purple-200">Saldo Crédito (COP)</label>
-            <input id="l1328Saldo" type="number" value="9500000" oninput="recalcularLey1328()" class="lilac-input w-full px-2.5 py-1.5 rounded-lg font-mono mt-0.5" />
+            <label class="text-slate-700 font-medium">Saldo Crédito ($ COP)</label>
+            <input id="l1328Saldo" type="number" value="9500000" oninput="recalcularLey1328()" class="oed-input w-full px-2.5 py-1.5 font-mono mt-0.5" />
           </div>
           <div>
-            <label class="text-purple-200">Tasa Efectiva Anual (% EA)</label>
-            <input id="l1328Tasa" type="number" step="0.1" value="16.80" oninput="recalcularLey1328()" class="lilac-input w-full px-2.5 py-1.5 rounded-lg font-mono mt-0.5" />
+            <label class="text-slate-700 font-medium">Tasa Efectiva Anual (% EA)</label>
+            <input id="l1328Tasa" type="number" step="0.1" value="16.80" oninput="recalcularLey1328()" class="oed-input w-full px-2.5 py-1.5 font-mono mt-0.5" />
           </div>
           <div>
-            <label class="text-purple-200">Plazo Restante (Meses)</label>
-            <input id="l1328Plazo" type="number" value="36" oninput="recalcularLey1328()" class="lilac-input w-full px-2.5 py-1.5 rounded-lg font-mono mt-0.5" />
+            <label class="text-slate-700 font-medium">Plazo Restante (Meses)</label>
+            <input id="l1328Plazo" type="number" value="36" oninput="recalcularLey1328()" class="oed-input w-full px-2.5 py-1.5 font-mono mt-0.5" />
           </div>
           <div>
-            <label class="text-purple-200">Abono Extra a Capital (COP)</label>
-            <input id="l1328Abono" type="number" value="2500000" oninput="recalcularLey1328()" class="lilac-input w-full px-2.5 py-1.5 rounded-lg font-mono mt-0.5" />
+            <label class="text-slate-700 font-medium">Abono Extra a Capital ($ COP)</label>
+            <input id="l1328Abono" type="number" value="2500000" oninput="recalcularLey1328()" class="oed-input w-full px-2.5 py-1.5 font-mono mt-0.5" />
           </div>
         </div>
-        <div id="resultadoLey1328" class="text-xs space-y-2 pt-2 border-t border-purple-300/20"></div>
+        <div id="resultadoLey1328" class="text-xs space-y-2 pt-2 border-t border-slate-200"></div>
       </div>
 
-      <!-- Compra de Cartera -->
-      <div class="lilac-card rounded-2xl p-4 md:p-5 space-y-3">
+      <div class="oed-card space-y-3">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-sm font-bold text-white">4. Evaluador de Compra de Cartera Consolidada</h2>
-            <p class="text-xs text-purple-200/75">Evalúa unificar todas las deudas de la tabla en un solo crédito.</p>
+            <h2 class="text-sm font-bold text-[#0F294A]">Evaluador de Compra de Cartera Consolidada</h2>
+            <p class="text-xs text-slate-600">Unifica tus créditos en una sola entidad vigilada con menor tasa EA.</p>
           </div>
           <div class="flex gap-1">
-            <button onclick="cargarTestCartera(true)" class="px-2 py-1 rounded-lg text-xs btn-mode-inactive">
+            <button onclick="cargarTestCartera(true)" class="btn-oed-secondary px-2 py-1 rounded-lg text-xs">
               TC-05A: Viable (12.5%)
             </button>
-            <button onclick="cargarTestCartera(false)" class="px-2 py-1 rounded-lg text-xs btn-mode-inactive">
+            <button onclick="cargarTestCartera(false)" class="btn-oed-secondary px-2 py-1 rounded-lg text-xs">
               TC-05B: Engañosa (60m)
             </button>
           </div>
         </div>
         <div class="grid grid-cols-3 gap-2.5 text-xs">
           <div>
-            <label class="text-purple-200">Nueva Tasa (% EA)</label>
-            <input id="ccTasa" type="number" step="0.1" value="12.50" oninput="recalcularTodo()" class="lilac-input w-full px-2.5 py-1.5 rounded-lg font-mono mt-0.5" />
+            <label class="text-slate-700 font-medium">Nueva Tasa (% EA)</label>
+            <input id="ccTasa" type="number" step="0.1" value="12.50" oninput="recalcularTodo()" class="oed-input w-full px-2.5 py-1.5 font-mono mt-0.5" />
           </div>
           <div>
-            <label class="text-purple-200">Nuevo Plazo (Meses)</label>
-            <input id="ccPlazo" type="number" value="24" oninput="recalcularTodo()" class="lilac-input w-full px-2.5 py-1.5 rounded-lg font-mono mt-0.5" />
+            <label class="text-slate-700 font-medium">Nuevo Plazo (Meses)</label>
+            <input id="ccPlazo" type="number" value="24" oninput="recalcularTodo()" class="oed-input w-full px-2.5 py-1.5 font-mono mt-0.5" />
           </div>
           <div>
-            <label class="text-purple-200">Seguro Nuevo (COP)</label>
-            <input id="ccSeguro" type="number" value="15000" oninput="recalcularTodo()" class="lilac-input w-full px-2.5 py-1.5 rounded-lg font-mono mt-0.5" />
+            <label class="text-slate-700 font-medium">Seguro Nuevo ($ COP)</label>
+            <input id="ccSeguro" type="number" value="15000" oninput="recalcularTodo()" class="oed-input w-full px-2.5 py-1.5 font-mono mt-0.5" />
           </div>
         </div>
-        <div id="resultadoCompraCartera" class="text-xs space-y-2 pt-2 border-t border-purple-300/20"></div>
+        <div id="resultadoCompraCartera" class="text-xs space-y-2 pt-2 border-t border-slate-200"></div>
       </div>
     </div>
+
+    <!-- =================================================================== -->
+    <!-- BLOQUE 5: DICCIONARIO FINANCIERO DESPLEGABLE (5 FAMILIAS OED)       -->
+    <!-- =================================================================== -->
+    <details open class="oed-card">
+      <summary class="cursor-pointer font-bold text-sm md:text-base text-[#0F294A] flex items-center justify-between select-none">
+        <span>📘 ¿Tienes dudas con algún concepto? Consulta aquí el Diccionario Financiero OED (Bloque 5 OED)</span>
+        <span class="text-xs font-normal text-[#1D4ED8]">5 Familias de Términos en Lenguaje Claro</span>
+      </summary>
+      <div class="mt-3 pt-3 border-t border-slate-200 space-y-3 text-xs">
+        <div class="flex flex-col md:flex-row gap-2 items-center justify-between">
+          <div class="flex flex-wrap gap-1.5" id="glosarioPills"></div>
+          <input id="buscadorGlosario" type="text" placeholder="🔍 Filtrar término (ej. EA, Usura, Avalancha, Ley 1328, UVT)..."
+            oninput="renderGlosarioOED()" class="oed-input px-3 py-1.5 w-full md:w-72 text-xs" />
+        </div>
+        <div id="glosarioDetalleBox" class="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 space-y-1.5"></div>
+      </div>
+    </details>
+
   </div>
 
   <script>
+    // =========================================================================
+    // DICCIONARIO OFICIAL OED ("CERO PALABRAS HUÉRFANAS" - 5 FAMILIAS)
+    // =========================================================================
+    const GLOSARIO_OED = {
+      EA: {
+        categoria: "1. Financiero e Inversión",
+        termino_tecnico: "Tasa Efectiva Anual (EA)",
+        lenguaje_claro: "Es la velocidad real a la que crece un ahorro o una deuda al cumplir 12 meses completos. En Colombia jamás se divide simplemente entre 12.",
+        ejemplo_cotidiano: "$1.000.000 al 10% EA equivalen a $1.100.000 al cabo de un año.",
+        alias: ["EA", "Efectiva Anual", "Efectivo Anual"]
+      },
+      EM: {
+        categoria: "1. Financiero e Inversión",
+        termino_tecnico: "Tasa Efectiva Mensual (EM)",
+        lenguaje_claro: "Es la fracción exacta de interés que te cobran o te pagan en un solo mes, calculada con interés compuesto: (1 + EA)^(1/12) - 1.",
+        ejemplo_cotidiano: "Una tasa del 25,80% EA equivale a 1,93% EM cada mes.",
+        alias: ["EM", "Efectiva Mensual"]
+      },
+      USURA: {
+        categoria: "4. Deudas y Leyes Protectoras",
+        termino_tecnico: "Tasa de Usura SFC",
+        lenguaje_claro: "El interés máximo legal que puede cobrar un crédito o tarjeta en Colombia según certificación mensual de la Superintendencia Financiera (1.5 veces el IBC). Superarlo es ilegal.",
+        ejemplo_cotidiano: "Si la Tasa de Usura está en 26,50% EA, ningún banco ni prestamista puede cobrarte por encima de ese tope.",
+        alias: ["Tasa de Usura", "Usura"]
+      },
+      AVALANCHA_NIEVE: {
+        categoria: "4. Deudas y Leyes Protectoras",
+        termino_tecnico: "Método Avalancha vs. Bola de Nieve",
+        lenguaje_claro: "Dos estrategias probadas para salir de deudas: 'Avalancha' prioriza la deuda con tasa más alta (ahorra más dinero en intereses) y 'Bola de Nieve' liquida primero el saldo más pequeño (libera cuotas rápido).",
+        ejemplo_cotidiano: "En ambas estrategias, al terminar de pagar una obligación sumas esa cuota liberada (Roll-Over) para acelerar la siguiente.",
+        alias: ["Avalancha", "Bola de Nieve"]
+      },
+      LEY_1328: {
+        categoria: "4. Deudas y Leyes Protectoras",
+        termino_tecnico: "Abono Extra a Capital (Ley 1328 de 2009)",
+        lenguaje_claro: "Derecho legal en Colombia a realizar pagos anticipados a capital en tus créditos en cualquier momento, sin multas ni sanciones, eligiendo entre reducir plazo o reducir cuota.",
+        ejemplo_cotidiano: "Destinar parte de tu prima a un abono a capital con reducción de plazo te ahorra meses de deuda y millones en intereses.",
+        alias: ["Ley 1328", "abonos a capital", "abono a capital"]
+      },
+      FOGAFIN: {
+        categoria: "4. Deudas y Leyes Protectoras",
+        termino_tecnico: "Seguro de Depósitos Fogafín",
+        lenguaje_claro: "Seguro estatal gratuito que protege tus ahorros y CDTs hasta por $50.000.000 COP por persona en cada banco inscrito.",
+        ejemplo_cotidiano: "Cuando termines de pagar tus deudas y pases al Módulo 2, guarda tu fondo de emergencia en entidades protegidas por Fogafín.",
+        alias: ["Fogafín", "Fogafin"]
+      },
+      HABEAS_DATA: {
+        categoria: "4. Deudas y Leyes Protectoras",
+        termino_tecnico: "Habeas Data (Ley 1581/2012 y Ley 1266/2008)",
+        lenguaje_claro: "Derecho constitucional a conocer, actualizar y proteger tus datos personales y tu historial en centrales de riesgo (Datacrédito / TransUnion).",
+        ejemplo_cotidiano: "Pagar puntualmente tus obligaciones protege tu puntaje crediticio para futuras metas como comprar vivienda.",
+        alias: ["Habeas Data", "Ley 1581", "Ley 1266"]
+      },
+      IBC: {
+        categoria: "3. Nómina, Trabajo e Impuestos",
+        termino_tecnico: "IBC (Ingreso Base de Cotización)",
+        lenguaje_claro: "La base sobre la cual se liquidan tus aportes a Salud y Pensión (4% cada uno como empleado, o sobre el 40% de tus honorarios si eres independiente).",
+        ejemplo_cotidiano: "De tu sueldo bruto se descuenta seguridad social sobre tu IBC para determinar tu Ingreso Neto Mensual.",
+        alias: ["IBC"]
+      },
+      UVT: {
+        categoria: "3. Nómina, Trabajo e Impuestos",
+        termino_tecnico: "UVT (Unidad de Valor Tributario)",
+        lenguaje_claro: "Unidad con la que la DIAN mide topes tributarios y la exención mensual de 350 UVT del 4x1000 en Colombia.",
+        ejemplo_cotidiano: "En 2026, 1 UVT equivale a $49.799 COP.",
+        alias: ["UVT"]
+      },
+      LEY_546: {
+        categoria: "2. Vivienda y Finca Raíz",
+        termino_tecnico: "Ley 546 de 1999 (Regla del 30%)",
+        lenguaje_claro: "Regla de oro hipotecaria: la primera cuota de un crédito de vivienda no puede superar el 30% del ingreso familiar mensual.",
+        ejemplo_cotidiano: "Salir de tus deudas actuales libera tu capacidad de endeudamiento para cumplir la Ley 546 en el Módulo 4.",
+        alias: ["Ley 546", "Regla del 30%"]
+      },
+      MONTE_CARLO: {
+        categoria: "5. Probabilidad y Futuro",
+        termino_tecnico: "Simulación Actuarial de Monte Carlo",
+        lenguaje_claro: "Prueba de Estrés Financiero que evalúa tu presupuesto en 1.000 escenarios económicos posibles para medir la solidez de tus metas.",
+        ejemplo_cotidiano: "Con menos deudas fijas, tu hogar supera con holgura las pruebas de estrés del Módulo 5.",
+        alias: ["Monte Carlo"]
+      }
+    };
+
+    let terminoGlosarioSeleccionado = "AVALANCHA_NIEVE";
+
+    function enriquecerTextoConExplicaciones(texto) {
+      let pares = [];
+      Object.entries(GLOSARIO_OED).forEach(([clave, ficha]) => {
+        (ficha.alias || []).forEach(al => pares.push([al, clave]));
+      });
+      pares.sort((a, b) => b[0].length - a[0].length);
+
+      let marcadores = {};
+      let usadas = new Set();
+      let trabajo = texto;
+
+      pares.forEach(([alias, clave], idx) => {
+        if (usadas.has(clave)) return;
+        const esc = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(`(?<![A-Za-zÁÉÍÓÚáéíóúñÑ0-9_])(${esc})(?![A-Za-zÁÉÍÓÚáéíóúñÑ0-9_])`, "i");
+        const m = trabajo.match(re);
+        if (m) {
+          usadas.add(clave);
+          const token = `__OEDTERM${idx}__`;
+          const ficha = GLOSARIO_OED[clave];
+          const tip = `💡 ${ficha.termino_tecnico}: ${ficha.lenguaje_claro}`.replace(/"/g, "&quot;");
+          marcadores[token] = `<span class="oed-term" tabindex="0" data-tip="${tip}">${m[1]}<sup class="oed-q">?</sup></span>`;
+          trabajo = trabajo.replace(re, token);
+        }
+      });
+
+      Object.entries(marcadores).forEach(([token, spanHtml]) => {
+        trabajo = trabajo.replace(token, spanHtml);
+      });
+      return trabajo;
+    }
+
+    function renderGlosarioOED() {
+      const filtro = (document.getElementById("buscadorGlosario")?.value || "").trim().toLowerCase();
+      const pillsCont = document.getElementById("glosarioPills");
+      const claves = Object.keys(GLOSARIO_OED).filter(k => {
+        if (!filtro) return true;
+        const f = GLOSARIO_OED[k];
+        return f.termino_tecnico.toLowerCase().includes(filtro) ||
+               f.lenguaje_claro.toLowerCase().includes(filtro) ||
+               f.categoria.toLowerCase().includes(filtro);
+      });
+
+      if (claves.length > 0 && !claves.includes(terminoGlosarioSeleccionado)) {
+        terminoGlosarioSeleccionado = claves[0];
+      }
+
+      pillsCont.innerHTML = claves.map(k => {
+        const activo = k === terminoGlosarioSeleccionado;
+        return `<button onclick="seleccionarTerminoGlosario('${k}')"
+          class="px-2.5 py-1 rounded-full text-xs transition ${activo ? 'bg-[#1D4ED8] text-white font-bold' : 'bg-white text-slate-700 border border-slate-300 hover:border-[#1D4ED8]'}">
+          ${GLOSARIO_OED[k].termino_tecnico}
+        </button>`;
+      }).join("");
+
+      const ficha = GLOSARIO_OED[terminoGlosarioSeleccionado] || GLOSARIO_OED.AVALANCHA_NIEVE;
+      document.getElementById("glosarioDetalleBox").innerHTML = `
+        <div class="text-[11px] font-bold uppercase tracking-wider text-[#1D4ED8]">${ficha.categoria}</div>
+        <div class="text-sm font-extrabold text-[#0F294A]">${ficha.termino_tecnico}</div>
+        <div class="text-slate-700"><b>💡 En palabras sencillas:</b> ${ficha.lenguaje_claro}</div>
+        <div class="text-[#0F294A] bg-white p-2 rounded-lg border border-blue-200">
+          🇨🇴 <b>Ejemplo en pesos colombianos ($ COP):</b> ${ficha.ejemplo_cotidiano}
+        </div>
+      `;
+    }
+
+    function seleccionarTerminoGlosario(k) {
+      terminoGlosarioSeleccionado = k;
+      renderGlosarioOED();
+    }
+
+    // =========================================================================
+    // MOTOR MATEMÁTICO DEL MÓDULO 3 (CATALINA MORENO)
+    // =========================================================================
     const DEUDAS_SEMILLA = [
       { nombre: "1. Tarjeta de Crédito Gold", saldo_cop: 4800000, tasa_ea: 0.2580, cuota_mensual_cop: 320000, seguro_cuota_manejo_cop: 28000 },
       { nombre: "2. Crédito Rotativo Tienda", saldo_cop: 1900000, tasa_ea: 0.2250, cuota_mensual_cop: 160000, seguro_cuota_manejo_cop: 14500 },
@@ -432,7 +749,8 @@
 
     let deudas = JSON.parse(JSON.stringify(DEUDAS_SEMILLA));
 
-    const fmtCOP = (v) => "$" + Math.round(Number(v) || 0).toLocaleString("es-CO");
+    const fmtCOP = (v) => "$" + Math.round(Number(v) || 0).toLocaleString("es-CO") + " COP";
+    const fmtCOPCorto = (v) => "$" + Math.round(Number(v) || 0).toLocaleString("es-CO");
     const eaAEm = (ea) => Math.pow(1.0 + Math.max(0, Number(ea) || 0), 1.0 / 12.0) - 1.0;
 
     function cuotaFrancesa(saldo, tasaEm, n) {
@@ -443,8 +761,7 @@
     }
 
     function toggleModalUsabilidad() {
-      const p = document.getElementById("panelUsabilidad");
-      p.classList.toggle("hidden");
+      document.getElementById("panelUsabilidad").classList.toggle("hidden");
     }
 
     function actualizarBotonesModo(modoActivo) {
@@ -452,8 +769,8 @@
       const btnSem = document.getElementById("btnModoSemilla");
       const ind = document.getElementById("indicadorModoActivo");
 
-      btnPers.className = (modoActivo === "personalizado" ? "btn-mode-active" : "btn-mode-inactive") + " px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5";
-      btnSem.className = (modoActivo === "base" ? "btn-mode-active" : "btn-mode-inactive") + " px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5";
+      btnPers.className = (modoActivo === "personalizado" ? "btn-oed-action" : "btn-oed-secondary") + " px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5";
+      btnSem.className = (modoActivo === "base" ? "btn-oed-action" : "btn-oed-secondary") + " px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5";
 
       const nombresModo = {
         personalizado: "Modo: Personalizado (Tus Datos)",
@@ -484,7 +801,7 @@
       const cuotaSug = Math.ceil(cuotaFrancesa(saldo, eaAEm(tasa), 36) / 1000) * 1000;
       document.getElementById("nuevaCuota").value = cuotaSug;
       const msg = document.getElementById("msgFormulario");
-      msg.textContent = `💡 Cuota fija francesa calculada para ${fmtCOP(saldo)} a 36 meses (${(tasa*100).toFixed(1)}% EA): ${fmtCOP(cuotaSug)}/mes.`;
+      msg.textContent = `💡 Cuota fija francesa sugerida para ${fmtCOP(saldo)} a 36 meses (${(tasa*100).toFixed(1)}% EA): ${fmtCOP(cuotaSug)}/mes.`;
       msg.classList.remove("hidden");
     }
 
@@ -506,7 +823,7 @@
       const interesMinimoMes = saldo * eaAEm(tasaEa);
       if (!cuota || cuota <= interesMinimoMes) {
         cuota = Math.ceil(cuotaFrancesa(saldo, eaAEm(tasaEa), 36) / 1000) * 1000;
-        msg.textContent = `ℹ️ Se asignó cuota sugerida a 36 meses (${fmtCOP(cuota)}) para cubrir intereses mensuales (${fmtCOP(interesMinimoMes)}).`;
+        msg.textContent = `ℹ️ Asignamos una cuota sugerida a 36 meses (${fmtCOP(cuota)}) para cubrir los intereses mensuales (${fmtCOP(interesMinimoMes)}).`;
         msg.classList.remove("hidden");
       } else {
         msg.classList.add("hidden");
@@ -625,45 +942,45 @@
         const cuotaInsuficiente = d.cuota_mensual_cop <= intMes;
 
         const tr = document.createElement("tr");
-        tr.className = "border-b border-purple-300/15 hover:bg-purple-900/25 transition";
+        tr.className = "border-b border-slate-200 hover:bg-blue-50/40 transition";
         tr.innerHTML = `
           <td class="py-2 pr-2">
             <input value="${d.nombre}" onchange="actualizarCampo(${idx}, 'nombre', this.value)"
-              class="lilac-input w-full px-2 py-1 rounded-lg text-xs" />
+              class="oed-input w-full px-2 py-1 text-xs font-medium" />
           </td>
           <td class="py-2 px-2">
             <input type="number" step="100000" value="${d.saldo_cop}" onchange="actualizarCampo(${idx}, 'saldo_cop', Number(this.value))"
-              class="lilac-input w-28 px-2 py-1 rounded-lg text-xs font-mono" />
-            <div class="text-[10px] text-purple-300/80 font-mono mt-0.5">${fmtCOP(d.saldo_cop)}</div>
+              class="oed-input w-28 px-2 py-1 text-xs font-mono" />
+            <div class="text-[10px] text-slate-500 font-mono mt-0.5">${fmtCOPCorto(d.saldo_cop)}</div>
           </td>
           <td class="py-2 px-2">
             <input type="number" step="0.1" value="${(d.tasa_ea * 100).toFixed(2)}" onchange="actualizarCampo(${idx}, 'tasa_ea', Number(this.value)/100)"
-              class="lilac-input w-20 px-2 py-1 rounded-lg text-xs font-mono" />
+              class="oed-input w-20 px-2 py-1 text-xs font-mono" />
           </td>
-          <td class="py-2 px-2 font-mono text-purple-200">${emPct}%</td>
+          <td class="py-2 px-2 font-mono font-semibold text-slate-700">${emPct}%</td>
           <td class="py-2 px-2">
             <input type="number" step="10000" value="${d.cuota_mensual_cop}" onchange="actualizarCampo(${idx}, 'cuota_mensual_cop', Number(this.value))"
-              class="lilac-input w-24 px-2 py-1 rounded-lg text-xs font-mono" />
-            <div class="text-[10px] ${cuotaInsuficiente ? 'text-amber-300' : 'text-purple-300/80'} font-mono mt-0.5">
-              ${cuotaInsuficiente ? '⚠️ Interés: ' + fmtCOP(intMes) : fmtCOP(d.cuota_mensual_cop)}
+              class="oed-input w-24 px-2 py-1 text-xs font-mono" />
+            <div class="text-[10px] ${cuotaInsuficiente ? 'text-amber-700 font-bold' : 'text-slate-500'} font-mono mt-0.5">
+              ${cuotaInsuficiente ? '⚠️ Interés: ' + fmtCOPCorto(intMes) : fmtCOPCorto(d.cuota_mensual_cop)}
             </div>
           </td>
           <td class="py-2 px-2">
             <input type="number" step="5000" value="${d.seguro_cuota_manejo_cop}" onchange="actualizarCampo(${idx}, 'seguro_cuota_manejo_cop', Number(this.value))"
-              class="lilac-input w-20 px-2 py-1 rounded-lg text-xs font-mono" />
+              class="oed-input w-20 px-2 py-1 text-xs font-mono" />
           </td>
           <td class="py-2 px-2">
             ${excede
-              ? `<span class="px-2 py-0.5 rounded-full font-semibold bg-rose-500/25 text-rose-200 border border-rose-400/40">ALERTA USURA (+${pb} pb)</span>`
-              : `<span class="px-2 py-0.5 rounded-full font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">Legal SFC</span>`}
+              ? `<span class="px-2.5 py-0.5 rounded-full font-bold bg-red-100 text-[#B91C1C] border border-red-300">ALERTA USURA (+${pb} pb)</span>`
+              : `<span class="px-2.5 py-0.5 rounded-full font-bold bg-emerald-100 text-[#15803D] border border-emerald-300">Cumple SFC</span>`}
           </td>
           <td class="py-2 pl-2 text-right whitespace-nowrap space-x-1">
             <button onclick="enviarALey1328(${idx})" title="Simular Abono Extra en Ley 1328"
-              class="px-2 py-1 rounded bg-purple-700/60 text-purple-100 hover:bg-purple-600 text-[11px]">
+              class="px-2 py-1 rounded-lg bg-blue-50 text-[#1D4ED8] border border-blue-200 hover:bg-blue-100 font-semibold text-[11px]">
               📥 Ley 1328
             </button>
             <button onclick="eliminarDeuda(${idx})" title="Eliminar obligación"
-              class="px-2 py-1 rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500/40 text-xs">
+              class="px-2 py-1 rounded-lg bg-red-50 text-[#B91C1C] border border-red-200 hover:bg-red-100 text-xs font-bold">
               ✕
             </button>
           </td>
@@ -691,11 +1008,11 @@
       const W = canvas.width, H = canvas.height;
       ctx.clearRect(0, 0, W, H);
 
-      const padL = 65, padR = 16, padT = 16, padB = 28;
+      const padL = 65, padR = 18, padT = 18, padB = 28;
       const maxMes = Math.max(1, simBase.meses, simNieve.meses, simAval.meses);
       const maxSaldo = Math.max(1, simBase.historial[0]?.saldo_total || 1);
 
-      ctx.strokeStyle = "rgba(216, 180, 254, 0.18)";
+      ctx.strokeStyle = "#E2E8F0";
       ctx.lineWidth = 1;
       for (let i = 0; i <= 4; i++) {
         const y = padT + ((H - padT - padB) * i) / 4;
@@ -705,8 +1022,8 @@
         ctx.stroke();
 
         const val = maxSaldo * (1 - i / 4);
-        ctx.fillStyle = "#d8b4fe";
-        ctx.font = "10px monospace";
+        ctx.fillStyle = "#475569";
+        ctx.font = "11px Segoe UI, sans-serif";
         ctx.textAlign = "right";
         ctx.fillText("$" + (val / 1e6).toFixed(1) + "M", padL - 6, y + 3);
       }
@@ -724,9 +1041,10 @@
         ctx.stroke();
       };
 
-      trazar(simBase.historial, "#f43f5e", 2.2);
-      trazar(simNieve.historial, "#f59e0b", 2.2);
-      trazar(simAval.historial, "#c084fc", 3.0);
+      // Paleta Oficial OED: Rojo Alerta (#DC2626), Naranja Plan (#EA580C), Verde Viabilidad (#15803D)
+      trazar(simBase.historial, "#DC2626", 2.2);
+      trazar(simNieve.historial, "#EA580C", 2.2);
+      trazar(simAval.historial, "#15803D", 3.2);
     }
 
     function recalcularLey1328() {
@@ -742,8 +1060,8 @@
       const cont = document.getElementById("resultadoLey1328");
 
       if (nuevoSaldo <= 0) {
-        cont.innerHTML = `<div class="p-3 rounded-xl bg-fuchsia-500/25 border border-fuchsia-300/40 text-fuchsia-100 font-semibold">
-          🎉 ¡Deuda Cancelada Totalmente! Ahorras ${plazo} meses y ${fmtCOP(intOrig)} en intereses.
+        cont.innerHTML = `<div class="oed-doc-card oed-doc-verde">
+          🎉 <b>¡Deuda Cancelada Totalmente bajo la Ley 1328!</b> Ahorras <b>${plazo} meses</b> y <b>${fmtCOP(intOrig)}</b> en intereses.
         </div>`;
         return;
       }
@@ -758,16 +1076,16 @@
       const ahorroCuota = Math.max(0, intOrig - intCuota);
 
       cont.innerHTML = `
-        <div class="flex justify-between text-purple-100"><span>Cuota original (${plazo} meses):</span><span class="font-mono font-bold text-white">${fmtCOP(cuotaOrig)}/mes</span></div>
-        <div class="p-2.5 rounded-xl bg-fuchsia-500/20 border border-fuchsia-300/40">
-          <div class="font-bold text-fuchsia-200">Opción A — Reducción de Plazo (Óptimo Matemático)</div>
-          <div>Nuevo plazo: <b>${nuevoPlazo} meses</b> (Ahorras <b>${Math.max(0, plazo - nuevoPlazo)} meses</b>)</div>
-          <div>Ahorro en intereses: <b class="font-mono text-emerald-300">${fmtCOP(ahorroPlazo)}</b></div>
+        <div class="flex justify-between text-slate-700"><span>Cuota original (${plazo} meses):</span><span class="font-mono font-bold text-[#0F294A]">${fmtCOP(cuotaOrig)}/mes</span></div>
+        <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-[#14532D]">
+          <div class="font-bold text-[#15803D]">Opción A — Reducción de Plazo (Recomendada para ahorrar más intereses)</div>
+          <div>Nuevo plazo: <b>${nuevoPlazo} meses</b> (Te ahorras <b>${Math.max(0, plazo - nuevoPlazo)} meses</b> de cuotas)</div>
+          <div>Ahorro total en intereses: <b class="font-mono text-[#15803D]">${fmtCOP(ahorroPlazo)}</b></div>
         </div>
-        <div class="p-2.5 rounded-xl bg-purple-800/45 border border-purple-400/35">
-          <div class="font-bold text-purple-200">Opción B — Reducción de Cuota (Alivio de Flujo Mensual)</div>
-          <div>Nueva cuota: <b class="font-mono">${fmtCOP(nuevaCuota)}/mes</b> (Libera <b class="font-mono text-fuchsia-200">${fmtCOP(cuotaOrig - nuevaCuota)}/mes</b>)</div>
-          <div>Ahorro en intereses: <b class="font-mono">${fmtCOP(ahorroCuota)}</b></div>
+        <div class="p-3 rounded-xl bg-blue-50 border border-blue-200 text-[#1E3A8A]">
+          <div class="font-bold text-[#1D4ED8]">Opción B — Reducción de Cuota (Ideal para aliviar tu flujo de caja mensual)</div>
+          <div>Nueva cuota: <b class="font-mono">${fmtCOP(nuevaCuota)}/mes</b> (Libera <b class="font-mono text-[#1D4ED8]">${fmtCOP(cuotaOrig - nuevaCuota)}/mes</b>)</div>
+          <div>Ahorro total en intereses: <b class="font-mono">${fmtCOP(ahorroCuota)}</b></div>
         </div>
       `;
     }
@@ -785,72 +1103,127 @@
       const cuotaTotal = deudas.reduce((a, d) => a + Number(d.cuota_mensual_cop) + Number(d.seguro_cuota_manejo_cop || 0), 0);
       const iePct = ingreso > 0 ? (cuotaTotal / ingreso) * 100 : 0;
 
-      const badge = document.getElementById("badgeSemaforo");
-      if (iePct <= 30) {
-        badge.className = "text-xs font-bold font-mono py-1.5 px-2.5 rounded-lg text-center mt-1 bg-emerald-500/25 text-emerald-200 border border-emerald-400/40";
-        badge.textContent = `${iePct.toFixed(1)}% • VERDE SALUDABLE`;
-      } else if (iePct <= 40) {
-        badge.className = "text-xs font-bold font-mono py-1.5 px-2.5 rounded-lg text-center mt-1 bg-amber-500/25 text-amber-200 border border-amber-400/40";
-        badge.textContent = `${iePct.toFixed(1)}% • AMARILLO ALERTA`;
-      } else {
-        badge.className = "text-xs font-bold font-mono py-1.5 px-2.5 rounded-lg text-center mt-1 bg-rose-500/30 text-rose-200 border border-rose-400/50";
-        badge.textContent = `${iePct.toFixed(1)}% • ROJO CRÍTICO`;
-      }
-
       const simBase = simularDesendeudamiento(deudas, 0, "sin_abono");
       const simNieve = simularDesendeudamiento(deudas, abonoExtra, "bola_de_nieve");
       const simAval = simularDesendeudamiento(deudas, abonoExtra, "avalancha");
 
       const ahorroAval = Math.max(0, simBase.costoTotal - simAval.costoTotal);
       const mesesAhorrados = Math.max(0, simBase.meses - simAval.meses);
-
-      document.getElementById("kpiSaldoTotal").textContent = fmtCOP(saldoTotal);
-      document.getElementById("kpiCuotaTotal").textContent = `Cuota + seguros: ${fmtCOP(cuotaTotal)}/mes`;
-      document.getElementById("kpiMesesAvalancha").textContent = `${simAval.meses} meses hasta Cero Deuda`;
-      document.getElementById("kpiAhorro").textContent = fmtCOP(ahorroAval);
-      document.getElementById("kpiMesesAhorrados").textContent = `${mesesAhorrados} meses ahorrados vs. pago mínimo`;
-
+      const primeraAval = simAval.cronograma[0];
+      const primeraNieve = simNieve.cronograma[0];
       const deudasUsura = deudas.filter(d => d.tasa_ea > usura + 1e-6);
-      const elUsuraEst = document.getElementById("kpiUsuraEstado");
-      const elUsuraDet = document.getElementById("kpiUsuraDetalle");
+
+      // =========================================================================
+      // BLOQUE 3: DIAGNÓSTICO FINANCIERO CON VOZ DE "ASESOR FINANCIERO DE CONFIANZA"
+      // =========================================================================
+      let nivelSem = "verde";
+      let tituloClaro = "";
+      let explicacionHumana = "";
+      let planAccionMes = "";
+
       if (deudasUsura.length > 0) {
-        elUsuraEst.className = "text-sm font-bold mt-1 text-rose-300";
-        elUsuraEst.textContent = `ALERTA LEGAL (${deudasUsura.length} en Usura)`;
-        elUsuraDet.textContent = `${deudasUsura[0].nombre} supera ${(usura*100).toFixed(2)}% EA`;
+        nivelSem = "rojo";
+        tituloClaro = `Identificamos ${deudasUsura.length} obligación por encima de la Tasa de Usura legal en Colombia`;
+        explicacionHumana = `Tu obligación "${deudasUsura[0].nombre}" tiene una tasa del ${(deudasUsura[0].tasa_ea*100).toFixed(2)}% EA, superando la Tasa de Usura certificada (${(usura*100).toFixed(2)}% EA). Antes de cualquier otra meta, te recomendamos priorizar su liquidación inmediata mediante el método Avalancha o solicitar una compra de cartera vigilada.`;
+        planAccionMes = `Destina este mismo mes tu abono extra de ${fmtCOP(abonoExtra)} (sumando un pago total de ${fmtCOP(primeraAval ? primeraAval.cuota_fija + abonoExtra : abonoExtra)}) directamente a capital de "${deudasUsura[0].nombre}" amparado en la Ley 1328.`;
+      } else if (iePct <= 30) {
+        nivelSem = "verde";
+        tituloClaro = `Tu nivel de endeudamiento (${iePct.toFixed(1)}%) es saludable y manejable`;
+        explicacionHumana = `Tus cuotas mensuales (${fmtCOP(cuotaTotal)}) comprometen menos del 30% de tu ingreso neto. Aplicando la estrategia Avalancha con tu abono extra de ${fmtCOP(abonoExtra)}, saldrás de todas tus deudas en ${simAval.meses} meses y te ahorrarás ${fmtCOP(ahorroAval)} en intereses EA y seguros.`;
+        planAccionMes = primeraAval
+          ? `Programa este mes un pago total de ${fmtCOP(primeraAval.cuota_fija + abonoExtra)} hacia "${primeraAval.nombre}" (${(primeraAval.tasa_ea*100).toFixed(2)}% EA) pidiendo expresamente abono a capital con reducción de plazo bajo la Ley 1328.`
+          : `Mantén tus pagos al día y destina tu excedente a un FIC o CDT protegido por Fogafín.`;
+      } else if (iePct <= 40) {
+        nivelSem = "ambar";
+        tituloClaro = `Tu endeudamiento (${iePct.toFixed(1)}%) requiere revisión preventiva para liberar flujo de caja`;
+        explicacionHumana = `Hoy destinas ${fmtCOP(cuotaTotal)} cada mes a pagar créditos (entre el 30% y el 40% de tu ingreso). Te recomendamos no adquirir nuevas deudas por ahora y aplicar la estrategia Avalancha para ahorrar ${fmtCOP(ahorroAval)} y liberar ese flujo en ${simAval.meses} meses.`;
+        planAccionMes = primeraAval
+          ? `Concentra este mes ${fmtCOP(abonoExtra)} de abono extra a capital en "${primeraAval.nombre}" (${(primeraAval.tasa_ea*100).toFixed(2)}% EA) y mantén las demás obligaciones en su cuota mínima.`
+          : `Unifica tus pasivos o realiza abonos a capital bajo la Ley 1328.`;
       } else {
-        elUsuraEst.className = "text-sm font-bold mt-1 text-emerald-300";
-        elUsuraEst.textContent = "100% Cumple Límite SFC";
-        elUsuraDet.textContent = `Ninguna supera ${(usura*100).toFixed(2)}% EA`;
+        nivelSem = "rojo";
+        tituloClaro = `Hoy tus cuotas representan el ${iePct.toFixed(1)}% de tu ingreso: te recomendamos aliviar tu flujo mensual`;
+        explicacionHumana = `Destinar más del 40% de tu ingreso neto (${fmtCOP(cuotaTotal)}/mes) a deudas reduce tu tranquilidad financiera. Te recomendamos esperar antes de tomar nuevos créditos y combinar el método Avalancha con una compra de cartera o abono a capital bajo la Ley 1328.`;
+        planAccionMes = primeraAval
+          ? `Ataca primero "${primeraAval.nombre}" (${(primeraAval.tasa_ea*100).toFixed(2)}% EA) abonando ${fmtCOP(primeraAval.cuota_fija + abonoExtra)} este mes, o evalúa en el bloque inferior unificar tus saldos a una tasa menor.`
+          : `Solicita una compra de cartera a menor tasa EA para bajar tu relación cuota/ingreso por debajo del 30%.`;
       }
 
+      const mapaClases = {
+        verde: { clase: "oed-doc-verde", icono: "✅", prefijo: "Diagnóstico Financiero favorable:" },
+        ambar: { clase: "oed-doc-ambar", icono: "⚠️", prefijo: "Revisión preventiva:" },
+        rojo:  { clase: "oed-doc-rojo",  icono: "🛑", prefijo: "Riesgo alto — Te recomendamos esperar:" }
+      }[nivelSem];
+
+      document.getElementById("semaforoCiudadanoContainer").innerHTML = `
+        <div class="oed-doc-card ${mapaClases.clase}">
+          <div><b>${mapaClases.icono} ${mapaClases.prefijo} ${enriquecerTextoConExplicaciones(tituloClaro)}</b></div>
+          <div class="mt-1">${enriquecerTextoConExplicaciones(explicacionHumana)}</div>
+          <div class="mt-2 text-xs opacity-80">
+            💡 <i>Tip OED ("Cero Palabras Huérfanas"): Pasa el cursor sobre cualquier término subrayado con <b>?</b> para ver su explicación sencilla.</i>
+          </div>
+        </div>
+      `;
+
+      document.getElementById("planAccionContainer").innerHTML = `
+        <div class="oed-rx-box">
+          <b>📌 Plan de Acción para este Mes:</b> ${enriquecerTextoConExplicaciones(planAccionMes)}
+        </div>
+      `;
+
+      // Actualizar los 4 KPIs
+      document.getElementById("kpiSaldoTotal").textContent = fmtCOP(saldoTotal);
+      document.getElementById("kpiCuotaTotal").textContent = `Cuota + seguros: ${fmtCOP(cuotaTotal)}/mes`;
+      document.getElementById("kpiIndiceEndeudamiento").textContent = `${iePct.toFixed(1)}%`;
+      const elEstSem = document.getElementById("kpiEstadoSemaforo");
+      if (iePct <= 30) {
+        elEstSem.className = "text-xs font-bold text-[#15803D] mt-0.5";
+        elEstSem.textContent = "✅ Saludable (≤ 30%)";
+      } else if (iePct <= 40) {
+        elEstSem.className = "text-xs font-bold text-[#B45309] mt-0.5";
+        elEstSem.textContent = "⚠️ Revisión preventiva (30%–40%)";
+      } else {
+        elEstSem.className = "text-xs font-bold text-[#B91C1C] mt-0.5";
+        elEstSem.textContent = "🛑 Priorizar desendeudamiento (> 40%)";
+      }
+      document.getElementById("kpiAhorro").textContent = fmtCOP(ahorroAval);
+      document.getElementById("kpiMesesAhorrados").textContent = `${mesesAhorrados} meses ahorrados (${simAval.meses}m vs. ${simBase.meses}m)`;
+
+      if (primeraAval) {
+        document.getElementById("kpiDeudaPrioritaria").textContent = primeraAval.nombre;
+        document.getElementById("kpiDeudaPrioritariaDetalle").textContent = `Tasa: ${(primeraAval.tasa_ea*100).toFixed(2)}% EA • Se liquida en Mes ${primeraAval.mes_extincion}`;
+      }
+
+      // Tabla comparativa
       const tbodyComp = document.getElementById("tablaComparativaBody");
       const filas = [
         { nombre: "Pago Mínimo (Sin Abono)", sim: simBase, badge: "" },
         { nombre: "Bola de Nieve (Conductual)", sim: simNieve, badge: "" },
-        { nombre: "Avalancha (Óptimo Matemático)", sim: simAval, badge: "★ ÓPTIMO" }
+        { nombre: "Avalancha (Óptimo Matemático)", sim: simAval, badge: "★ ÓPTIMO OED" }
       ];
       tbodyComp.innerHTML = filas.map(f => `
-        <tr class="border-b border-purple-300/15">
-          <td class="py-2 font-medium text-white">${f.nombre} <span class="text-fuchsia-300 font-bold">${f.badge}</span></td>
-          <td class="py-2 text-right font-mono">${f.sim.meses}m</td>
-          <td class="py-2 text-right font-mono">${fmtCOP(f.sim.intereses)}</td>
-          <td class="py-2 text-right font-mono font-semibold text-white">${fmtCOP(f.sim.costoTotal)}</td>
-          <td class="py-2 text-right font-mono text-emerald-300 font-bold">${fmtCOP(Math.max(0, simBase.costoTotal - f.sim.costoTotal))}</td>
+        <tr class="border-b border-slate-200">
+          <td class="py-2 px-2 font-semibold text-[#0F294A]">${f.nombre} <span class="text-[#15803D] font-bold">${f.badge}</span></td>
+          <td class="py-2 px-2 text-right font-mono">${f.sim.meses}m</td>
+          <td class="py-2 px-2 text-right font-mono">${fmtCOPCorto(f.sim.intereses)}</td>
+          <td class="py-2 px-2 text-right font-mono font-bold text-[#0F294A]">${fmtCOPCorto(f.sim.costoTotal)}</td>
+          <td class="py-2 px-2 text-right font-mono font-bold text-[#15803D]">${fmtCOPCorto(Math.max(0, simBase.costoTotal - f.sim.costoTotal))}</td>
         </tr>
       `).join("");
 
+      // Gantt
       const ganttCont = document.getElementById("ganttContainer");
       const maxM = Math.max(1, simBase.meses);
       ganttCont.innerHTML = simAval.cronograma.map(d => {
         const pct = Math.min(100, Math.round((d.mes_extincion / maxM) * 100));
         return `
           <div class="space-y-0.5">
-            <div class="flex justify-between text-xs text-purple-100">
-              <span>${d.nombre} (${(d.tasa_ea*100).toFixed(1)}% EA)</span>
-              <span class="font-mono font-semibold text-fuchsia-200">Mes ${d.mes_extincion}</span>
+            <div class="flex justify-between text-xs text-[#0F294A]">
+              <span class="font-medium">${d.nombre} (${(d.tasa_ea*100).toFixed(1)}% EA)</span>
+              <span class="font-mono font-bold text-[#1D4ED8]">Mes ${d.mes_extincion}</span>
             </div>
-            <div class="w-full h-2.5 rounded-full bg-purple-950 overflow-hidden border border-purple-400/25">
-              <div class="h-full bg-gradient-to-r from-purple-500 to-fuchsia-400 rounded-full" style="width:${pct}%"></div>
+            <div class="w-full h-2.5 rounded-full bg-slate-200 overflow-hidden">
+              <div class="h-full rounded-full" style="width:${pct}%; background: linear-gradient(90deg, #1D4ED8, #15803D);"></div>
             </div>
           </div>
         `;
@@ -859,112 +1232,80 @@
       dibujarCurvas(simBase, simNieve, simAval);
       recalcularLey1328();
 
-      // DICTAMEN ANALÍTICO Y EXPLICACIÓN DE LA ESTRATEGIA ÓPTIMA
+      // Análisis detallado de estrategia óptima, deuda prioritaria y ahorro en intereses
       const ahorroInteresesPuro = Math.max(0, simBase.intereses - simAval.intereses);
       const ahorroSegurosPuro = Math.max(0, simBase.seguros - simAval.seguros);
       const difAvalVsNieve = Math.max(0, simNieve.costoTotal - simAval.costoTotal);
-      const primeraAval = simAval.cronograma[0];
-      const primeraNieve = simNieve.cronograma[0];
 
       document.getElementById("badgeAhorroDictamen").textContent =
         `Ahorro Total con Estrategia Óptima: ${fmtCOP(ahorroAval)} (${mesesAhorrados} meses menos)`;
 
       if (primeraAval) {
         const tasaEmPrimera = (eaAEm(primeraAval.tasa_ea) * 100).toFixed(2);
-        const interesMensualPrimera = deudas.find(x => x.nombre === primeraAval.nombre)?.saldo_cop * eaAEm(primeraAval.tasa_ea) || 0;
+        const interesMensualPrimera = (deudas.find(x => x.nombre === primeraAval.nombre)?.saldo_cop || 0) * eaAEm(primeraAval.tasa_ea);
         const abonoTotalInicial = primeraAval.cuota_fija + abonoExtra;
 
         document.getElementById("analisisEjecutivoContainer").innerHTML = `
-          <!-- Tarjeta 1: Descripción de la Estrategia Óptima -->
-          <div class="p-3.5 rounded-xl bg-purple-950/70 border border-purple-400/35 space-y-2">
-            <div class="font-bold text-fuchsia-300 text-sm flex items-center gap-1.5">
-              <span>🏆 1. ¿Cuál es la Estrategia Óptima y cómo funciona?</span>
-            </div>
-            <p class="text-purple-100/90 leading-relaxed">
-              La estrategia matemáticamente óptima es el <b>Método Avalancha con Efecto Roll-Over</b>. Consiste en pagar puntualmente la cuota mínima de todas las obligaciones y concentrar el <b>100% de tu abono extra mensual (${fmtCOP(abonoExtra)})</b> en la deuda con mayor tasa Efectiva Anual (EA).
-            </p>
-            <p class="text-purple-200/85 leading-relaxed">
-              <b>Efecto Bola de Nieve / Roll-Over:</b> En cuanto liquidas la primera deuda (Mes ${primeraAval.mes_extincion}), no reduces tu presupuesto: sumas la cuota que pagabas en ella al abono extra para atacar la segunda deuda con más fuerza.
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+            <div class="font-bold text-[#0F294A] text-xs">🏆 1. Descripción de la Estrategia Óptima</div>
+            <p class="text-slate-700 leading-relaxed">
+              ${enriquecerTextoConExplicaciones(
+                `La estrategia óptima es el método Avalancha con Roll-Over: mantienes al día las cuotas mínimas de todos tus créditos y concentras el 100% de tu abono extra mensual (${fmtCOP(abonoExtra)}) en la obligación con mayor tasa EA. Al liquidarla en el Mes ${primeraAval.mes_extincion}, sumas su cuota liberada para acelerar la siguiente deuda.`
+              )}
             </p>
           </div>
 
-          <!-- Tarjeta 2: ¿Cuál deuda pagar primero y por qué? -->
-          <div class="p-3.5 rounded-xl bg-fuchsia-950/55 border border-fuchsia-400/45 space-y-2">
-            <div class="font-bold text-fuchsia-200 text-sm flex items-center gap-1.5">
-              <span>🎯 2. ¿Cuál deuda debes pagar PRIMERO?</span>
+          <div class="p-3.5 rounded-xl bg-violet-50/70 border border-violet-200 space-y-1.5">
+            <div class="font-bold text-violet-900 text-xs">🎯 2. ¿Cuál deuda debes pagar PRIMERO y por qué?</div>
+            <div class="p-2 rounded-lg bg-white border border-violet-200">
+              <div class="text-[11px] font-bold text-violet-700">PRIORIDAD #1 DE PAGO:</div>
+              <div class="text-sm font-extrabold text-[#0F294A]">${primeraAval.nombre}</div>
+              <div class="text-xs text-slate-600">Tasa: <b>${(primeraAval.tasa_ea*100).toFixed(2)}% EA</b> (${tasaEmPrimera}% EM) • Extinción: <b>Mes ${primeraAval.mes_extincion}</b></div>
             </div>
-            <div class="p-2 rounded-lg bg-purple-900/60 border border-fuchsia-300/30">
-              <div class="text-xs text-fuchsia-200 font-semibold">PRIORIDAD #1 DE ATAQUE:</div>
-              <div class="text-sm font-bold text-white">${primeraAval.nombre}</div>
-              <div class="text-xs text-purple-200 mt-0.5">
-                Tasa: <b>${(primeraAval.tasa_ea * 100).toFixed(2)}% EA</b> (${tasaEmPrimera}% EM) • Se liquida en el <b>Mes ${primeraAval.mes_extincion}</b>
-              </div>
-            </div>
-            <p class="text-purple-100/90 leading-relaxed">
-              <b>Razón Financiera:</b> Es el pasivo más costoso por cada peso adeudado (hoy te genera <b>${fmtCOP(interesMensualPrimera)}/mes</b> solo en intereses). Debes pagarle <b>${fmtCOP(abonoTotalInicial)}/mes</b> (${fmtCOP(primeraAval.cuota_fija)} de cuota fija + ${fmtCOP(abonoExtra)} de abono extra).
+            <p class="text-slate-700 leading-relaxed">
+              Es la deuda más cara por cada peso que debes (hoy te cuesta <b>${fmtCOP(interesMensualPrimera)}/mes</b> solo en intereses). Págale <b>${fmtCOP(abonoTotalInicial)}/mes</b> (${fmtCOP(primeraAval.cuota_fija)} de cuota + ${fmtCOP(abonoExtra)} de abono extra).
               ${primeraNieve && primeraNieve.nombre !== primeraAval.nombre
-                ? `<br><span class="text-purple-300"><i>Nota conductual:</i> Si prefieres una victoria psicológica rápida (Bola de Nieve), empezarías por <b>${primeraNieve.nombre}</b>, pero pagarías <b>${fmtCOP(difAvalVsNieve)}</b> adicionales en intereses y seguros.</span>`
+                ? `<br><span class="text-violet-800"><i>Comparación con Bola de Nieve:</i> Empezar por "${primeraNieve.nombre}" te costaría <b>${fmtCOP(difAvalVsNieve)}</b> más en intereses y seguros.</span>`
                 : ``}
             </p>
           </div>
 
-          <!-- Tarjeta 3: Análisis del Ahorro en Intereses y Tiempo -->
-          <div class="p-3.5 rounded-xl bg-purple-950/70 border border-emerald-400/35 space-y-2">
-            <div class="font-bold text-emerald-300 text-sm flex items-center gap-1.5">
-              <span>💰 3. Impacto y Ahorro en Intereses al Aplicar Avalancha</span>
+          <div class="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
+            <div class="font-bold text-[#15803D] text-xs">💰 3. Desglose de tu Ahorro en Intereses y Seguros</div>
+            <div class="space-y-1 text-slate-700">
+              <div class="flex justify-between"><span>Intereses sin abono extra:</span><span class="font-mono text-[#B91C1C]">${fmtCOP(simBase.intereses)}</span></div>
+              <div class="flex justify-between"><span>Intereses con Avalancha:</span><span class="font-mono font-bold text-[#15803D]">${fmtCOP(simAval.intereses)}</span></div>
+              <div class="flex justify-between border-t border-emerald-200 pt-1"><span><b>Ahorro directo en intereses:</b></span><span class="font-mono font-bold text-[#15803D]">${fmtCOP(ahorroInteresesPuro)}</span></div>
+              <div class="flex justify-between"><span><b>Ahorro en seguros y manejo:</b></span><span class="font-mono font-bold text-[#15803D]">${fmtCOP(ahorroSegurosPuro)}</span></div>
+              <div class="flex justify-between border-t border-emerald-200 pt-1 font-extrabold text-[#0F294A]"><span>Ahorro Financiero Total:</span><span class="font-mono text-[#15803D]">${fmtCOP(ahorroAval)}</span></div>
             </div>
-            <div class="space-y-1 text-purple-100">
-              <div class="flex justify-between">
-                <span>Intereses sin optimizar (Pago Mínimo):</span>
-                <span class="font-mono text-rose-300">${fmtCOP(simBase.intereses)}</span>
-              </div>
-              <div class="flex justify-between">
-                <span>Intereses con Estrategia Avalancha:</span>
-                <span class="font-mono text-emerald-300 font-bold">${fmtCOP(simAval.intereses)}</span>
-              </div>
-              <div class="flex justify-between border-t border-purple-400/20 pt-1">
-                <span><b>Ahorro directo en intereses:</b></span>
-                <span class="font-mono text-emerald-300 font-bold">${fmtCOP(ahorroInteresesPuro)}</span>
-              </div>
-              <div class="flex justify-between">
-                <span><b>Ahorro en seguros y cuotas de manejo:</b></span>
-                <span class="font-mono text-emerald-300 font-bold">${fmtCOP(ahorroSegurosPuro)}</span>
-              </div>
-              <div class="flex justify-between border-t border-purple-400/20 pt-1 text-white font-bold">
-                <span>Ahorro Financiero Total:</span>
-                <span class="font-mono text-emerald-300">${fmtCOP(ahorroAval)}</span>
-              </div>
-            </div>
-            <p class="text-purple-200/85 pt-1">
-              Sales de todas tus deudas en <b>${simAval.meses} meses</b> en lugar de ${simBase.meses} meses (<b>ganas ${mesesAhorrados} meses de libertad financiera</b> y liberas <b>${fmtCOP(cuotaTotal)}/mes</b> para invertir en el Módulo 2).
-            </p>
           </div>
         `;
 
-        let cuotaRollOverAcumulada = abonoExtra;
+        let rollOverAcum = abonoExtra;
         document.getElementById("pasoAPasoAtaqueContainer").innerHTML = simAval.cronograma.map((d, index) => {
-          const cuotaFijaDeuda = d.cuota_fija;
-          const totalAtacado = cuotaFijaDeuda + cuotaRollOverAcumulada;
-          const htmlPaso = `
-            <div class="p-3 rounded-xl bg-purple-950/60 border ${index === 0 ? 'border-fuchsia-400 ring-1 ring-fuchsia-400/40' : 'border-purple-400/25'} space-y-1">
+          const totalAtacado = d.cuota_fija + rollOverAcum;
+          const cardHtml = `
+            <div class="p-3 rounded-xl bg-white border ${index === 0 ? 'border-[#EA580C] ring-2 ring-orange-200' : 'border-slate-200'} space-y-1">
               <div class="flex items-center justify-between">
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${index === 0 ? 'bg-fuchsia-500 text-white' : 'bg-purple-800 text-purple-200'}">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${index === 0 ? 'bg-[#EA580C] text-white' : 'bg-slate-100 text-[#0F294A]'}">
                   PASO ${index + 1} ${index === 0 ? '• PAGAR PRIMERO' : ''}
                 </span>
-                <span class="font-mono text-xs text-fuchsia-200 font-bold">Mes ${d.mes_extincion}</span>
+                <span class="font-mono text-xs font-bold text-[#1D4ED8]">Mes ${d.mes_extincion}</span>
               </div>
-              <div class="font-bold text-white truncate" title="${d.nombre}">${d.nombre}</div>
-              <div class="text-[11px] text-purple-200">Tasa: <b>${(d.tasa_ea * 100).toFixed(2)}% EA</b></div>
-              <div class="text-[11px] text-purple-300/90 pt-1 border-t border-purple-400/15">
-                Cuota + Roll-Over aplicado: <b class="font-mono text-fuchsia-200">${fmtCOP(totalAtacado)}/mes</b>
+              <div class="font-bold text-[#0F294A] truncate" title="${d.nombre}">${d.nombre}</div>
+              <div class="text-[11px] text-slate-600">Tasa: <b>${(d.tasa_ea * 100).toFixed(2)}% EA</b></div>
+              <div class="text-[11px] text-slate-700 pt-1 border-t border-slate-100">
+                Pago mensual con Roll-Over: <b class="font-mono text-[#15803D]">${fmtCOPCorto(totalAtacado)}/mes</b>
               </div>
             </div>
           `;
-          cuotaRollOverAcumulada += cuotaFijaDeuda;
-          return htmlPaso;
+          rollOverAcum += d.cuota_fija;
+          return cardHtml;
         }).join("");
       }
 
+      // Compra de Cartera
       const ccTasa = Number(document.getElementById("ccTasa").value) / 100.0;
       const ccPlazo = Number(document.getElementById("ccPlazo").value);
       const ccSeguro = Number(document.getElementById("ccSeguro").value);
@@ -976,11 +1317,11 @@
       const flujoLib = cuotaTotal - nuevaCuotaTot;
 
       document.getElementById("resultadoCompraCartera").innerHTML = `
-        <div class="flex justify-between text-purple-100"><span>Saldo Unificado a Comprar:</span><span class="font-mono font-bold text-white">${fmtCOP(saldoTotal)}</span></div>
-        <div class="flex justify-between text-purple-100"><span>Cuota Actual vs. Nueva Cuota:</span><span class="font-mono">${fmtCOP(cuotaTotal)} → <b class="text-white">${fmtCOP(nuevaCuotaTot)}</b></span></div>
-        <div class="flex justify-between text-purple-100"><span>Flujo Mensual Liberado:</span><span class="font-mono ${flujoLib >= 0 ? 'text-emerald-300' : 'text-amber-300'}">${fmtCOP(flujoLib)}/mes</span></div>
-        <div class="p-2.5 rounded-xl mt-1 ${ahorroCartera > 0 ? 'bg-emerald-500/20 border border-emerald-400/40 text-emerald-200' : 'bg-rose-500/25 border border-rose-400/40 text-rose-200'}">
-          <div class="font-bold">${ahorroCartera > 0 ? '✅ COMPRA DE CARTERA VIABLE FINANCIERAMENTE' : '❌ RECHAZADA: ENCARECE EL COSTO TOTAL DE LA DEUDA'}</div>
+        <div class="flex justify-between text-slate-700"><span>Saldo Unificado a Comprar:</span><span class="font-mono font-bold text-[#0F294A]">${fmtCOP(saldoTotal)}</span></div>
+        <div class="flex justify-between text-slate-700"><span>Cuota Actual vs. Nueva Cuota:</span><span class="font-mono">${fmtCOPCorto(cuotaTotal)} → <b class="text-[#0F294A]">${fmtCOPCorto(nuevaCuotaTot)}/mes</b></span></div>
+        <div class="flex justify-between text-slate-700"><span>Flujo Mensual Liberado:</span><span class="font-mono font-bold ${flujoLib >= 0 ? 'text-[#15803D]' : 'text-[#B45309]'}">${fmtCOP(flujoLib)}/mes</span></div>
+        <div class="oed-doc-card ${ahorroCartera > 0 ? 'oed-doc-verde' : 'oed-doc-rojo'}">
+          <div class="font-bold">${ahorroCartera > 0 ? '✅ Diagnóstico favorable: Esta Compra de Cartera te ahorra dinero' : '🛑 Te recomendamos esperar: Esta oferta encarece el costo total de tu deuda'}</div>
           <div>Ahorro Neto en Costo Financiero Total: <b class="font-mono">${fmtCOP(ahorroCartera)}</b></div>
         </div>
       `;
@@ -1042,6 +1383,12 @@
       recalcularTodo();
     }
 
+    // Inicializar encabezados enriquecidos con (?) y glosario OED
+    document.getElementById("headerSaludoEnriquecido").innerHTML =
+      `💼 <i>"${enriquecerTextoConExplicaciones("Si tienes créditos con tasas altas cercanas a la Tasa de Usura, prioricemos su pago con Avalancha o Bola de Nieve y aprovechemos la Ley 1328 para liberar flujo mensual.")}"</i><br>` +
+      `<small>Responsable OED en esta etapa: <b>Catalina Moreno</b> · Módulo 3: Optimización Analítica de Deudas (<code>src/mod3_gestion_deudas.py</code>)</small>`;
+
+    renderGlosarioOED();
     recalcularTodo();
   </script>
 </body>
