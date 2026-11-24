@@ -11,7 +11,11 @@ from src.data_governance import (
 from src.finance import ea_a_em, em_a_ea, validar_usura_sfc
 from src.mod1_presupuesto import diagnosticar_presupuesto_y_flujo_caja
 from src.mod2_inversiones_salario import estructurar_portafolio_salario
-from src.mod3_gestion_deudas import optimizar_portafolio_deudas
+from src.mod3_gestion_deudas import (
+    optimizar_portafolio_deudas,
+    simular_abono_extraordinario_ley_1328,
+    simular_compra_cartera,
+)
 from src.mod4_finca_raiz import evaluar_inversion_finca_raiz
 from src.mod5_decisiones_vida import evaluar_viabilidad_decision_vida
 from src.mod6_educacion_financiera import (
@@ -92,3 +96,29 @@ def test_flujo_integrado_6_modulos_oed():
         excedente_mensual_actual_cop=pres["excedente_mensual_cop"] + 1_200_000.0,
     )
     assert vida["vpa_decision_cop"] > 0
+
+
+def test_modulo3_catalina_ley_1328_y_compra_cartera():
+    prepago = simular_abono_extraordinario_ley_1328(
+        saldo_actual_cop=9_500_000.0,
+        tasa_ea=0.168,
+        plazo_restante_meses=36,
+        abono_extra_capital_cop=2_500_000.0,
+    )
+    assert (
+        prepago["opcion_reduccion_plazo"]["ahorro_intereses_cop"]
+        > prepago["opcion_reduccion_cuota"]["ahorro_intereses_cop"]
+    )
+    assert prepago["opcion_reduccion_plazo"]["meses_ahorrados"] > 0
+
+    cartera = simular_compra_cartera(
+        lista_deudas=[
+            {"nombre": "Tarjeta Crédito", "saldo_cop": 4_500_000.0, "tasa_ea": 0.255, "cuota_mensual_cop": 350_000.0},
+            {"nombre": "Libre Inversión", "saldo_cop": 8_000_000.0, "tasa_ea": 0.165, "cuota_mensual_cop": 300_000.0},
+        ],
+        tasa_ea_compra_cartera=0.125,
+        plazo_meses_nuevo=24,
+    )
+    assert cartera["es_viable_financieramente"] is True
+    assert cartera["ahorro_neto_costo_financiero_cop"] > 0
+
