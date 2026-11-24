@@ -57,7 +57,6 @@ from src.oed_design_system import (
     formatear_cop_claro,
 )
 
-
 def _to_float(val: Any, default: float) -> float:
     if val is None or val == "":
         return default
