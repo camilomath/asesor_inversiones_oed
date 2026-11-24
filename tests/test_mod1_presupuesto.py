@@ -273,7 +273,8 @@ def test_interfaz_grafica_local_endpoints():
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/") as resp_html:
                 html = resp_html.read().decode("utf-8")
                 assert resp_html.status == 200
-                assert "Radiografía del Sueldo" in html
+                assert "Análisis de tu Sueldo, Gastos y Flujo de Caja" in html
+                assert "Asesor Financiero de Confianza" in html
                 assert "watermark-ahorro" in html
                 assert "background-image: url(\"data:image/svg+xml" in html
 
@@ -490,6 +491,44 @@ def test_culminar_asesoria_en_ceros_microgastos_y_guia_abstencion():
         assert len(res_cierre["historial"]) == 1
 
 
+def test_manual_marca_y_plantilla_oed_mod1():
+    """
+    Verifica el cumplimiento íntegro del Manual de Marca y Plantilla OED:
+    - Paso 2 activo ("Análisis de tu Sueldo, Gastos y Flujo de Caja" — Nidia Velásquez).
+    - Paleta oficial OED (#0F294A, #1D4ED8, #EA580C, #15803D, #B45309, #B91C1C).
+    - Burbujas automáticas (?) de "Cero Palabras Huérfanas" (`class="oed-term"`).
+    - Tarjeta `📌 Plan de Acción para este Mes` y Diccionario Financiero OED de las 5 familias.
+    - Adaptador Streamlit `src/ui_mod1_presupuesto.py`.
+    """
+    from app_mod1_local import HTML_DASHBOARD, _construir_oed_ui_enriquecido
+    from src.ui_mod1_presupuesto import construir_resumen_ciudadano_mod1
+
+    for hex_oficial in ("#0F294A", "#1D4ED8", "#EA580C", "#15803D", "#B45309", "#B91C1C", "#F4F7FB"):
+        assert hex_oficial in HTML_DASHBOARD
+
+    assert "oed-step-active" in HTML_DASHBOARD
+    assert "Paso 2:" in HTML_DASHBOARD
+    assert "Plan de Acción para este Mes:" in HTML_DASHBOARD
+    assert "Diccionario Financiero OED" in HTML_DASHBOARD
+    assert 'class="oed-term"' in HTML_DASHBOARD
+
+    diag = diagnosticar_presupuesto_y_flujo_caja(
+        ingreso_bruto_mensual_cop=6_500_000.0,
+        gastos_fijos_vitales_cop=2_800_000.0,
+        gastos_variables_estilo_vida_cop=950_000.0,
+        gastos_hormiga_mensual_cop=320_000.0,
+        liquidez_actual_fondo_emergencia_cop=6_000_000.0,
+    )
+    sem_st = construir_resumen_ciudadano_mod1(diag)
+    assert sem_st["nivel"] == "ambar"
+    assert len(sem_st["siguiente_paso_accionable"]) > 20
+
+    oed_ui = _construir_oed_ui_enriquecido(diag)
+    assert oed_ui["clase_css"] == "oed-doc-ambar"
+    assert 'class="oed-term"' in oed_ui["explicacion_rica_html"]
+    assert len(oed_ui["plan_mes_rico_html"]) > 20
+
+
 if __name__ == "__main__":
     pruebas = [
         test_paso4_verificacion_salario_6_5m_empleado,
@@ -504,6 +543,7 @@ if __name__ == "__main__":
         test_interfaz_grafica_local_endpoints,
         test_optimizador_presupuesto_tributos_y_pareto,
         test_culminar_asesoria_en_ceros_microgastos_y_guia_abstencion,
+        test_manual_marca_y_plantilla_oed_mod1,
     ]
     for fn in pruebas:
         fn()

@@ -809,11 +809,13 @@ def diagnosticar_presupuesto_y_flujo_caja(
         cuotas_deuda_mensual_cop=cuotas_deuda_mensual_cop,
     )
 
-    # Reglas de decisión CU-01 (Sesión en Ceros vs. Camino Feliz vs. FA-01 vs. FA-02)
+    # Reglas de decisión CU-01 con Voz de "Asesor Financiero de Confianza" OED
     if idn <= 0 and egresos_totales <= 0 and liquidez_actual_fondo_emergencia_cop <= 0:
         estado_flujo_caja = "SESION_EN_CEROS"
         plan_accion = {
             "codigo_flujo": "CU-01-INIT",
+            "nivel_semaforo_oed": "azul",
+            "titulo_diagnostico_oed": "Tu espacio de asesoría está limpio y listo en ceros ($0 COP)",
             "bloquea_inversion_riesgo": False,
             "aporte_recomendado_fondo_emergencia_cop": 0.0,
             "aporte_disponible_portafolio_mod2_cop": 0.0,
@@ -821,8 +823,12 @@ def diagnosticar_presupuesto_y_flujo_caja(
             "recorte_inmediato_fugas_cop": 0.0,
             "recorte_adicional_variables_cop": 0.0,
             "recomendacion_ejecutiva": (
-                "Sesión de asesoría iniciada en ceros ($0 COP). Ingrese el salario, la modalidad contractual "
-                "y los gastos mensuales del asesorado para generar su radiografía y plan de acción."
+                "Tus datos se procesan localmente bajo Habeas Data. Ingresa tu salario en SMMLV o pesos, "
+                "tu modalidad de cotización sobre IBC y tus gastos mensuales para analizar tu flujo de caja."
+            ),
+            "plan_accion_mes_oed": (
+                "Registra tu ingreso bruto mensual y selecciona en la lista desplegable tus microgastos cotidianos "
+                "para calcular tu potencial real de ahorro con interés compuesto."
             ),
         }
     elif excedente_mensual_cop < 0:
@@ -832,6 +838,8 @@ def diagnosticar_presupuesto_y_flujo_caja(
         recorte_sugerido_variables = max(0.0, deficit_abs - recorte_sugerido_fugas)
         plan_accion = {
             "codigo_flujo": "FA-01",
+            "nivel_semaforo_oed": "rojo",
+            "titulo_diagnostico_oed": "Tu flujo de caja mensual requiere recuperar equilibrio antes de invertir",
             "bloquea_inversion_riesgo": True,
             "aporte_recomendado_fondo_emergencia_cop": 0.0,
             "aporte_disponible_portafolio_mod2_cop": 0.0,
@@ -839,9 +847,13 @@ def diagnosticar_presupuesto_y_flujo_caja(
             "recorte_inmediato_fugas_cop": round(recorte_sugerido_fugas, 2),
             "recorte_adicional_variables_cop": round(recorte_sugerido_variables, 2),
             "recomendacion_ejecutiva": (
-                f"ALERTA ROJA DE DÉFICIT ESTRUCTURAL (-${deficit_abs:,.0f} COP/mes): "
-                "Se bloquean inversiones de riesgo. Priorice eliminar fugas hormiga y gastos variables, "
-                "y remita sus obligaciones al Módulo 3 (Gestión de Deudas - Catalina)."
+                f"Te recomendamos esperar antes de asumir inversiones con riesgo: hoy tus salidas superan tu ingreso "
+                f"neto en ${deficit_abs:,.0f} COP al mes. Evita cubrir este faltante cerca de la Tasa de Usura y "
+                "revisemos tus deudas con Avalancha o Bola de Nieve en el Módulo 3."
+            ),
+            "plan_accion_mes_oed": (
+                f"Recorta este mismo mes ${recorte_sugerido_fugas:,.0f} COP en microgastos/4x1000 y ajusta "
+                f"${recorte_sugerido_variables:,.0f} COP en gastos variables para volver tu flujo positivo ($0 deuda nueva)."
             ),
         }
     elif not fondo_completo:
@@ -856,6 +868,8 @@ def diagnosticar_presupuesto_y_flujo_caja(
         plazo_txt = f"durante ~{meses_para_meta} meses " if meses_para_meta is not None else ""
         plan_accion = {
             "codigo_flujo": "FA-02",
+            "nivel_semaforo_oed": "ambar",
+            "titulo_diagnostico_oed": "Generas ahorro mensual positivo; consolidemos primero tu fondo de tranquilidad",
             "bloquea_inversion_riesgo": False,
             "aporte_recomendado_fondo_emergencia_cop": round(aporte_emergencia_80, 2),
             "aporte_disponible_portafolio_mod2_cop": round(aporte_portafolio_20, 2),
@@ -863,16 +877,21 @@ def diagnosticar_presupuesto_y_flujo_caja(
             "recorte_inmediato_fugas_cop": 0.0,
             "recorte_adicional_variables_cop": 0.0,
             "recomendacion_ejecutiva": (
-                f"Fondo de emergencia en construcción ({meses_cobertura_actual:.2f} de {meses_meta_emergencia:.0f} meses). "
-                f"Destine el 80% del excedente (${aporte_emergencia_80:,.0f} COP/mes) a liquidez inmediata "
-                f"(Bolsillo remunerado Fogafín / FIC a la vista) {plazo_txt}y el 20% "
-                f"(${aporte_portafolio_20:,.0f} COP/mes) al Módulo 2."
+                f"Tu colchón actual cubre {meses_cobertura_actual:.2f} de los {meses_meta_emergencia:.0f} meses recomendados "
+                f"para tu modalidad ({nomina['modalidad_laboral']}). Destinar el 80% de tu excedente a una cuenta protegida "
+                f"por Fogafín o un FIC a la vista {plazo_txt}protege tu liquidez superando la inflación del IPC."
+            ),
+            "plan_accion_mes_oed": (
+                f"Programa una transferencia automática el día de pago por ${aporte_emergencia_80:,.0f} COP/mes a tu fondo "
+                f"de emergencia y destina ${aporte_portafolio_20:,.0f} COP/mes a tu portafolio inicial (Módulo 2)."
             ),
         }
     else:
         estado_flujo_caja = "LISTO_PARA_INVERTIR"
         plan_accion = {
             "codigo_flujo": "CU-01-OK",
+            "nivel_semaforo_oed": "verde",
+            "titulo_diagnostico_oed": "Tus indicadores muestran solidez presupuestal y capacidad lista para crecer",
             "bloquea_inversion_riesgo": False,
             "aporte_recomendado_fondo_emergencia_cop": 0.0,
             "aporte_disponible_portafolio_mod2_cop": round(excedente_mensual_cop, 2),
@@ -880,9 +899,13 @@ def diagnosticar_presupuesto_y_flujo_caja(
             "recorte_inmediato_fugas_cop": 0.0,
             "recorte_adicional_variables_cop": 0.0,
             "recomendacion_ejecutiva": (
-                f"Flujo de caja saludable y fondo de emergencia completo ({meses_cobertura_actual:.2f} meses). "
-                f"Dispone de ${excedente_mensual_cop:,.0f} COP/mes libres para optimizar deudas (Módulo 3) "
-                "o estructurar su portafolio de inversión (Módulo 2)."
+                f"Cuentas con tu fondo de emergencia completo ({meses_cobertura_actual:.2f} meses) y un excedente libre "
+                f"de ${excedente_mensual_cop:,.0f} COP/mes para hacer abono a capital bajo la Ley 1328 o invertir en CDT, "
+                "FIC o Cuenta AFC con interés compuesto por encima del IPC."
+            ),
+            "plan_accion_mes_oed": (
+                f"Automatiza el traslado mensual de tus ${excedente_mensual_cop:,.0f} COP libres el mismo día que recibes "
+                "tu ingreso hacia tu estrategia de inversión en el Módulo 2."
             ),
         }
 
@@ -1767,23 +1790,25 @@ def culminar_asesoria_y_reiniciar(
 
 
 def crear_figura_sankey_presupuesto(diagnostico: Dict[str, Any]) -> Any:
-    """Genera en Plotly el Diagrama de Sankey del balance termodinámico de flujos salariales."""
+    """Genera en Plotly el Diagrama de Sankey aplicando la Paleta Oficial del Manual de Marca OED."""
     import plotly.graph_objects as go  # type: ignore
+
+    from src.oed_design_system import aplicar_estilo_plotly_oed
 
     sk = diagnostico["flujo_sankey"]
     colores_nodos = [
-        "#1f4e78",  # 0 Ingreso Bruto
-        "#2e75b6",  # 1 Auxilio / Otros
-        "#0f2c59",  # 2 Total Devengado
-        "#c55a11",  # 3 Seguridad Social
-        "#843c0c",  # 4 Retefuente
-        "#1b7f5c",  # 5 IDN
-        "#4472c4",  # 6 Costos Fijos
-        "#7030a0",  # 7 Estilo de Vida
-        "#d9534f",  # 8 Fugas / Hormiga
-        "#f0ad4e",  # 9 Deuda
-        "#2ca02c",  # 10 Excedente Libre
-        "#b30000",  # 11 Déficit
+        "#0F294A",  # 0 Ingreso Bruto (Azul Solidez OED)
+        "#1D4ED8",  # 1 Auxilio / Otros (Azul Acción Financiera)
+        "#0F294A",  # 2 Total Devengado
+        "#EA580C",  # 3 Seguridad Social (Naranja Plan de Acción)
+        "#B45309",  # 4 Retefuente (Ámbar Revisión)
+        "#15803D",  # 5 IDN (Verde Viabilidad)
+        "#1D4ED8",  # 6 Costos Fijos
+        "#7C3AED",  # 7 Estilo de Vida (Violeta Comparativo OED)
+        "#DC2626",  # 8 Fugas / Hormiga (Rojo Alerta Financiera)
+        "#EA580C",  # 9 Deuda
+        "#15803D",  # 10 Excedente Libre (Verde Viabilidad)
+        "#B91C1C",  # 11 Déficit (Rojo Riesgo Alto)
     ]
 
     fig = go.Figure(
@@ -1794,7 +1819,7 @@ def crear_figura_sankey_presupuesto(diagnostico: Dict[str, Any]) -> Any:
                 node=dict(
                     pad=18,
                     thickness=22,
-                    line=dict(color="#1e293b", width=0.8),
+                    line=dict(color="#0F294A", width=0.8),
                     label=sk["labels"],
                     color=colores_nodos,
                 ),
@@ -1802,26 +1827,26 @@ def crear_figura_sankey_presupuesto(diagnostico: Dict[str, Any]) -> Any:
                     source=sk["sources"],
                     target=sk["targets"],
                     value=sk["values"],
-                    color="rgba(100, 116, 139, 0.28)",
+                    color="rgba(29, 78, 216, 0.20)",
                 ),
             )
         ]
     )
-    fig.update_layout(
-        title=(
-            "Diagrama de Sankey — Balance Termodinámico del Sueldo al Excedente Libre "
-            f"({diagnostico['liquidacion_nomina']['modalidad_laboral']})"
+    return aplicar_estilo_plotly_oed(
+        fig,
+        titulo=(
+            "Flujo de tu Sueldo al Ahorro Mensual ($ COP) — "
+            f"{diagnostico['liquidacion_nomina']['modalidad_laboral']}"
         ),
-        font=dict(size=12, family="Arial"),
-        height=500,
-        margin=dict(l=20, r=20, t=60, b=20),
+        altura=500,
     )
-    return fig
 
 
 def crear_figura_waterfall_sueldo(diagnostico: Dict[str, Any]) -> Any:
-    """Genera en Plotly un gráfico Waterfall (Cascada) paso a paso desde el sueldo bruto hasta el excedente."""
+    """Genera en Plotly un gráfico Waterfall (Cascada) con la Paleta Oficial OED."""
     import plotly.graph_objects as go  # type: ignore
+
+    from src.oed_design_system import aplicar_estilo_plotly_oed
 
     nom = diagnostico["liquidacion_nomina"]
     medidas = ["absolute"]
@@ -1871,27 +1896,27 @@ def crear_figura_waterfall_sueldo(diagnostico: Dict[str, Any]) -> Any:
             y=valores,
             text=[f"${v:,.0f}" if m != "total" else "" for v, m in zip(valores, medidas)],
             textposition="outside",
-            connector={"line": {"color": "#64748b"}},
-            decreasing={"marker": {"color": "#dc2626"}},
-            increasing={"marker": {"color": "#2563eb"}},
-            totals={"marker": {"color": "#16a34a"}},
+            connector={"line": {"color": "#475569"}},
+            decreasing={"marker": {"color": "#DC2626"}},
+            increasing={"marker": {"color": "#1D4ED8"}},
+            totals={"marker": {"color": "#15803D"}},
         )
     )
-    fig.update_layout(
-        title="Radiografía en Cascada (Waterfall) — Del Salario Bruto al Excedente Mensual (COP)",
-        yaxis_title="Pesos Colombianos (COP)",
-        height=460,
-        margin=dict(l=40, r=20, t=60, b=40),
+    fig.update_layout(yaxis_title="Pesos Colombianos ($ COP)")
+    return aplicar_estilo_plotly_oed(
+        fig,
+        titulo="Paso a Paso de tu Sueldo al Excedente Libre ($ COP)",
+        altura=460,
     )
-    return fig
 
 
 def crear_figura_costo_oportunidad_hormiga(diagnostico: Dict[str, Any]) -> Any:
     """
-    Grafica la curva de crecimiento exponencial (1 a 120 meses) de invertir las fugas y gastos
-    hormiga al 10% EA vs. el dinero acumulado gastado sin retorno.
+    Grafica la curva de crecimiento compuesto (1 a 120 meses) con la Paleta Oficial OED.
     """
     import plotly.graph_objects as go  # type: ignore
+
+    from src.oed_design_system import aplicar_estilo_plotly_oed
 
     fugas = diagnostico["radiografia_fugas"]
     hist = fugas["historial_capitalizacion_10a"]
@@ -1905,8 +1930,8 @@ def crear_figura_costo_oportunidad_hormiga(diagnostico: Dict[str, Any]) -> Any:
             x=meses,
             y=gasto_acumulado,
             mode="lines",
-            name="Dinero drenado en Fugas / Hormiga (Sin invertir)",
-            line=dict(color="#ef4444", width=2.5, dash="dash"),
+            name="Dinero gastado sin retorno en fugas",
+            line=dict(color="#DC2626", width=2.5, dash="dash"),
         )
     )
     fig.add_trace(
@@ -1914,35 +1939,35 @@ def crear_figura_costo_oportunidad_hormiga(diagnostico: Dict[str, Any]) -> Any:
             x=meses,
             y=patrimonio_potencial,
             mode="lines",
-            name=f"Patrimonio si se invierte al {fugas['tasa_oportunidad_ea'] * 100:.1f}% EA",
+            name=f"Patrimonio si lo inviertes al {fugas['tasa_oportunidad_ea'] * 100:.1f}% EA",
             fill="tonexty",
-            fillcolor="rgba(16, 185, 129, 0.18)",
-            line=dict(color="#059669", width=3),
+            fillcolor="rgba(29, 78, 216, 0.14)",
+            line=dict(color="#1D4ED8", width=3),
         )
     )
-    # Marcadores clave a 5 años (mes 60) y 10 años (mes 120)
     if len(hist) >= 120:
         fig.add_trace(
             go.Scatter(
                 x=[60, 120],
                 y=[hist[59]["saldo_final_cop"], hist[119]["saldo_final_cop"]],
                 mode="markers+text",
-                name="Hitos 5 y 10 años",
+                name="Metas a 5 y 10 años",
                 text=[
                     f"5 años: ${hist[59]['saldo_final_cop']:,.0f}",
                     f"10 años: ${hist[119]['saldo_final_cop']:,.0f}",
                 ],
                 textposition="top left",
-                marker=dict(size=10, color="#047857"),
+                marker=dict(size=10, color="#15803D"),
             )
         )
 
     fig.update_layout(
-        title="Costo de Oportunidad de las Fugas Presupuestales (Horizonte 5 y 10 Años)",
         xaxis_title="Meses",
-        yaxis_title="Pesos Colombianos (COP)",
+        yaxis_title="Pesos Colombianos ($ COP)",
         hovermode="x unified",
-        height=440,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
-    return fig
+    return aplicar_estilo_plotly_oed(
+        fig,
+        titulo="Lo que Construyen tus Microgastos con Interés Compuesto (5 y 10 Años)",
+        altura=440,
+    )
