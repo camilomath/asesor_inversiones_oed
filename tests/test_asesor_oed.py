@@ -11,7 +11,11 @@ from src.data_governance import (
 from src.finance import ea_a_em, em_a_ea, validar_usura_sfc
 from src.mod1_presupuesto import diagnosticar_presupuesto_y_flujo_caja
 from src.mod2_inversiones_salario import estructurar_portafolio_salario
-from src.mod3_gestion_deudas import optimizar_portafolio_deudas
+from src.mod3_gestion_deudas import (
+    optimizar_portafolio_deudas,
+    simular_abono_extraordinario_ley_1328,
+    simular_compra_cartera,
+)
 from src.mod4_finca_raiz import evaluar_inversion_finca_raiz
 from src.mod5_decisiones_vida import evaluar_viabilidad_decision_vida
 from src.mod6_educacion_financiera import (

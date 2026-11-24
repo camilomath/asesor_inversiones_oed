@@ -58,7 +58,6 @@ from src.oed_design_system import (
     formatear_cop_claro,
 )
 
-
 def _to_float(val: Any, default: float) -> float:
     if val is None or val == "":
         return default
@@ -1089,7 +1088,7 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
         ingreso_familiar_neto_cop=ingreso_neto_hogar if ingreso_neto_hogar > 0 else 6_500_000.0,
     )
 
-    # 6. Diagnóstico cálido del "Médico Financiero Amigo" + Receta del Mes (Manual de Marca OED)
+    # 6. Diagnóstico del "Asesor Financiero de Confianza" + Plan de Acción del Mes (Manual de Marca OED)
     decs_activas = []
     if desea_boda:
         decs_activas.append(("Boda", decisiones_eval["CASARSE"]))
@@ -1100,11 +1099,11 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
 
     if not decs_activas:
         nivel_med = "azul"
-        titulo_med = "Bienvenida tranquila a tu Consultorio Financiero Amigo OED"
+        titulo_med = "Bienvenido a tu Asesor Financiero de Confianza OED"
         explicacion_med = (
-            "Tus signos vitales están listos en $0 COP esperando que elijas tus metas en el Paso 1. "
+            "Tus indicadores están listos en $0 COP esperando que elijas tus metas en el Paso 1. "
             "Aquí evaluamos tus planes con simulación actuarial de Monte Carlo, descuento en EA y ajuste por IPC, "
-            "cuidando tu privacidad bajo Habeas Data y Ley 1581."
+            "protegiendo tu información bajo Habeas Data y Ley 1581."
         )
         receta_med = (
             "Selecciona arriba a la izquierda cuántos hijos deseas proyectar (0 a 6), si deseas un crédito o una boda, "
@@ -1116,44 +1115,44 @@ def _calcular_payload_completo(params: Dict[str, Any]) -> Dict[str, Any]:
         vpa_tot_planes = sum(d["vpa_decision_cop"] for _, d in decs_activas)
         if prob_min >= 80.0:
             nivel_med = "verde"
-            titulo_med = "Tus signos vitales financieros están firmes y saludables"
+            titulo_med = "Tus indicadores clave muestran alta viabilidad y solidez financiera"
             explicacion_med = (
-                f"¡Excelente noticia! Con tu excedente mensual de {formatear_cop_claro(excedente_mensual)} y tu reserva "
+                f"Con tu excedente mensual de {formatear_cop_claro(excedente_mensual)} y tu reserva "
                 f"de {formatear_cop_claro(liquidez_emergencia)}, superas el {prob_min:.1f}% de los 1.000 escenarios de "
                 f"Monte Carlo frente a un compromiso mensual estimado de {formatear_cop_claro(impacto_tot_mes)} "
                 f"(valor presente total de {formatear_cop_claro(vpa_tot_planes)} descontado en EA frente al IPC)."
             )
             receta_med = (
-                f"Programa un débito automático mensual de {formatear_cop_claro(max(200_000.0, impacto_tot_mes * 0.25))} "
-                "el mismo día que recibes tu pago hacia un FIC o CDT vigilado con seguro Fogafín para blindar tu tranquilidad."
+                f"Programa una transferencia automática mensual de {formatear_cop_claro(max(200_000.0, impacto_tot_mes * 0.25))} "
+                "el mismo día que recibes tu pago hacia un FIC o CDT vigilado con seguro Fogafín para consolidar tu meta."
             )
         elif prob_min >= 55.0:
             nivel_med = "ambar"
-            titulo_med = "Chequeo preventivo a tiempo: tu meta es viable cuidando el flujo mensual"
+            titulo_med = "Tu meta es viable hoy, pero requiere cuidar el flujo de caja mensual"
             explicacion_med = (
-                f"Tu plan alcanza una solvencia de {prob_min:.1f}% en la prueba de esfuerzo de Monte Carlo. "
+                f"Tu plan alcanza una solvencia de {prob_min:.1f}% en la Prueba de Estrés Financiero de Monte Carlo. "
                 f"El flujo requerido hoy es de {formatear_cop_claro(impacto_tot_mes)}/mes frente a tu excedente de "
                 f"{formatear_cop_claro(excedente_mensual)}/mes, por lo que conviene vigilar la inflación del IPC y "
                 "evitar créditos cercanos a la Tasa de Usura."
             )
             brecha_preventiva = max(150_000.0, impacto_tot_mes - excedente_mensual) if impacto_tot_mes > excedente_mensual else max(200_000.0, impacto_tot_mes * 0.15)
             receta_med = (
-                f"Fortalece tu colchón separando {formatear_cop_claro(brecha_preventiva)} adicionales este mes en un FIC "
+                f"Fortalece tu fondo de liquidez separando {formatear_cop_claro(brecha_preventiva)} adicionales este mes en un FIC "
                 "con interés compuesto antes de asumir nuevos compromisos fijos."
             )
         else:
             nivel_med = "rojo"
-            titulo_med = "Hagamos una pausa protectora para cuidar tu sueño tranquilo"
+            titulo_med = "Hoy esta meta compromete tu flujo de caja mensual"
             brecha_mes = max(0.0, impacto_tot_mes - excedente_mensual)
             explicacion_med = (
-                f"Cero regaños, estamos aquí para cuidarte: hoy tus planes requieren {formatear_cop_claro(impacto_tot_mes)}/mes "
+                f"Te recomendamos esperar antes de asumir este compromiso completo: hoy tus planes requieren {formatear_cop_claro(impacto_tot_mes)}/mes "
                 f"y tu excedente libre es de {formatear_cop_claro(excedente_mensual)}/mes (brecha de {formatear_cop_claro(brecha_mes)}/mes). "
-                f"En la prueba de Monte Carlo tu solvencia actual es {prob_min:.1f}%, así que primero demos oxígeno a tu caja."
+                f"En la Prueba de Estrés de Monte Carlo tu solvencia actual es {prob_min:.1f}%, por lo que conviene capitalizar primero."
             )
             dosis_inicial = max(100_000.0, round((brecha_mes if brecha_mes > 0 else 300_000.0) * 0.20, -3))
             receta_med = (
-                f"Empieza este mes separando una dosis suave de {formatear_cop_claro(dosis_inicial)} en un CDT o FIC protegido por Fogafín "
-                "y aplaza 6 a 12 meses los gastos no urgentes para evitar sobreendeudamiento."
+                f"Inicia este mes un ahorro programado de {formatear_cop_claro(dosis_inicial)} en un CDT o FIC protegido por Fogafín "
+                "y aplaza de 6 a 12 meses los compromisos no urgentes para evitar sobreendeudamiento."
             )
 
     return {
@@ -1512,7 +1511,7 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 <header>
   <div class="header-brand">
     <!-- LOGO SIMÉTRICO Y SUAVE DE POSITIVA COMPAÑÍA DE SEGUROS / OED -->
-    <div class="positiva-logo-wrap" title="Positiva Compañía de Seguros — Consultorio Financiero Amigo OED">
+    <div class="positiva-logo-wrap" title="Positiva Compañía de Seguros — Asesor Financiero de Confianza OED">
       <svg id="logo-positiva-svg" width="38" height="38" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Logo Positiva">
         <rect x="4" y="4" width="56" height="56" rx="16" fill="#0F294A" stroke="#EA580C" stroke-width="3"/>
         <circle cx="32" cy="32" r="20" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
@@ -1526,8 +1525,8 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
       <span>POSITIVA</span>
     </div>
     <div>
-      <h1>🩺 Consultorio Financiero Amigo OED — Tu Médico Financiero de Cabecera</h1>
-      <p>Especialista Paso 6 y Paso 0: <strong>Nelson Angel</strong> (Rama <code>nean</code>) &bull; Manual de Marca Oficial OED &bull; Cero Palabras Huérfanas (<code>?</code>)</p>
+      <h1>💼 Asesor Financiero de Confianza OED — Paso 6 y Paso 0</h1>
+      <p>Responsable OED: <strong>Nelson Angel</strong> (Rama <code>nean</code>) &bull; Manual de Marca Oficial OED &bull; Cero Palabras Huérfanas (<code>?</code>)</p>
     </div>
   </div>
   <div class="badge-top" id="badge-hora">🛡️ Positiva OED &bull; Ley 1581 &bull; Monte Carlo</div>
@@ -1535,30 +1534,30 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
 
 <!-- BLOQUE 1 DEL MANUAL DE MARCA: BARRA DE PROGRESO DE LOS 7 PASOS (PASOS 0 AL 6) -->
 <div class="oed-steps-bar" id="barra-7-pasos-oed">
-  <span class="oed-step-pill" id="pill-paso-0">Paso 0: 🩺 Bienvenida y Confidencialidad (Nelson + Camilo)</span>
+  <span class="oed-step-pill" id="pill-paso-0">Paso 0: 🤝 Bienvenida a OED y Protección de tus Datos (Nelson + Camilo)</span>
   <span class="oed-step-pill">Paso 1: 🎯 Tu Perfil de Riesgo y Criterio de Inversión (Salin)</span>
-  <span class="oed-step-pill">Paso 2: 🩻 Radiografía de tu Sueldo (Nidia)</span>
-  <span class="oed-step-pill">Paso 3: 🩹 Alivio de Deudas (Catalina)</span>
-  <span class="oed-step-pill">Paso 4: 🌱 Vitaminas de Inversión (Camilo)</span>
-  <span class="oed-step-pill">Paso 5: 🏡 Comprar Casa sin Ahogarte (Jesi)</span>
-  <span class="oed-step-pill oed-step-active" id="pill-paso-6">Paso 6: 🛡️ Prueba de Esfuerzo Grandes Planes (Nelson)</span>
+  <span class="oed-step-pill">Paso 2: 📊 Análisis de tu Sueldo, Gastos y Flujo de Caja (Nidia)</span>
+  <span class="oed-step-pill">Paso 3: 🔓 Estrategia para Salir de Deudas (Catalina)</span>
+  <span class="oed-step-pill">Paso 4: 🌱 Plan de Inversión Mensual desde tu Sueldo (Camilo)</span>
+  <span class="oed-step-pill">Paso 5: 🏡 Viabilidad para Comprar Vivienda o Finca Raíz (Jesi)</span>
+  <span class="oed-step-pill oed-step-active" id="pill-paso-6">Paso 6: 🛡️ Prueba de Estrés Financiero para tus Grandes Metas (Nelson)</span>
 </div>
 
 <div class="tabs">
-  <button class="tab-btn active" onclick="abrirTab('tab-mod5', this)">🛡️ Paso 6: Prueba de Esfuerzo Actuarial (Módulo 5 — Nelson)</button>
-  <button class="tab-btn" onclick="abrirTab('tab-habeas', this)">🩺 Paso 0: Confidencialidad y Habeas Data (Nelson)</button>
-  <button class="tab-btn" onclick="abrirTab('tab-integrado', this)">🚀 Consulta Completa OED: Los 6 Módulos + Glosario</button>
+  <button class="tab-btn active" onclick="abrirTab('tab-mod5', this)">🛡️ Paso 6: Prueba de Estrés Financiero para tus Grandes Metas (Módulo 5 — Nelson)</button>
+  <button class="tab-btn" onclick="abrirTab('tab-habeas', this)">🤝 Paso 0: Protección de tus Datos y Habeas Data (Nelson)</button>
+  <button class="tab-btn" onclick="abrirTab('tab-integrado', this)">🚀 Consulta Completa OED: Los 6 Módulos + Diccionario</button>
 </div>
 
 <div class="container">
 
-  <!-- SALUDO CÁLIDO DEL MÉDICO FINANCIERO AMIGO (BLOQUE 1 MANUAL DE MARCA) -->
+  <!-- ENCABEZADO DEL ASESOR FINANCIERO DE CONFIANZA (BLOQUE 1 MANUAL DE MARCA) -->
   <div class="oed-medico-banner">
     <p id="saludo-medico-top">
-      🩺 <strong>Saludo de tu Médico Financiero Amigo (Nelson Angel):</strong>
-      <i>"Hagamos una prueba de esfuerzo con 1.000 escenarios futuros para que casarte, tener hijos o tomar un crédito te tome bien preparado y durmiendo tranquilo."</i>
+      💼 <strong>Responsable OED en esta etapa (Nelson Angel — Paso 6):</strong>
+      <i>"Ejecutemos una Prueba de Estrés Financiero con 1.000 escenarios de Monte Carlo para evaluar tus metas de matrimonio, hijos o estudio."</i>
     </p>
-    <span class="pill" style="background:#FFF7ED;color:#EA580C;border:1px solid #FED7AA;flex-shrink:0;">🧡 Voz Médico Amigo</span>
+    <span class="pill" style="background:#FFF7ED;color:#EA580C;border:1px solid #FED7AA;flex-shrink:0;">🧡 Voz Asesor Financiero de Confianza</span>
   </div>
 
   <!-- ==================== PESTAÑA 1: MÓDULO 5 ACTUARIAL PARAMÉTRICO (NELSON) ==================== -->
@@ -1978,10 +1977,10 @@ HTML_DASHBOARD = r"""<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- ==================== BLOQUE 5 MANUAL DE MARCA: DICCIONARIO DEL MÉDICO AMIGO ==================== -->
+  <!-- ==================== BLOQUE 5 MANUAL DE MARCA: DICCIONARIO FINANCIERO OED ==================== -->
   <div class="card" id="bloque-glosario-oed" style="margin-top:18px;border-top:4px solid #0F294A;">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
-      <h3 style="margin:0;">🩺 ¿Alguna palabra te sonó a chino? Diccionario del Médico Financiero Amigo (5 Familias OED)</h3>
+      <h3 style="margin:0;">📘 ¿Tienes dudas con algún concepto? Consulta aquí el Diccionario Financiero OED (5 Familias)</h3>
       <input type="text" id="buscador-glosario-oed" placeholder="🔍 Buscar sigla o concepto (ej. EA, IPC, Monte Carlo, Habeas Data, UVR, Fogafín)..."
              title="Escriba cualquier sigla o término para ver su explicación sencilla y ejemplo en pesos."
              data-tooltip="Escriba cualquier sigla o término para ver su explicación sencilla y ejemplo en pesos."
@@ -2328,13 +2327,13 @@ function abrirTab(tabId, btn) {
     if (pill0) pill0.classList.add('oed-step-active');
     if (pill6) pill6.classList.remove('oed-step-active');
     if (saludoEl) {
-      saludoEl.innerHTML = '🩺 <strong>Paso 0 — Bienvenida al Consultorio y Confidencialidad (Nelson + Camilo):</strong> <i>"Igual que en una historia clínica médica, tus datos son privados, se quedan cifrados en tu equipo y nadie más los ve."</i>';
+      saludoEl.innerHTML = '🤝 <strong>Paso 0 — Bienvenida a OED y Protección de tus Datos (Nelson + Camilo):</strong> <i>"Tus datos financieros son 100% privados, se procesan cifrados en tu equipo y nadie más tiene acceso a ellos."</i>';
     }
   } else {
     if (pill0) pill0.classList.remove('oed-step-active');
     if (pill6) pill6.classList.add('oed-step-active');
     if (saludoEl) {
-      saludoEl.innerHTML = '🛡️ <strong>Paso 6 — Prueba de Esfuerzo para tus Grandes Planes (Nelson Angel):</strong> <i>"Hagamos una prueba de esfuerzo con 1.000 escenarios futuros para que casarte, tener hijos o estudiar te tome bien preparado."</i>';
+      saludoEl.innerHTML = '🛡️ <strong>Paso 6 — Prueba de Estrés Financiero para tus Grandes Metas (Nelson Angel):</strong> <i>"Ejecutemos una Prueba de Estrés Financiero con 1.000 escenarios de Monte Carlo para evaluar tus metas de matrimonio, hijos o estudio."</i>';
     }
   }
 
@@ -2520,10 +2519,10 @@ function renderizarTodo(data, animar = false) {
   const boxDiagEl = document.getElementById('box-diagnostico-medico-oed');
   if (boxDiagEl && diagMed) {
     const mapaNivel = {
-      verde: { clase: 'oed-doc-verde', icono: '🩺💚', prefijo: 'Signos vitales saludables:' },
-      azul:  { clase: 'oed-doc-azul',  icono: '🩺💙', prefijo: 'Lectura tranquila de tu médico financiero:' },
-      ambar: { clase: 'oed-doc-ambar', icono: '🩺🧡', prefijo: 'Chequeo preventivo a tiempo:' },
-      rojo:  { clase: 'oed-doc-rojo',  icono: '🩺❤️‍🩹', prefijo: 'Pausa protectora para cuidar tu tranquilidad:' }
+      verde: { clase: 'oed-doc-verde', icono: '✅', prefijo: 'Diagnóstico Financiero favorable:' },
+      azul:  { clase: 'oed-doc-azul',  icono: 'ℹ️', prefijo: 'Análisis de tu Asesor Financiero:' },
+      ambar: { clase: 'oed-doc-ambar', icono: '⚠️', prefijo: 'Revisión preventiva:' },
+      rojo:  { clase: 'oed-doc-rojo',  icono: '🛑', prefijo: 'Riesgo alto — Te recomendamos esperar:' }
     };
     const cfgNiv = mapaNivel[diagMed.nivel] || mapaNivel.azul;
     boxDiagEl.innerHTML = `
@@ -2535,7 +2534,7 @@ function renderizarTodo(data, animar = false) {
         </div>
       </div>
       <div class="oed-rx-box">
-        <strong>💊 Tu Receta Práctica para este Mes:</strong> ${diagMed.receta_html}
+        <strong>📌 Plan de Acción para este Mes:</strong> ${diagMed.receta_html}
       </div>
     `;
   }
@@ -2892,7 +2891,7 @@ function verTerminoGlosarioOED(clave) {
         Familia: ${f.categoria} &bull; ${f.termino_tecnico}
       </div>
       <div class="oed-doc-card oed-doc-verde" style="margin:4px 0 8px 0;">
-        <strong>🩺 Explicación sencilla de tu Médico Financiero Amigo:</strong> ${f.lenguaje_claro}
+        <strong>💡 En palabras sencillas:</strong> ${f.lenguaje_claro}
       </div>
       <div class="oed-rx-box" style="margin:0;">
         <strong>🇨🇴 Ejemplo cotidiano en pesos ($ COP):</strong> ${f.ejemplo_cotidiano}
